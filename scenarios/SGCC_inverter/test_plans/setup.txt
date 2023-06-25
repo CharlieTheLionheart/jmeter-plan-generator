@@ -1,0 +1,1 @@
+scenarios/SGCC_inverter/meta_data_management/create_device.jmx
