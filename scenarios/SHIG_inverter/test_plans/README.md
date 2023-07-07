@@ -5,7 +5,6 @@
 |:------------------|:---|
 | setup.txt |省综逆变器create device场景|
 | save_data.txt |省综逆变器save data场景|
-| query_data.txt |省综逆变器query data场景|
 | teardown.txt |省综逆变器drop device场景|
 
 ## 注意事项

@@ -1,1 +1,0 @@
-scenarios/SGCC_inverter/write_data_from_collector/write_data_from_collector.jmx

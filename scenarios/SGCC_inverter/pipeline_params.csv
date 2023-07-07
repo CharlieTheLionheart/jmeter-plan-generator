@@ -1,2 +1,0 @@
-url|write_loops|batch_size|read_loops|range_begin|range_end|interval|write_times_per_minute|read_times_per_minute
-jdbc:postgresql://edge-2cdca5e0-1:26257/defaultdb?mode%3D3%26sslmode%3Dverify-ca%26sslcert%3D%2Fkaiwudb%2Fcerts%2Fclient.root.crt%26sslkey%3D%2Fkaiwudb%2Fcerts%2Fclient.root.pk8%26sslrootcert%3D%2Fkaiwudb%2Fcerts%2Fca.crt|100|1|10|P-1D|P0D|1000|120|120
