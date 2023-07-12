@@ -1,1 +1,3 @@
-scenarios/SHIG_inverter/meta_data_management/create_device.jmx
+scenarios/SHIG_inverter/meta_data_management/create_database.jmx
+scenarios/SHIG_inverter/meta_data_management/create_template_table.jmx
+scenarios/SHIG_inverter/meta_data_management/create_ts_tables.jmx

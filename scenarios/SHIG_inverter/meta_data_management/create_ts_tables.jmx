@@ -12,52 +12,66 @@
       <stringProp name="TestPlan.user_define_classpath"></stringProp>
     </TestPlan>
     <hashTree>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[variable define] 读入配置" enabled="true">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[Variables] 读入配置" enabled="true">
         <collectionProp name="Arguments.arguments">
           <elementProp name="db_url" elementType="Argument">
             <stringProp name="Argument.name">db_url</stringProp>
             <stringProp name="Argument.value">${__P(db_url,jdbc:postgresql://127.0.0.1:26257/defaultdb)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">数据库连接jdbc url, default: jdbc:postgresql://127.0.0.1:26257/defaultdb</stringProp>
           </elementProp>
           <elementProp name="db_user" elementType="Argument">
             <stringProp name="Argument.name">db_user</stringProp>
             <stringProp name="Argument.value">${__P(db_user,root)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">数据库连接用户, default: root</stringProp>
           </elementProp>
           <elementProp name="db_passwd" elementType="Argument">
             <stringProp name="Argument.name">db_passwd</stringProp>
             <stringProp name="Argument.value">${__P(db_passwd,123456)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="device_count" elementType="Argument">
-            <stringProp name="Argument.name">device_count</stringProp>
-            <stringProp name="Argument.value">${__P(device_count,50)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="csv_data_file" elementType="Argument">
-            <stringProp name="Argument.name">csv_data_file</stringProp>
-            <stringProp name="Argument.value">${__P(csv_data_file,C:\\Users\\hikari\\Desktop\\data.csv)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">数据库连接密码, default: 123456</stringProp>
           </elementProp>
           <elementProp name="ts_db" elementType="Argument">
             <stringProp name="Argument.name">ts_db</stringProp>
-            <stringProp name="Argument.value">${__P(ts_db,t_shig)}</stringProp>
+            <stringProp name="Argument.value">${__P(ts_db,db_shig)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">创建时时序库名称, default: db_shig</stringProp>
           </elementProp>
-          <elementProp name="throughput" elementType="Argument">
-            <stringProp name="Argument.name">throughput</stringProp>
-            <stringProp name="Argument.value">${__P(throughput,50000)}</stringProp>
+          <elementProp name="write_throughput" elementType="Argument">
+            <stringProp name="Argument.name">write_throughput</stringProp>
+            <stringProp name="Argument.value">${__P(write_throughput,50000)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">写入吞吐量/min, default: 50000</stringProp>
           </elementProp>
           <elementProp name="conn_pool_size" elementType="Argument">
             <stringProp name="Argument.name">conn_pool_size</stringProp>
             <stringProp name="Argument.value">${__P(conn_pool_size,20)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">线程池大小, default: 20</stringProp>
+          </elementProp>
+          <elementProp name="device_count_per_thread" elementType="Argument">
+            <stringProp name="Argument.name">device_count_per_thread</stringProp>
+            <stringProp name="Argument.value">${__P(device_count_per_thread,50)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">每个线程模拟设备数量, default: 20</stringProp>
+          </elementProp>
+          <elementProp name="csv_sample_data" elementType="Argument">
+            <stringProp name="Argument.name">csv_sample_data</stringProp>
+            <stringProp name="Argument.value">${__P(csv_sample_data,C:\\Users\\hikari\\Desktop\\data.csv)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">插入样本数据文件, default: C:\\Users\\hikari\\Desktop\\data.csv</stringProp>
+          </elementProp>
+          <elementProp name="data_ts_step" elementType="Argument">
+            <stringProp name="Argument.name">data_ts_step</stringProp>
+            <stringProp name="Argument.value">${__P(data_ts_step,1000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">生成数据时间戳间隔ms, default: 1000</stringProp>
           </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC Connection config] 创建数据库连接池" enabled="true">
+      <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
         <stringProp name="dataSource">default_pool</stringProp>
         <stringProp name="poolMax">${conn_pool_size}</stringProp>
         <stringProp name="timeout">10000</stringProp>
@@ -76,7 +90,7 @@
         <stringProp name="connectionProperties"></stringProp>
       </JDBCDataSource>
       <hashTree/>
-      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="[setUp] 创建数据库和表" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建数据库" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -88,22 +102,9 @@
         <stringProp name="ThreadGroup.duration"></stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
-      </SetupThreadGroup>
+      </ThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建时序库" enabled="false">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE DATABASE ${ts_db};</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS] 创建时序库" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建时序库: ${ts_db}" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TS DATABASE ${ts_db};</stringProp>
@@ -116,7 +117,22 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS] 创建模板表" enabled="true">
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建模板表" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建模板表: ${ts_db}.t_electmeter" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${ts_db}.t_electmeter (
@@ -166,9 +182,8 @@
   powerr varchar(32) NOT NULL,
   powerl varchar(32) NOT NULL,
   allrenergy1 varchar(32) NOT NULL,
-  allrenergy2 varchar(32) NOT NULL,
-  machine_code varchar(64) NOT NULL
-) ATTRIBUTES (device int);</stringProp>
+  allrenergy2 varchar(32) NOT NULL
+) ATTRIBUTES (machine_code varchar(64));</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
@@ -178,24 +193,38 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="创建设备表" enabled="true">
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建表" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程变量初始化" enabled="true">
+          <stringProp name="scriptLanguage">java</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">vars.putObject(&quot;counter&quot;, 1)</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
-          <stringProp name="LoopController.loops">${device_count}</stringProp>
+          <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
         </LoopController>
         <hashTree>
-          <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="device_no" enabled="true">
-            <stringProp name="CounterConfig.start">1</stringProp>
-            <stringProp name="CounterConfig.end">${device_count}</stringProp>
-            <stringProp name="CounterConfig.incr">1</stringProp>
-            <stringProp name="CounterConfig.name">device_no</stringProp>
-            <stringProp name="CounterConfig.format"></stringProp>
-            <boolProp name="CounterConfig.per_user">false</boolProp>
-          </CounterConfig>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]创建设备表" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]创建设备表${__threadNum}_${counter}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">CREATE TABLE ${ts_db}.electmeter_${device_no} USING ${ts_db}.t_electmeter (device) ATTRIBUTES (${device_no});</stringProp>
+            <stringProp name="query">CREATE TABLE ${ts_db}.electmeter_${__threadNum}_${counter} USING ${ts_db}.t_electmeter (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;);</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -205,161 +234,23 @@
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建设备表" enabled="false">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">CREATE TABLE ${ts_db}.electmeter_${device_no} (
-  ts timestamp NOT NULL,
-  elect_name varchar(63) NOT NULL,
-  vol_a varchar(32) NOT NULL,
-  cur_a varchar(32) NOT NULL,
-  powerf_a varchar(32) NOT NULL,
-  allenergy_a varchar(32) NOT NULL,
-  pallenergy_a varchar(32) NOT NULL,
-  rallenergy_a varchar(32) NOT NULL,
-  allrenergy1_a varchar(32) NOT NULL,
-  allrenergy2_a varchar(32) NOT NULL,
-  powera_a varchar(32) NOT NULL,
-  powerr_a varchar(32) NOT NULL,
-  powerl_a varchar(32) NOT NULL,
-  vol_b varchar(32) NOT NULL,
-  cur_b varchar(32) NOT NULL,
-  powerf_b varchar(32) NOT NULL,
-  allenergy_b varchar(32) NOT NULL,
-  pallenergy_b varchar(32) NOT NULL,
-  rallenergy_b varchar(32) NOT NULL,
-  allrenergy1_b varchar(32) NOT NULL,
-  allrenergy2_b varchar(32) NOT NULL,
-  powera_b varchar(32) NOT NULL,
-  powerr_b varchar(32) NOT NULL,
-  powerl_b varchar(32) NOT NULL,
-  vol_c varchar(32) NOT NULL,
-  cur_c varchar(32) NOT NULL,
-  powerf_c varchar(32) NOT NULL,
-  allenergy_c varchar(32) NOT NULL,
-  pallenergy_c varchar(32) NOT NULL,
-  rallenergy_c varchar(32) NOT NULL,
-  allrenergy1_c varchar(32) NOT NULL,
-  allrenergy2_c varchar(32) NOT NULL,
-  powera_c varchar(32) NOT NULL,
-  powerr_c varchar(32) NOT NULL,
-  powerl_c varchar(32) NOT NULL,
-  vol_ab varchar(32) NOT NULL,
-  vol_bc varchar(32) NOT NULL,
-  vol_ca varchar(32) NOT NULL,
-  infre varchar(32) NOT NULL,
-  powerf varchar(32) NOT NULL,
-  allpower varchar(32) NOT NULL,
-  pallpower varchar(32) NOT NULL,
-  rallpower varchar(32) NOT NULL,
-  powerr varchar(32) NOT NULL,
-  powerl varchar(32) NOT NULL,
-  allrenergy1 varchar(32) NOT NULL,
-  allrenergy2 varchar(32) NOT NULL,
-  machine_code varchar(64) NOT NULL
-);</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout"></stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-        </hashTree>
-      </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare Write] 执行数据写入" enabled="false">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">${device_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"></stringProp>
-        <stringProp name="ThreadGroup.delay"></stringProp>
-        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
-      </ThreadGroup>
-      <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="全局对象初始化" enabled="true">
-          <stringProp name="scriptLanguage">java</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.text.SimpleDateFormat;
-vars.putObject(&quot;dateFormater&quot;, new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;));</stringProp>
-        </JSR223Sampler>
-        <hashTree/>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="数据加载" enabled="true">
-          <stringProp name="scriptLanguage">java</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.sql.*;
-import java.io.*;
-import org.apache.jmeter.protocol.jdbc.config.DataSourceElement;
-
-Connection conn = DataSourceElement.getConnection(&quot;default_pool&quot;);
-PreparedStatement preparedStmts = conn.prepareStatement(&quot;insert into &quot; + vars.get(&quot;ts_db&quot;) + &quot;.electmeter_&quot; + ${__threadNum} + &quot; values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)&quot;);
-BufferedReader bufferReader = new BufferedReader(new FileReader(vars.get(&quot;csv_data_file&quot;)));
-vars.putObject(&quot;preparedStmts_&quot; + ${__threadNum}, preparedStmts);
-vars.putObject(&quot;bufferReader_&quot; + ${__threadNum}, bufferReader);
-vars.putObject(&quot;read_next&quot;, true);</stringProp>
-        </JSR223Sampler>
-        <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${throughput}</stringProp>
-          <intProp name="calcMode">0</intProp>
-        </ConstantThroughputTimer>
-        <hashTree/>
-        <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="循环写入" enabled="true">
-          <stringProp name="WhileController.condition">${read_next}</stringProp>
-        </WhileController>
-        <hashTree>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="写入下一行" enabled="true">
-            <stringProp name="scriptLanguage">java</stringProp>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程变量处理" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">import java.sql.*;
-import java.io.*;
-
-PreparedStatement preparedStmts = vars.getObject(&quot;preparedStmts_&quot; + ${__threadNum});
-BufferedReader bufferReader = vars.getObject(&quot;bufferReader_&quot; + ${__threadNum});
-String line = bufferReader.readLine();
-if(void != line) {
-  	String[] items = line.split(&quot;,&quot;);
-  	// 第一列是timestamp类型
-  	preparedStmts.setTimestamp(1, new Timestamp(vars.getObject(&quot;dateFormater&quot;).parse(items[0]).getTime()));
-  	// 其余列为varchar类型
-  	for(int colIndex = 1; colIndex &lt; items.length; ++colIndex) {
-  		preparedStmts.setString(colIndex + 1, items[colIndex]);
-  	}
-  	log.info(preparedStmts.toString());
-  	if (1 != preparedStmts.executeUpdate()) {
-  		log.error(&quot;Insert error: &quot; + line);
-  	}
-} else {
-	vars.putObject(&quot;read_next&quot;, false);
-}
-</stringProp>
+            <stringProp name="script">vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)</stringProp>
           </JSR223Sampler>
           <hashTree/>
-          <ResultAction guiclass="ResultActionGui" testclass="ResultAction" testname="[DEBUG] 断言执行结果" enabled="false">
-            <intProp name="OnError.action">2</intProp>
-          </ResultAction>
-          <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">${device_count}</stringProp>
+        <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration"></stringProp>
@@ -367,74 +258,119 @@ if(void != line) {
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="全局对象初始化" enabled="true">
-          <stringProp name="scriptLanguage">java</stringProp>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.text.SimpleDateFormat;
-vars.putObject(&quot;dateFormater&quot;, new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;));</stringProp>
-        </JSR223Sampler>
-        <hashTree/>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="数据加载" enabled="true">
-          <stringProp name="scriptLanguage">java</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.sql.*;
-import java.io.*;
-import org.apache.jmeter.protocol.jdbc.config.DataSourceElement;
+          <stringProp name="script">import java.sql.*
+import java.io.*
+import org.apache.jmeter.protocol.jdbc.config.DataSourceElement
+import java.text.SimpleDateFormat
 
-Connection conn = DataSourceElement.getConnection(&quot;default_pool&quot;);
-Statement stmt = conn.createStatement();
-BufferedReader bufferReader = new BufferedReader(new FileReader(vars.get(&quot;csv_data_file&quot;)));
-vars.putObject(&quot;stmt_&quot; + ${__threadNum}, stmt);
-vars.putObject(&quot;bufferReader_&quot; + ${__threadNum}, bufferReader);
-vars.putObject(&quot;read_next&quot;, true);</stringProp>
+vars.putObject(&quot;dateFormater&quot;, new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;))
+vars.putObject(&quot;stmt&quot;, DataSourceElement.getConnection(&quot;default_pool&quot;).createStatement())
+vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
+vars.putObject(&quot;counter&quot;, 1)
+vars.putObject(&quot;sample_data&quot;, new File(vars.get(&quot;csv_sample_data&quot;)).readLines())</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${throughput}</stringProp>
+          <stringProp name="throughput">${write_throughput}</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="循环写入" enabled="true">
-          <stringProp name="WhileController.condition">${read_next}</stringProp>
-        </WhileController>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
+        </LoopController>
         <hashTree>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="写入下一行" enabled="true">
-            <stringProp name="scriptLanguage">java</stringProp>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="写入表: ${ts_db}.electmeter_${__threadNum}_${counter}" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">import java.sql.*;
-import java.io.*;
+            <stringProp name="script">import java.sql.*
+import java.io.*
+def next_ts = vars.getObject(&quot;last_ts&quot;)
+def builder = new StringBuilder()
 
-Statement stmt = vars.getObject(&quot;stmt_&quot; + ${__threadNum});
-BufferedReader bufferReader = vars.getObject(&quot;bufferReader_&quot; + ${__threadNum});
-String line = bufferReader.readLine();
+builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.getObject(&quot;counter&quot;)} values &quot;)
+for(String line in vars.getObject(&quot;sample_data&quot;)) {
+  builder.append(&quot;(${next_ts},${line}),&quot;)
+  next_ts += Integer.parseInt(vars.get(&quot;data_ts_step&quot;))
+}
+builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+log.info(builder.toString())
 try{
-	if(void != line) {
-	  	if (1 != stmt.executeUpdate(&quot;insert into &quot; + vars.get(&quot;ts_db&quot;) + &quot;.electmeter_&quot; + ${__threadNum} + &quot; values (&quot; + line + &quot;)&quot;)) {
-	  		log.error(&quot;Insert error: &quot; + line);
-	  	}
-	} else {
-		vars.putObject(&quot;read_next&quot;, false);
-	}
+  def execCode = vars.getObject(&quot;stmt&quot;).executeUpdate(builder.toString())
+  if (1 &gt; execCode) {
+     SampleResult.setResponseData(&quot;Insert error: ${execCode}&quot;)
+     SampleResult.setSuccessful(false)
+  }
 } catch (Exception ex) {
-    	log.error(ex.getMessage());
-	vars.putObject(&quot;read_next&quot;, false);
+     SampleResult.setResponseData(&quot;Insert error: ${ex.getMessage()}&quot;)
+     SampleResult.setSuccessful(false)
 }
-</stringProp>
+vars.putObject(&quot;last_ts&quot;, next_ts)
+vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)
+SampleResult.setResponseData(&quot;Execute SQL: ${builder.toString()}&quot;)
+SampleResult.setSuccessful(true)</stringProp>
           </JSR223Sampler>
-          <hashTree/>
-          <ResultAction guiclass="ResultActionGui" testclass="ResultAction" testname="[DEBUG] 断言执行结果" enabled="false">
-            <intProp name="OnError.action">2</intProp>
-          </ResultAction>
           <hashTree/>
         </hashTree>
       </hashTree>
-      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除数据库和表" enabled="false">
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除子表" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </PostThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程变量初始化" enabled="true">
+          <stringProp name="scriptLanguage">java</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">vars.putObject(&quot;counter&quot;, 1)</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
+        </LoopController>
+        <hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="删除子表:${ts_db}.electmeter_${__threadNum}_${counter}" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">DROP TABLE ${ts_db}.electmeter_${__threadNum}_${counter};</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree/>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程变量处理" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除模板表" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -448,48 +384,7 @@ try{
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </PostThreadGroup>
       <hashTree>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="删除设备表" enabled="true">
-          <boolProp name="LoopController.continue_forever">true</boolProp>
-          <stringProp name="LoopController.loops">${device_count}</stringProp>
-        </LoopController>
-        <hashTree>
-          <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="device_no" enabled="true">
-            <stringProp name="CounterConfig.start">1</stringProp>
-            <stringProp name="CounterConfig.end">${device_count}</stringProp>
-            <stringProp name="CounterConfig.incr">1</stringProp>
-            <stringProp name="CounterConfig.name">device_no</stringProp>
-            <stringProp name="CounterConfig.format"></stringProp>
-            <boolProp name="CounterConfig.per_user">false</boolProp>
-          </CounterConfig>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]删除设备表" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">DROP TABLE ${ts_db}.electmeter_${device_no};</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout"></stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="删除设备表" enabled="false">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">DROP TABLE ${ts_db}.electmeter_${device_no};</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout"></stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-        </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]删除模板表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="删除模板表:${ts_db}.t_electmeter" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">DROP TABLE ${ts_db}.t_electmeter CASCADE;</stringProp>
@@ -502,20 +397,22 @@ try{
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]删除时序库" enabled="true">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">DROP DATABASE ${ts_db};</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="删除时序库" enabled="false">
+      </hashTree>
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除数据库" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </PostThreadGroup>
+      <hashTree>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="删除时序库: ${ts_db}" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">DROP DATABASE ${ts_db};</stringProp>
