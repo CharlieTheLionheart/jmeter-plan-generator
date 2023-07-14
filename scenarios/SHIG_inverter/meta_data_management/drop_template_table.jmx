@@ -310,7 +310,7 @@ def builder = new StringBuilder()
 builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.getObject(&quot;counter&quot;)} values &quot;)
 for(String line in vars.getObject(&quot;sample_data&quot;)) {
   builder.append(&quot;(${next_ts},${line}),&quot;)
-  next_ts += Integer.parseInt(vars.get(&quot;data_ts_step&quot;))
+  next_ts += Long.parseLong(vars.get(&quot;data_ts_step&quot;))
 }
 builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
 log.info(builder.toString())
