@@ -2,14 +2,11 @@
 
 ### 1. 文件列表
 
-1. create_database.jmx: 创建数据库
-2. create_template_table.jmx: 创建模板表
-3. create_ts_tables.jmx: 创建模板表子表
-4. drop_ts_tables.jmx: 删除模板表子表
-5. drop_template_table.jmx: 删除模板表
-6. drop_database.jmx: 删除数据库
+1. data_write.jmx: 数据写入
 
 ### 2. 通用参数定义
+
+> CSV数据
 
 | 参数名称                    | 默认值                                         | 描述             |
 |-------------------------|---------------------------------------------|----------------|
@@ -20,10 +17,17 @@
 | write_throughput        | 50000                                       | 	写入吞吐量/min     |
 | conn_pool_size          | 20                                          | 	线程池大小         |
 | device_count_per_thread | 50                                          | 	每个线程模拟设备数量    |
-| csv_sample_data         | C:\\Users\\hikari\\Desktop\\data.csv        | 	插入样本数据文件      |
+| csv_sample_data         | test_plans/data.csv                         | 	插入样本数据文件      |
 | data_ts_step            | 1000                                        | 	生成数据时间戳间隔ms   |
 
+> 参数数据
+
+| 参数名称        | 默认值        | 描述         |
+|-------------|------------|------------|
+| config_file | config.csv | 读入配置的CSV文件 |
+
 ### 3. 示例
+
 ```shell
-    [/opt/path/bin]/jmeter -n -t [file].jmx -l result.csv -J [Option:name]=[Option:value] ...
+    [/opt/path/bin]/jmeter -n -t data_write.jmx -l data_write-result.csv -J config_file=test_plans/config.csv
 ```

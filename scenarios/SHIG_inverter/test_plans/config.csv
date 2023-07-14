@@ -1,0 +1,2 @@
+db_url|db_user|db_passwd|ts_db|write_throughput|conn_pool_size|device_count_per_thread|csv_sample_data|data_ts_step
+jdbc:postgresql://127.0.0.1:26257/defaultdb|root|123456|db_shig|50000|20|50|/data.csv|1000

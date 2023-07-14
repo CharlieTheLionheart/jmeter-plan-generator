@@ -12,7 +12,7 @@
       <stringProp name="TestPlan.user_define_classpath"></stringProp>
     </TestPlan>
     <hashTree>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[Variables] 读入配置" enabled="true">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[Variables] 读入配置" enabled="false">
         <collectionProp name="Arguments.arguments">
           <elementProp name="db_url" elementType="Argument">
             <stringProp name="Argument.name">db_url</stringProp>
@@ -70,6 +70,18 @@
           </elementProp>
         </collectionProp>
       </Arguments>
+      <hashTree/>
+      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="[Variable] 从csv读入配置" enabled="true">
+        <stringProp name="delimiter">|</stringProp>
+        <stringProp name="fileEncoding">UTF-8</stringProp>
+        <stringProp name="filename">${__P(config_file, config.csv)}</stringProp>
+        <boolProp name="ignoreFirstLine">true</boolProp>
+        <boolProp name="quotedData">true</boolProp>
+        <boolProp name="recycle">true</boolProp>
+        <stringProp name="shareMode">shareMode.all</stringProp>
+        <boolProp name="stopThread">false</boolProp>
+        <stringProp name="variableNames">db_url,db_user,db_passwd,ts_db,write_throughput,conn_pool_size,device_count_per_thread,csv_sample_data,data_ts_step</stringProp>
+      </CSVDataSet>
       <hashTree/>
       <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
         <stringProp name="dataSource">default_pool</stringProp>
