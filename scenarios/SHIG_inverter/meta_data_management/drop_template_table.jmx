@@ -54,7 +54,7 @@
             <stringProp name="Argument.name">device_count_per_thread</stringProp>
             <stringProp name="Argument.value">${__P(device_count_per_thread,50)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">每个线程模拟设备数量, default: 20</stringProp>
+            <stringProp name="Argument.desc">每个线程模拟设备数量, default: 50</stringProp>
           </elementProp>
           <elementProp name="csv_sample_data" elementType="Argument">
             <stringProp name="Argument.name">csv_sample_data</stringProp>
