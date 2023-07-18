@@ -12,7 +12,7 @@
       <stringProp name="TestPlan.user_define_classpath"></stringProp>
     </TestPlan>
     <hashTree>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[Variables] 读入配置" enabled="false">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[ConfigDebug] 预定义配置" enabled="false">
         <collectionProp name="Arguments.arguments">
           <elementProp name="db_url" elementType="Argument">
             <stringProp name="Argument.name">db_url</stringProp>
@@ -68,10 +68,57 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">生成数据时间戳间隔ms, default: 1000</stringProp>
           </elementProp>
+          <elementProp name="write_limit_per_thread" elementType="Argument">
+            <stringProp name="Argument.name">write_limit_per_thread</stringProp>
+            <stringProp name="Argument.value">${__P(write_limit_per_thread,10000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">每个线程执行的数据写入次数, default: 10000</stringProp>
+          </elementProp>
+          <elementProp name="write_duration" elementType="Argument">
+            <stringProp name="Argument.name">write_duration</stringProp>
+            <stringProp name="Argument.value">${__P(write_duration,-1)}</stringProp>
+            <stringProp name="Argument.desc">写入持续时间,ISO8601时间格式-1表示不限制,default: -1</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="write_stop_at" elementType="Argument">
+            <stringProp name="Argument.name">write_stop_at</stringProp>
+            <stringProp name="Argument.value">${__P(write_stop_at,-1)}</stringProp>
+            <stringProp name="Argument.desc">写入终止时间,时间格式参照&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;, -1表示不限制,default: -1</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="[Variable] 从csv读入配置" enabled="true">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[ConfigPro] 读入配置" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="db_url" elementType="Argument">
+            <stringProp name="Argument.name">db_url</stringProp>
+            <stringProp name="Argument.value">${__P(db_url,jdbc:postgresql://127.0.0.1:26257/defaultdb)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">数据库连接jdbc url, default: jdbc:postgresql://127.0.0.1:26257/defaultdb</stringProp>
+          </elementProp>
+          <elementProp name="db_user" elementType="Argument">
+            <stringProp name="Argument.name">db_user</stringProp>
+            <stringProp name="Argument.value">${__P(db_user,root)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">数据库连接用户, default: root</stringProp>
+          </elementProp>
+          <elementProp name="db_passwd" elementType="Argument">
+            <stringProp name="Argument.name">db_passwd</stringProp>
+            <stringProp name="Argument.value">${__P(db_passwd,)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">数据库连接密码, default: 123456</stringProp>
+          </elementProp>
+          <elementProp name="conn_pool_size" elementType="Argument">
+            <stringProp name="Argument.name">conn_pool_size</stringProp>
+            <stringProp name="Argument.value">${__P(conn_pool_size,20)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">线程池大小, default: 20</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
+      <hashTree/>
+      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="[ConfigPro] 从csv读入配置" enabled="true">
         <stringProp name="delimiter">|</stringProp>
         <stringProp name="fileEncoding">UTF-8</stringProp>
         <stringProp name="filename">${__P(config_file, config.csv)}</stringProp>
@@ -80,7 +127,7 @@
         <boolProp name="recycle">true</boolProp>
         <stringProp name="shareMode">shareMode.all</stringProp>
         <boolProp name="stopThread">false</boolProp>
-        <stringProp name="variableNames">db_url,db_user,db_passwd,ts_db,write_throughput,conn_pool_size,device_count_per_thread,csv_sample_data,data_ts_step</stringProp>
+        <stringProp name="variableNames">ts_db,write_throughput,device_count_per_thread,csv_sample_data,data_ts_step,write_limit_per_thread,write_durition,write_stop_at</stringProp>
       </CSVDataSet>
       <hashTree/>
       <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
@@ -212,7 +259,7 @@
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration"></stringProp>
@@ -220,12 +267,13 @@
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程变量初始化" enabled="true">
-          <stringProp name="scriptLanguage">java</stringProp>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="初始化循环变量" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">vars.putObject(&quot;counter&quot;, 1)</stringProp>
+          <stringProp name="script">vars.putObject(&quot;counter&quot;, 1)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
@@ -246,12 +294,13 @@
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程变量处理" enabled="true">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="循环变量处理" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)</stringProp>
+            <stringProp name="script">vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)
+SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
         </hashTree>
@@ -279,12 +328,39 @@
 import java.io.*
 import org.apache.jmeter.protocol.jdbc.config.DataSourceElement
 import java.text.SimpleDateFormat
+import java.time.Duration
 
-vars.putObject(&quot;dateFormater&quot;, new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;))
+def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
+
+vars.putObject(&quot;date_formatter&quot;, formatter)
 vars.putObject(&quot;stmt&quot;, DataSourceElement.getConnection(&quot;default_pool&quot;).createStatement())
+vars.putObject(&quot;sample_data&quot;, new File(vars.get(&quot;csv_sample_data&quot;)).readLines())
+vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
 vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-vars.putObject(&quot;counter&quot;, 1)
-vars.putObject(&quot;sample_data&quot;, new File(vars.get(&quot;csv_sample_data&quot;)).readLines())</stringProp>
+
+if(null == vars.get(&quot;write_stop_at&quot;) || vars.get(&quot;write_stop_at&quot;).equals(&quot;-1&quot;)) {
+	vars.putObject(&quot;write_stop_at_value&quot;, null)
+} else {
+	try {
+		vars.putObject(&quot;write_stop_at_value&quot;, formatter.parse(vars.get(&quot;write_stop_at&quot;)))
+	} catch(Exception ex) {
+		log.error(ex.getMessage())
+		vars.putObject(&quot;write_stop_at_value&quot;, null)
+	}
+}
+
+if(null == vars.get(&quot;write_duration&quot;) || vars.get(&quot;write_duration&quot;).equals(&quot;-1&quot;)) {
+	vars.putObject(&quot;write_duration_value&quot;, null)
+} else {
+	try {
+		vars.putObject(&quot;write_duration_value&quot;, Duration.parse(vars.get(&quot;write_duration&quot;)).toMillis())
+	} catch(Exception ex) {
+		log.error(ex.getMessage())
+		vars.putObject(&quot;write_duration_value&quot;, null)
+	}
+	
+}
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
@@ -292,44 +368,94 @@ vars.putObject(&quot;sample_data&quot;, new File(vars.get(&quot;csv_sample_data&
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="写入倍率" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
-          <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
+          <stringProp name="LoopController.loops">${write_limit_per_thread}</stringProp>
         </LoopController>
         <hashTree>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="写入表: ${ts_db}.electmeter_${__threadNum}_${counter}" enabled="true">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="初始化循环变量" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">import java.sql.*
-import java.io.*
-def next_ts = vars.getObject(&quot;last_ts&quot;)
-def builder = new StringBuilder()
+            <stringProp name="script">vars.putObject(&quot;counter&quot;, 1)
+SampleResult.setIgnore()</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
+            <boolProp name="LoopController.continue_forever">true</boolProp>
+            <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
+          </LoopController>
+          <hashTree>
+            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="终止判定" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">SampleResult.setIgnore()
 
+def stopAt = vars.getObject(&quot;write_stop_at_value&quot;)
+if(null != stopAt) {
+	if(stopAt.getTime() &lt;= System.currentTimeMillis()) {
+		SampleResult.setStopThread(true)
+		return &quot;Write after stop time.&quot;
+	}
+}
+
+def writeDuration = vars.getObject(&quot;write_duration_value&quot;)
+if (null != writeDuration) {
+	def writeStartAt = vars.getObject(&quot;write_start_at&quot;)
+	if (System.currentTimeMillis() - writeStartAt &gt;= writeDuration) {
+		SampleResult.setStopThread(true)
+		return &quot;Write timeout.&quot;
+	}
+}</stringProp>
+            </JSR223Sampler>
+            <hashTree/>
+            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="写入表: ${ts_db}.electmeter_${__threadNum}_${counter}" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">import java.sql.*
+import java.io.*
+
+def nextTs = vars.getObject(&quot;last_ts&quot;)
+def builder = new StringBuilder()
 builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.getObject(&quot;counter&quot;)} values &quot;)
 for(String line in vars.getObject(&quot;sample_data&quot;)) {
-  builder.append(&quot;(${next_ts},${line}),&quot;)
-  next_ts += Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  builder.append(&quot;(${nextTs},${line}),&quot;)
+  nextTs += Long.parseLong(vars.get(&quot;data_ts_step&quot;))
 }
 builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-log.info(builder.toString())
+
 try{
   def execCode = vars.getObject(&quot;stmt&quot;).executeUpdate(builder.toString())
   if (1 &gt; execCode) {
      SampleResult.setResponseData(&quot;Insert error: ${execCode}&quot;)
      SampleResult.setSuccessful(false)
+     SampleResult.setIgnore()
   }
 } catch (Exception ex) {
      SampleResult.setResponseData(&quot;Insert error: ${ex.getMessage()}&quot;)
      SampleResult.setSuccessful(false)
+     SampleResult.setIgnore()
 }
-vars.putObject(&quot;last_ts&quot;, next_ts)
-vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)
-SampleResult.setResponseData(&quot;Execute SQL: ${builder.toString()}&quot;)
-SampleResult.setSuccessful(true)</stringProp>
-          </JSR223Sampler>
-          <hashTree/>
+vars.putObject(&quot;last_ts&quot;, nextTs)
+SampleResult.setSuccessful(true)
+</stringProp>
+            </JSR223Sampler>
+            <hashTree/>
+            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="循环变量处理" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)
+SampleResult.setIgnore()</stringProp>
+            </JSR223Sampler>
+            <hashTree/>
+          </hashTree>
         </hashTree>
       </hashTree>
       <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除子表" enabled="false">
@@ -346,12 +472,13 @@ SampleResult.setSuccessful(true)</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </PostThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程变量初始化" enabled="true">
-          <stringProp name="scriptLanguage">java</stringProp>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="初始化循环变量" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">vars.putObject(&quot;counter&quot;, 1)</stringProp>
+          <stringProp name="script">vars.putObject(&quot;counter&quot;, 1)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
@@ -372,12 +499,13 @@ SampleResult.setSuccessful(true)</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程变量处理" enabled="true">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="循环变量处理" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)</stringProp>
+            <stringProp name="script">vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)
+SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
         </hashTree>
