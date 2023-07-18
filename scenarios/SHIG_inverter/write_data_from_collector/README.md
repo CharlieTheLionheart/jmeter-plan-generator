@@ -18,6 +18,7 @@
 | write_limit_per_thread  | 10000               | 每个线程执行的数据写入次数                                    |
 | write_duration          | -1                  | 写入持续时间,ISO8601 时间格式-1 表示不限制                      |
 | write_stop_at           | -1                  | 写入终止时间,时间格式参照"yyyy-MM-dd HH:mm:ss.SSS", -1 表示不限制 |
+| device_no_start         | 1                   | 起始设备编号,用于分布客户端创建                                 |
 
 > 参数数据
 

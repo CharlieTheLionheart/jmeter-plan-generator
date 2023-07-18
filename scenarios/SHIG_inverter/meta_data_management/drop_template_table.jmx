@@ -86,6 +86,12 @@
             <stringProp name="Argument.desc">写入终止时间,时间格式参照&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;, -1表示不限制,default: -1</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="device_no_start" elementType="Argument">
+            <stringProp name="Argument.name">device_no_start</stringProp>
+            <stringProp name="Argument.value">${__P(device_no_start,1)}</stringProp>
+            <stringProp name="Argument.desc">起始设备编号,用于分布客户端创建,default: 1</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -127,7 +133,7 @@
         <boolProp name="recycle">true</boolProp>
         <stringProp name="shareMode">shareMode.all</stringProp>
         <boolProp name="stopThread">false</boolProp>
-        <stringProp name="variableNames">ts_db,write_throughput,device_count_per_thread,csv_sample_data,data_ts_step,write_limit_per_thread,write_durition,write_stop_at</stringProp>
+        <stringProp name="variableNames">ts_db,write_throughput,device_count_per_thread,csv_sample_data,data_ts_step,write_limit_per_thread,write_durition,write_stop_at,device_no_start</stringProp>
       </CSVDataSet>
       <hashTree/>
       <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
@@ -272,7 +278,7 @@
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">vars.putObject(&quot;counter&quot;, 1)
+          <stringProp name="script">vars.putObject(&quot;counter&quot;, Integer.parseInt(vars.get(&quot;device_no_start&quot;)))
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
@@ -378,7 +384,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">vars.putObject(&quot;counter&quot;, 1)
+            <stringProp name="script">vars.putObject(&quot;counter&quot;, Integer.parseInt(vars.get(&quot;device_no_start&quot;)))
 SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
@@ -477,7 +483,7 @@ SampleResult.setIgnore()</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">vars.putObject(&quot;counter&quot;, 1)
+          <stringProp name="script">vars.putObject(&quot;counter&quot;, Integer.parseInt(vars.get(&quot;device_no_start&quot;)))
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
