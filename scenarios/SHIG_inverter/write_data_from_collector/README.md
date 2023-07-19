@@ -27,7 +27,6 @@
 | config_file    | config.csv                                  | 读入配置的 CSV 文件   |
 | db_url         | jdbc:postgresql://127.0.0.1:26257/defaultdb | 数据库连接 jdbc url |
 | db_user        | root                                        | 数据库连接用户        |
-| db_passwd      |                                             | 数据库连接密码        |
 | conn_pool_size | 20                                          | 线程池大小          |
 
 ### 3. 示例

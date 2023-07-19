@@ -26,12 +26,6 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">数据库连接用户, default: root</stringProp>
           </elementProp>
-          <elementProp name="db_passwd" elementType="Argument">
-            <stringProp name="Argument.name">db_passwd</stringProp>
-            <stringProp name="Argument.value">${__P(db_passwd,123456)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">数据库连接密码, default: 123456</stringProp>
-          </elementProp>
           <elementProp name="ts_db" elementType="Argument">
             <stringProp name="Argument.name">ts_db</stringProp>
             <stringProp name="Argument.value">${__P(ts_db,db_shig)}</stringProp>
@@ -109,12 +103,6 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">数据库连接用户, default: root</stringProp>
           </elementProp>
-          <elementProp name="db_passwd" elementType="Argument">
-            <stringProp name="Argument.name">db_passwd</stringProp>
-            <stringProp name="Argument.value">${__P(db_passwd,)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">数据库连接密码, default: 123456</stringProp>
-          </elementProp>
           <elementProp name="conn_pool_size" elementType="Argument">
             <stringProp name="Argument.name">conn_pool_size</stringProp>
             <stringProp name="Argument.value">${__P(conn_pool_size,20)}</stringProp>
@@ -151,7 +139,7 @@
         <stringProp name="dbUrl">${db_url}</stringProp>
         <stringProp name="driver">org.postgresql.Driver</stringProp>
         <stringProp name="username">${db_user}</stringProp>
-        <stringProp name="password">${db_passwd}</stringProp>
+        <stringProp name="password"></stringProp>
         <stringProp name="connectionProperties"></stringProp>
       </JDBCDataSource>
       <hashTree/>
