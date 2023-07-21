@@ -428,6 +428,9 @@ try{
   if (1 &gt; execCode) {
      SampleResult.setResponseData(&quot;Insert error: ${execCode}&quot;)
      SampleResult.setSuccessful(false)
+  } else {
+     SampleResult.setResponseData(&quot;Insert success.&quot;)
+     SampleResult.setSuccessful(true)
   }
 } catch (Exception ex) {
      SampleResult.setResponseData(&quot;Insert error: ${ex.getMessage()}&quot;)
