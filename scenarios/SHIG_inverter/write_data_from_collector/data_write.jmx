@@ -428,15 +428,15 @@ try{
   if (1 &gt; execCode) {
      SampleResult.setResponseData(&quot;Insert error: ${execCode}&quot;)
      SampleResult.setSuccessful(false)
-  } else {
-     SampleResult.setResponseData(&quot;Insert success.&quot;)
-  	 SampleResult.setSuccessful(true)
-   }
+     return
+  }
 } catch (Exception ex) {
      SampleResult.setResponseData(&quot;Insert error: ${ex.getMessage()}&quot;)
      SampleResult.setSuccessful(false)
+     return
 }
 vars.putObject(&quot;last_ts&quot;, nextTs)
+SampleResult.setSuccessful(true)
 </stringProp>
             </JSR223Sampler>
             <hashTree/>
