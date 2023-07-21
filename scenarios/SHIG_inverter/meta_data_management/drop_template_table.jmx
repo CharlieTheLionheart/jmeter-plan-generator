@@ -423,19 +423,15 @@ for(String line in vars.getObject(&quot;sample_data&quot;)) {
 }
 builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
 
-def result = true
-def resMsg = &quot;&quot;
-
 try{
-  resMsg = &quot;Insert result: ${vars.getObject(&quot;stmt&quot;).executeUpdate(builder.toString())}&quot;
+  SampleResult.setResponseMessage(&quot;Insert result: ${vars.getObject(&quot;stmt&quot;).executeUpdate(builder.toString())}&quot;)
+  SampleResult.setSuccessful(true)
 } catch (Exception ex) {
-  SampleResult.setResponseData(&quot;Insert error: ${ex.getMessage()}&quot;)
-  result = false
+  SampleResult.setResponseMessage(&quot;Insert error: ${ex.getMessage()}&quot;)
+  SampleResult.setSuccessful(false)
 } finally {
   vars.putObject(&quot;last_ts&quot;, nextTs)
 }
-SampleResult.setResponseData(resMsg)
-SampleResult.setSuccessful(result)
 </stringProp>
             </JSR223Sampler>
             <hashTree/>
