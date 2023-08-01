@@ -165,7 +165,7 @@
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
           <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
           <stringProp name="resultSetMaxRows"></stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
@@ -241,7 +241,7 @@
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
           <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
           <stringProp name="resultSetMaxRows"></stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
@@ -283,7 +283,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
             <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="queryTimeout">600</stringProp>
             <stringProp name="resultSetMaxRows"></stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
@@ -327,7 +327,8 @@ import java.time.Duration
 def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
 
 vars.putObject(&quot;date_formatter&quot;, formatter)
-vars.putObject(&quot;stmt&quot;, DataSourceElement.getConnection(&quot;default_pool&quot;).createStatement())
+Statement stmt = DataSourceElement.getConnection(&quot;default_pool&quot;).createStatement()
+stmt.setQueryTimeout(600)
 vars.putObject(&quot;sample_data&quot;, new File(vars.get(&quot;csv_sample_data&quot;)).readLines())
 vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
 vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
@@ -483,7 +484,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
             <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="queryTimeout">600</stringProp>
             <stringProp name="resultSetMaxRows"></stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
@@ -521,7 +522,7 @@ SampleResult.setIgnore()</stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
           <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
           <stringProp name="resultSetMaxRows"></stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
@@ -549,7 +550,7 @@ SampleResult.setIgnore()</stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
           <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
           <stringProp name="resultSetMaxRows"></stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
