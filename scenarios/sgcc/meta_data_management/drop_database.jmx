@@ -398,7 +398,6 @@ for(String line in vars.getObject(&quot;sample_data&quot;)) {
   nextTs += Long.parseLong(vars.get(&quot;data_ts_step&quot;))
 }
 builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-log.error(builder.toString())
 try{
   SampleResult.setResponseMessage(&quot;Insert result: ${vars.getObject(&quot;stmt&quot;).executeUpdate(builder.toString())}&quot;)
   SampleResult.setSuccessful(true)
