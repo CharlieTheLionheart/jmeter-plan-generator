@@ -105,14 +105,26 @@
           </elementProp>
           <elementProp name="conn_pool_size" elementType="Argument">
             <stringProp name="Argument.name">conn_pool_size</stringProp>
-            <stringProp name="Argument.value">${__P(conn_pool_size,20)}</stringProp>
+            <stringProp name="Argument.value">${__P(conn_pool_size,15)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">线程池大小, default: 20</stringProp>
+            <stringProp name="Argument.desc">线程池大小, default: 15</stringProp>
           </elementProp>
           <elementProp name="device_count_per_thread" elementType="Argument">
             <stringProp name="Argument.name">device_count_per_thread</stringProp>
-            <stringProp name="Argument.value">${__P(device_count_per_thread,15)}</stringProp>
-            <stringProp name="Argument.desc">每线程对应表数量,default:15</stringProp>
+            <stringProp name="Argument.value">${__P(device_count_per_thread,20)}</stringProp>
+            <stringProp name="Argument.desc">每线程对应表数量,default:20</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="device_no_start" elementType="Argument">
+            <stringProp name="Argument.name">device_no_start</stringProp>
+            <stringProp name="Argument.value">${__P(device_no_start,1)}</stringProp>
+            <stringProp name="Argument.desc">起始device编号：default:1</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="device_no_end" elementType="Argument">
+            <stringProp name="Argument.name">device_no_end</stringProp>
+            <stringProp name="Argument.value">${__P(device_no_end,20)}</stringProp>
+            <stringProp name="Argument.desc">结束device编号：default:20</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -127,7 +139,7 @@
         <boolProp name="recycle">true</boolProp>
         <stringProp name="shareMode">shareMode.all</stringProp>
         <boolProp name="stopThread">false</boolProp>
-        <stringProp name="variableNames">ts_db,write_throughput,device_count_per_thread,csv_sample_data,data_ts_step,write_limit_per_thread,write_duration,write_stop_at,device_no_start</stringProp>
+        <stringProp name="variableNames">ts_db,write_throughput,device_count_per_thread,csv_sample_data,data_ts_step,write_limit_per_thread,write_duration,write_stop_at,device_no_start,device_no_end</stringProp>
       </CSVDataSet>
       <hashTree/>
       <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
@@ -411,7 +423,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
           </LoopController>
           <hashTree>
-            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="终止判定" enabled="false">
+            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="终止判定" enabled="true">
               <stringProp name="scriptLanguage">groovy</stringProp>
               <stringProp name="parameters"></stringProp>
               <stringProp name="filename"></stringProp>
@@ -452,9 +464,7 @@ for(String line in vars.getObject(&quot;sample_data&quot;)) {
   nextTs += Long.parseLong(vars.get(&quot;data_ts_step&quot;))
 }
 builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-vars.put(&quot;builder&quot;, builder.toString());
 
-/*
 try{
   SampleResult.setResponseMessage(&quot;Insert result: ${vars.getObject(&quot;stmt&quot;).executeUpdate(builder.toString())}&quot;)
   SampleResult.setSuccessful(true)
@@ -463,8 +473,7 @@ try{
   SampleResult.setSuccessful(false)
 } finally {
   vars.putObject(&quot;last_ts&quot;, nextTs)
-}***/
-</stringProp>
+}</stringProp>
             </JSR223Sampler>
             <hashTree/>
             <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="循环变量处理" enabled="true">
@@ -535,8 +544,8 @@ vars.put(&quot;threadNo&quot;, deviceNo);</stringProp>
         </LoopController>
         <hashTree>
           <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
-            <stringProp name="maximumValue">${device_count_per_thread}</stringProp>
-            <stringProp name="minimumValue">1</stringProp>
+            <stringProp name="maximumValue">${device_no_end}</stringProp>
+            <stringProp name="minimumValue">${device_no_start}</stringProp>
             <stringProp name="outputFormat"></stringProp>
             <boolProp name="perThread">false</boolProp>
             <stringProp name="randomSeed"></stringProp>
