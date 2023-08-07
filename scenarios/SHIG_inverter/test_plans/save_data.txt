@@ -1,1 +1,0 @@
-scenarios/SHIG_inverter/write_data_from_collector/data_write.jmx
