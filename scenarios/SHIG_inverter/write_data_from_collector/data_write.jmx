@@ -547,7 +547,7 @@ vars.putObject(&quot;last_ts&quot;, nextTs)
 SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${ts_db}.electmeter_${__threadNum}_${device_num}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${builder}</stringProp>
