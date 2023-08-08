@@ -568,8 +568,8 @@ for(String line in vars.getObject(&quot;sample_data&quot;)) {
   nextTs += Long.parseLong(vars.get(&quot;data_ts_step&quot;))
 }
 builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-vars.put(&quot;builder&quot;, builder.toString());
-
+vars.put(&quot;builder&quot;, builder.toString())
+vars.putObject(&quot;last_ts&quot;, nextTs)
 SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
