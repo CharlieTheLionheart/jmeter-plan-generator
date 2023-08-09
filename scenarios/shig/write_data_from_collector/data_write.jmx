@@ -139,7 +139,7 @@
         <boolProp name="recycle">true</boolProp>
         <stringProp name="shareMode">shareMode.all</stringProp>
         <boolProp name="stopThread">false</boolProp>
-        <stringProp name="variableNames">ts_db,write_throughput,device_count_per_thread,csv_sample_data,data_ts_step,write_limit_per_thread,write_duration,write_stop_at,device_no_start,device_no_end</stringProp>
+        <stringProp name="variableNames">ts_db,write_throughput,device_count_per_thread,csv_sample_data,data_ts_step,write_limit_per_thread,write_duration,write_stop_at</stringProp>
       </CSVDataSet>
       <hashTree/>
       <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
@@ -605,6 +605,7 @@ vars.putObject(&quot;date_formatter&quot;, formatter)
 vars.putObject(&quot;sample_data&quot;, new File(vars.get(&quot;csv_sample_data&quot;)).readLines())
 vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
 vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
+vars.putObject(&quot;device_no_end&quot;, Integer.parseInt(vars.get(&quot;device_no_start&quot;)) + Integer.parseInt(vars.get(&quot;device_count_per_thread&quot;)) - 1)
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
