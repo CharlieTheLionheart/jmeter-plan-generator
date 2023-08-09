@@ -173,7 +173,7 @@
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建8080用户" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE USER root WITH PASSWORD &apos;123456&apos;;</stringProp>
+          <stringProp name="query">CREATE USER root1 WITH PASSWORD &apos;123456&apos;;</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
