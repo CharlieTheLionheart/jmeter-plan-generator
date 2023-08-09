@@ -605,7 +605,7 @@ vars.putObject(&quot;date_formatter&quot;, formatter)
 vars.putObject(&quot;sample_data&quot;, new File(vars.get(&quot;csv_sample_data&quot;)).readLines())
 vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
 vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-vars.putObject(&quot;device_no_end&quot;, Integer.parseInt(vars.get(&quot;device_no_start&quot;)) + Integer.parseInt(vars.get(&quot;device_count_per_thread&quot;)) - 1)
+//vars.putObject(&quot;device_no_end&quot;, Integer.parseInt(vars.get(&quot;device_no_start&quot;)) + Integer.parseInt(vars.get(&quot;device_count_per_thread&quot;)) - 1)
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
