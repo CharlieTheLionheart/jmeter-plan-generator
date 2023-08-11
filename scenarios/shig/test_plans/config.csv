@@ -1,2 +1,2 @@
 ts_db|write_throughput|device_count_per_thread|csv_sample_data|data_ts_step|write_limit_per_thread|write_duration|write_stop_at|device_no_start
-db_shig|50000|15|scenarios/SHIG_inverter/test_plans/data.csv|1000|1000000|PT10S|-1|31
+db_shig|120|20|scenarios/SHIG_inverter/test_plans/data.csv|1000|1000000|10|-1|21
