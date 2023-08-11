@@ -1,0 +1,4 @@
+scenarios/shig_ha/meta_data_management/setup_replication.jmx
+scenarios/shig_ha/meta_data_management/create_database.jmx
+scenarios/shig_ha/meta_data_management/create_template_table.jmx
+scenarios/shig_ha/meta_data_management/create_ts_tables.jmx
