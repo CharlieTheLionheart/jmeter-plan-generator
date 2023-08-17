@@ -627,7 +627,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="variableName">device_num</stringProp>
           </RandomVariableConfig>
           <hashTree/>
-          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${ts_db}.electmeter_${__threadNum}" enabled="false">
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
             <stringProp name="cacheKey">true</stringProp>
             <stringProp name="filename"></stringProp>
             <stringProp name="parameters"></stringProp>
@@ -646,27 +646,6 @@ vars.put(&quot;builder&quot;, builder.toString())
 vars.putObject(&quot;last_ts&quot;, nextTs)</stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
           </JSR223PreProcessor>
-          <hashTree/>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="预处理数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
-            <stringProp name="scriptLanguage">groovy</stringProp>
-            <stringProp name="parameters"></stringProp>
-            <stringProp name="filename"></stringProp>
-            <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">import java.sql.*
-import java.io.*
-
-def nextTs = vars.getObject(&quot;last_ts&quot;)
-def builder = new StringBuilder()
-builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
-for(String line in vars.getObject(&quot;sample_data&quot;)) {
-  builder.append(&quot;(${nextTs},${line}),&quot;)
-  nextTs += Long.parseLong(vars.get(&quot;data_ts_step&quot;))
-}
-builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-vars.put(&quot;builder&quot;, builder.toString())
-vars.putObject(&quot;last_ts&quot;, nextTs)
-SampleResult.setIgnore()</stringProp>
-          </JSR223Sampler>
           <hashTree/>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
