@@ -30,7 +30,7 @@
 | device_no_start         | 1                                                                                                                                                                                                     | 起始设备编号,用于分布客户端创建                                 |
 | backup_ip               | 127.0.0.1                                                                                                                                                                                             | 备节点ip                                            |
 | bachup_port             | 26258                                                                                                                                                                                                 | 备节点port                                          |
-| slave_url               | jdbc:postgresql://172.22.0.3:26258/defaultdb?mode=3&sslmode=verify-ca&sslcert=/home/liujin/certs/client.root.crt&sslkey=/home/liujin/certs/client.root.key.pk8&sslrootcert=/home/liujin/certs/ca.crt  | 组建主备集群时向主节点发送的备节点连接串                             |
+| backup_url               | jdbc:postgresql://172.22.0.3:26258/defaultdb?mode=3&sslmode=verify-ca&sslcert=/home/liujin/certs/client.root.crt&sslkey=/home/liujin/certs/client.root.key.pk8&sslrootcert=/home/liujin/certs/ca.crt  | 组建主备集群时向主节点发送的备节点连接串                             |
 
 > 参数数据
 

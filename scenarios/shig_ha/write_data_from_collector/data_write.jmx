@@ -93,12 +93,12 @@
           </elementProp>
           <elementProp name="backup_port" elementType="Argument">
             <stringProp name="Argument.name">backup_port</stringProp>
-            <stringProp name="Argument.value">${__P(backup_port,26258)}</stringProp>
+            <stringProp name="Argument.value">${__P(backup_port,26257)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="slave_url" elementType="Argument">
-            <stringProp name="Argument.name">slave_url</stringProp>
-            <stringProp name="Argument.value">${__P(db_url,jdbc:postgresql://172.22.0.3:26258/defaultdb?mode=3&amp;sslmode=verify-ca&amp;sslcert=/home/liujin/certs/client.root.crt&amp;sslkey=/home/liujin/certs/client.root.key.pk8&amp;sslrootcert=/home/liujin/certs/ca.crt)}</stringProp>
+          <elementProp name="backup_url" elementType="Argument">
+            <stringProp name="Argument.name">backup_url</stringProp>
+            <stringProp name="Argument.value">${__P(backup_url,jdbc:postgresql://172.22.0.3:26258/defaultdb?mode=3&amp;sslmode=verify-ca&amp;sslcert=/home/liujin/certs/client.root.crt&amp;sslkey=/home/liujin/certs/client.root.key.pk8&amp;sslrootcert=/home/liujin/certs/ca.crt)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -131,12 +131,12 @@
           </elementProp>
           <elementProp name="backup_port" elementType="Argument">
             <stringProp name="Argument.name">backup_port</stringProp>
-            <stringProp name="Argument.value">${__P(backup_port,26258)}</stringProp>
+            <stringProp name="Argument.value">${__P(backup_port,26257)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="slave_url" elementType="Argument">
-            <stringProp name="Argument.name">slave_url</stringProp>
-            <stringProp name="Argument.value">${__P(db_url,jdbc:postgresql://172.22.0.3:26258/defaultdb?mode=3&amp;sslmode=verify-ca&amp;sslcert=/home/liujin/certs/client.root.crt&amp;sslkey=/home/liujin/certs/client.root.key.pk8&amp;sslrootcert=/home/liujin/certs/ca.crt)}</stringProp>
+          <elementProp name="backup_url" elementType="Argument">
+            <stringProp name="Argument.name">backup_url</stringProp>
+            <stringProp name="Argument.value">${__P(backup_url,jdbc:postgresql://172.22.0.3:26257/defaultdb?mode=3&amp;sslmode=verify-ca&amp;sslcert=/home/liujin/certs/client.root.crt&amp;sslkey=/home/liujin/certs/client.root.key.pk8&amp;sslrootcert=/home/liujin/certs/ca.crt)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -185,7 +185,7 @@
         <boolProp name="keepAlive">true</boolProp>
         <stringProp name="connectionAge">5000</stringProp>
         <stringProp name="checkQuery"></stringProp>
-        <stringProp name="dbUrl">${slave_url}</stringProp>
+        <stringProp name="dbUrl">${backup_url}</stringProp>
         <stringProp name="driver">org.postgresql.Driver</stringProp>
         <stringProp name="username">${db_user}</stringProp>
         <stringProp name="password"></stringProp>
