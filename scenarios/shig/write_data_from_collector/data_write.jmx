@@ -647,7 +647,7 @@ vars.putObject(&quot;last_ts&quot;, nextTs)</stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
           </JSR223PreProcessor>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${ts_db}.electmeter" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${builder}</stringProp>
