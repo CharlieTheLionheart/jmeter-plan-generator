@@ -127,6 +127,12 @@
             <stringProp name="Argument.desc">结束device编号：default:20</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="insert_lines" elementType="Argument">
+            <stringProp name="Argument.name">insert_lines</stringProp>
+            <stringProp name="Argument.value">${__P(insert_lines,20)}</stringProp>
+            <stringProp name="Argument.desc">单次单表插入数据行数: default:20</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -602,7 +608,13 @@ import java.time.Duration
 def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
 
 vars.putObject(&quot;date_formatter&quot;, formatter)
-vars.putObject(&quot;sample_data&quot;, new File(vars.get(&quot;csv_sample_data&quot;)).readLines())
+def maxCount = Integer.parseInt(vars.get(&quot;insert_lines&quot;))
+def rawDatas = new File(vars.get(&quot;csv_sample_data&quot;)).readLines()
+def sampleDatas = new ArrayList(maxCount)
+for(int i = 0; i &lt; maxCount; i++) {
+	sampleDatas.add(rawDatas.get(i % rawDatas.size()))
+}
+vars.putObject(&quot;sample_data&quot;, sampleDatas)
 vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
 vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
 SampleResult.setIgnore()</stringProp>
