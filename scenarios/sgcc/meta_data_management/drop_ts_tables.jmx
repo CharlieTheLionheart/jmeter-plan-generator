@@ -52,9 +52,9 @@
           </elementProp>
           <elementProp name="csv_sample_data" elementType="Argument">
             <stringProp name="Argument.name">csv_sample_data</stringProp>
-            <stringProp name="Argument.value">${__P(csv_sample_data,/home/liujin/Downloads/data1.csv)}</stringProp>
+            <stringProp name="Argument.value">${__P(csv_sample_data,/data/data.csv)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">插入样本数据文件, default: C:\\Users\\hikari\\Desktop\\data.csv</stringProp>
+            <stringProp name="Argument.desc">插入样本数据文件, default: /data/data.csv</stringProp>
           </elementProp>
           <elementProp name="data_ts_step" elementType="Argument">
             <stringProp name="Argument.name">data_ts_step</stringProp>
@@ -121,7 +121,7 @@
         <boolProp name="recycle">true</boolProp>
         <stringProp name="shareMode">shareMode.all</stringProp>
         <boolProp name="stopThread">false</boolProp>
-        <stringProp name="variableNames">ts_db,write_throughput,device_count_per_thread,csv_sample_data,data_ts_step,write_limit_per_thread,write_duration,write_stop_at,device_no_start</stringProp>
+        <stringProp name="variableNames">ts_db,write_throughput,device_count_per_thread,csv_sample_data,data_ts_step,write_limit_per_thread,device_no_start</stringProp>
       </CSVDataSet>
       <hashTree/>
       <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
@@ -281,9 +281,9 @@ SampleResult.setIgnore()</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"></stringProp>
-        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__P(duration,120)}</stringProp>
+        <stringProp name="ThreadGroup.delay">1</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
