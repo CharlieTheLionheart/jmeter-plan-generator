@@ -109,6 +109,12 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">线程池大小, default: 20</stringProp>
           </elementProp>
+          <elementProp name="trace_log" elementType="Argument">
+            <stringProp name="Argument.name">trace_log</stringProp>
+            <stringProp name="Argument.value">${__P(trace_log,)}</stringProp>
+            <stringProp name="Argument.desc">trace_log的sql，默認為空</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -186,7 +192,7 @@
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="增加trace日志" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">set cluster setting timeseries.trace.on_off_list=&apos;ee 4,st 4,su 4,me 4&apos;;</stringProp>
+          <stringProp name="query">${trace_log}</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
