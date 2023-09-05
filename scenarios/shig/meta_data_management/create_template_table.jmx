@@ -314,7 +314,7 @@
   powerl double NOT NULL,
   allrenergy1 double NOT NULL,
   allrenergy2 double NOT NULL
-) ATTRIBUTES (machine_code varchar(64));</stringProp>
+) ATTRIBUTES (machine_code varchar(64)) RETENTIONS 180m,360m:1m,720m:10m SAMPLE avg,last(elect_name);</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
