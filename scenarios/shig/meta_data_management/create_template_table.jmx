@@ -141,7 +141,7 @@
           </elementProp>
           <elementProp name="down_sampling_param" elementType="Argument">
             <stringProp name="Argument.name">down_sampling_param</stringProp>
-            <stringProp name="Argument.value">${__P(down_sampling_param,RETENTIONS 180m,360m:30s,720m:1m SAMPLE avg,last(elect_name))}</stringProp>
+            <stringProp name="Argument.value">${__P(down_sampling_param,RETENTIONS 180m\,360m:30s\,720m:1m SAMPLE avg\,last(elect_name))}</stringProp>
             <stringProp name="Argument.desc">降采样参数</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
