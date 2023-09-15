@@ -1,3 +1,1 @@
-scenarios/sgcc/meta_data_management/drop_ts_tables.jmx
-scenarios/sgcc/meta_data_management/drop_template_table.jmx
 scenarios/sgcc/meta_data_management/drop_database.jmx
