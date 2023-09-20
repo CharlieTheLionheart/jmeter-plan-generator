@@ -94,8 +94,8 @@
           </elementProp>
           <elementProp name="disorder_batch_interval" elementType="Argument">
             <stringProp name="Argument.name">disorder_batch_interval</stringProp>
-            <stringProp name="Argument.value">${__P(disorder_batch_interval,5)}</stringProp>
-            <stringProp name="Argument.desc">产生乱序数据的batch间隔，从1开始</stringProp>
+            <stringProp name="Argument.value">${__P(disorder_batch_interval,0)}</stringProp>
+            <stringProp name="Argument.desc">产生乱序数据的batch间隔，从1开始，设置为0则关闭乱序</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="down_sampling_param" elementType="Argument">
@@ -183,9 +183,9 @@
           </elementProp>
           <elementProp name="disorder_batch_interval" elementType="Argument">
             <stringProp name="Argument.name">disorder_batch_interval</stringProp>
-            <stringProp name="Argument.value">${__P(disorder_batch_interval,5)}</stringProp>
+            <stringProp name="Argument.value">${__P(disorder_batch_interval,0)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">产生乱序数据的batch间隔，从1开始</stringProp>
+            <stringProp name="Argument.desc">产生乱序数据的batch间隔，从1开始，设置为0则关闭乱序</stringProp>
           </elementProp>
         </collectionProp>
       </Arguments>
