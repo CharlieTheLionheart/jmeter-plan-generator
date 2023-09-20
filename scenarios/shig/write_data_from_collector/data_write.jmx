@@ -5,7 +5,7 @@
       <stringProp name="TestPlan.comments"></stringProp>
       <boolProp name="TestPlan.functional_mode">false</boolProp>
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
         <collectionProp name="Arguments.arguments"/>
       </elementProp>
@@ -86,6 +86,36 @@
             <stringProp name="Argument.desc">起始设备编号,用于分布客户端创建,default: 1</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="swap_line_idx" elementType="Argument">
+            <stringProp name="Argument.name">swap_line_idx</stringProp>
+            <stringProp name="Argument.value">${__P(swap_line_idx,1)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">生成乱序数据时batch内部使用第几行与第0行交换的索引，从0开始</stringProp>
+          </elementProp>
+          <elementProp name="disorder_batch_interval" elementType="Argument">
+            <stringProp name="Argument.name">disorder_batch_interval</stringProp>
+            <stringProp name="Argument.value">${__P(disorder_batch_interval,5)}</stringProp>
+            <stringProp name="Argument.desc">产生乱序数据的batch间隔，从1开始</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="down_sampling_param" elementType="Argument">
+            <stringProp name="Argument.name">down_sampling_param</stringProp>
+            <stringProp name="Argument.value">${__P(down_sampling_param,RETENTIONS 180m\,360m:30s\,720m:1m SAMPLE avg\,last(elect_name))}</stringProp>
+            <stringProp name="Argument.desc">降采样参数</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="insert_lines" elementType="Argument">
+            <stringProp name="Argument.name">insert_lines</stringProp>
+            <stringProp name="Argument.value">${__P(insert_lines,20)}</stringProp>
+            <stringProp name="Argument.desc">单次单表插入数据行数: default:20</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="device_no_end" elementType="Argument">
+            <stringProp name="Argument.name">device_no_end</stringProp>
+            <stringProp name="Argument.value">${__P(device_no_end,10)}</stringProp>
+            <stringProp name="Argument.desc">结束device编号：default:20</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -145,6 +175,18 @@
             <stringProp name="Argument.desc">降采样参数</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="swap_line_idx" elementType="Argument">
+            <stringProp name="Argument.name">swap_line_idx</stringProp>
+            <stringProp name="Argument.value">${__P(swap_line_idx,1)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">生成乱序数据时batch内部使用第几行与第0行交换的索引，从0开始</stringProp>
+          </elementProp>
+          <elementProp name="disorder_batch_interval" elementType="Argument">
+            <stringProp name="Argument.name">disorder_batch_interval</stringProp>
+            <stringProp name="Argument.value">${__P(disorder_batch_interval,5)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">产生乱序数据的batch间隔，从1开始</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -179,7 +221,7 @@
         <stringProp name="connectionProperties"></stringProp>
       </JDBCDataSource>
       <hashTree/>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建数据库" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 配置" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -193,10 +235,10 @@
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建时序库: ${ts_db}" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建8080用户" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE TS DATABASE ${ts_db};</stringProp>
+          <stringProp name="query">CREATE USER root1 WITH PASSWORD &apos;123456&apos;;</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
@@ -206,10 +248,10 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建8080用户" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="开启查询下推" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE USER root1 WITH PASSWORD &apos;123456&apos;;</stringProp>
+          <stringProp name="query">set cluster setting sql.between_of_push.enabled=true;</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
@@ -239,6 +281,34 @@
           </JDBCSampler>
           <hashTree/>
         </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建数据库" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建时序库: ${ts_db}" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE TS DATABASE ${ts_db};</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建模板表" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
@@ -423,7 +493,6 @@ if(null == vars.get(&quot;write_duration&quot;) || vars.get(&quot;write_duration
 		log.error(ex.getMessage())
 		vars.putObject(&quot;write_duration_value&quot;, null)
 	}
-	
 }
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
@@ -690,23 +759,65 @@ SampleResult.setIgnore()</stringProp>
               <stringProp name="variableName">device_num</stringProp>
             </RandomVariableConfig>
             <hashTree/>
+            <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
+              <stringProp name="CounterConfig.start">1</stringProp>
+              <stringProp name="CounterConfig.end">${write_limit_per_thread}</stringProp>
+              <stringProp name="CounterConfig.incr">1</stringProp>
+              <stringProp name="CounterConfig.name">batch_idx</stringProp>
+              <stringProp name="CounterConfig.format"></stringProp>
+              <boolProp name="CounterConfig.per_user">false</boolProp>
+            </CounterConfig>
+            <hashTree/>
             <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
               <stringProp name="script">import java.sql.*
 import java.io.*
+import java.util.List
+import java.util.ArrayList
 
-def nextTs = vars.getObject(&quot;last_ts&quot;)
-def builder = new StringBuilder()
-builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
-for(String line in vars.getObject(&quot;sample_data&quot;)) {
-  builder.append(&quot;(${nextTs},${line}),&quot;)
-  nextTs += Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+List generateTimestampList() {
+  def nextTs = vars.getObject(&quot;last_ts&quot;)
+  int lineNum = Integer.parseInt(vars.get(&quot;insert_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  vars.putObject(&quot;last_ts&quot;, nextTs)
+  return tsList
 }
-builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-vars.put(&quot;builder&quot;, builder.toString())
-vars.putObject(&quot;last_ts&quot;, nextTs)</stringProp>
+
+List getSwapedListOrNot() {
+  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
+  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
+  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
+	// log.info(&quot;index={}&quot;, index)
+	// log.info(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
+	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
+	// log.info(&quot;tmpList={}&quot;, tmpList)
+    return tmpList
+  }
+  return generateTimestampList()
+}
+
+void generateBatchInsertSQL() {
+  def builder = new StringBuilder()
+  builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  int lineIdx = 0
+  def swapedList = getSwapedListOrNot()
+  for(String line in vars.getObject(&quot;sample_data&quot;)) {
+    builder.append(&quot;(${swapedList.get(lineIdx)},${line}),&quot;)
+    lineIdx++
+  }
+  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+  // log.info(&quot;builder={}&quot;, builder.toString())
+  vars.put(&quot;builder&quot;, builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -754,23 +865,64 @@ vars.putObject(&quot;last_ts&quot;, nextTs)</stringProp>
               <stringProp name="variableName">device_num</stringProp>
             </RandomVariableConfig>
             <hashTree/>
+            <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
+              <stringProp name="CounterConfig.start">1</stringProp>
+              <stringProp name="CounterConfig.end">${write_limit_per_thread}</stringProp>
+              <stringProp name="CounterConfig.incr">1</stringProp>
+              <stringProp name="CounterConfig.name">batch_idx</stringProp>
+              <stringProp name="CounterConfig.format"></stringProp>
+              <boolProp name="CounterConfig.per_user">false</boolProp>
+            </CounterConfig>
+            <hashTree/>
             <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
               <stringProp name="script">import java.sql.*
 import java.io.*
+import java.util.List
+import java.util.ArrayList
 
-def nextTs = System.currentTimeMillis()
-def builder = new StringBuilder()
-builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
-for(String line in vars.getObject(&quot;sample_data&quot;)) {
-  builder.append(&quot;(${nextTs},${line}),&quot;)
-  nextTs += Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+List generateTimestampList() {
+  def nextTs = System.currentTimeMillis()
+  int lineNum = Integer.parseInt(vars.get(&quot;insert_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  return tsList
 }
-builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-vars.put(&quot;builder&quot;, builder.toString())
-vars.putObject(&quot;last_ts&quot;, nextTs)</stringProp>
+
+List getSwapedListOrNot() {
+  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
+  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
+  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
+	// log.info(&quot;index={}&quot;, index)
+	// log.info(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
+	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
+	// log.info(&quot;tmpList={}&quot;, tmpList)
+    return tmpList
+  }
+  return generateTimestampList()
+}
+
+void generateBatchInsertSQL() {
+  def builder = new StringBuilder()
+  builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  int lineIdx = 0
+  def swapedList = getSwapedListOrNot()
+  for(String line in vars.getObject(&quot;sample_data&quot;)) {
+    builder.append(&quot;(${swapedList.get(lineIdx)},${line}),&quot;)
+    lineIdx++
+  }
+  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+  // log.info(&quot;builder={}&quot;, builder.toString())
+  vars.put(&quot;builder&quot;, builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>

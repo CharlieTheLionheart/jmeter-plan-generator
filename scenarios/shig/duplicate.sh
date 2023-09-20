@@ -16,6 +16,10 @@ python3 ${base_dir}/../../dupjmx.py -s ${base_dir}/write_data_from_collector/dat
   --disable '\[Write\] 执行数据写入\(random\)' --enable '\[Prepare\] 创建表'
 
 python3 ${base_dir}/../../dupjmx.py -s ${base_dir}/write_data_from_collector/data_write.jmx \
+  -d ${base_dir}/meta_data_management/config.jmx \
+  --disable '\[Write\] 执行数据写入\(random\)' --enable '\[Prepare\] 配置'
+
+python3 ${base_dir}/../../dupjmx.py -s ${base_dir}/write_data_from_collector/data_write.jmx \
   -d ${base_dir}/meta_data_management/drop_database.jmx \
   --disable '\[Write\] 执行数据写入\(random\)' --enable '\[tearDown\] 删除数据库'
 
