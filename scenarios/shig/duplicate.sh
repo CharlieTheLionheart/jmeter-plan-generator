@@ -3,14 +3,19 @@
 base_dir=$(dirname -- "${BASH_SOURCE[0]}")
 echo ${base_dir}
 
-python3 ${base_dir}/../../dupjmx.py -s ${base_dir}/write_data_from_collector/data_write.jmx \
-  -d ${base_dir}/meta_data_management/create_database.jmx \
-  --disable '\[Write\] 执行数据写入\(random\)' --enable '\[Prepare\] 创建数据库,\[Prepare\] 创建模板表,\[Prepare\] 创建表'
+src_file=${1:-data_write.jmx}
 
-python3 ${base_dir}/../../dupjmx.py -s ${base_dir}/write_data_from_collector/data_write.jmx \
-  -d ${base_dir}/meta_data_management/config.jmx \
-  --disable '\[Write\] 执行数据写入\(random\)' --enable '\[Prepare\] 配置'
+python3 ${base_dir}/../../dupjmx.py -s ${base_dir}/plans/${src_file} \
+  -d ${base_dir}/plans/data_write.jmx \
+  --enable '\[Write\] 执行数据写入\(random\)' \
+  --disable '\[Prepare\] 创建数据库,\[Prepare\] 创建模板表,\[Prepare\] 创建表,\[tearDown\] 删除数据库,\[tearDown\] 删除模板表,\[tearDown\] 删除子表,\[Prepare\] 配置'
 
-python3 ${base_dir}/../../dupjmx.py -s ${base_dir}/write_data_from_collector/data_write.jmx \
-  -d ${base_dir}/meta_data_management/drop_database.jmx \
-  --disable '\[Write\] 执行数据写入\(random\)' --enable '\[tearDown\] 删除数据库,\[tearDown\] 删除模板表,\[tearDown\] 删除子表'
+python3 ${base_dir}/../../dupjmx.py -s ${base_dir}/plans/${src_file} \
+  -d ${base_dir}/plans/data_write.jmx \
+  --disable '\[Write\] 执行数据写入\(random\),\[tearDown\] 删除数据库,\[tearDown\] 删除模板表,\[tearDown\] 删除子表' \
+  --enable '\[Prepare\] 创建数据库,\[Prepare\] 创建模板表,\[Prepare\] 创建表,\[Prepare\] 配置'
+
+python3 ${base_dir}/../../dupjmx.py -s ${base_dir}/plans/${src_file} \
+  -d ${base_dir}/plans/data_write.jmx \
+  --enable '\[tearDown\] 删除数据库,\[tearDown\] 删除模板表,\[tearDown\] 删除子表' \
+  --disable '\[Write\] 执行数据写入\(random\),\[Prepare\] 创建数据库,\[Prepare\] 创建模板表,\[Prepare\] 创建表,\[Prepare\] 配置'

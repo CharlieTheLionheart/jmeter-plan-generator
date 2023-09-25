@@ -12,199 +12,152 @@
       <stringProp name="TestPlan.user_define_classpath"></stringProp>
     </TestPlan>
     <hashTree>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[ConfigDebug] 预定义配置" enabled="false">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[ConfigDebug] 预定义配置" enabled="true">
         <collectionProp name="Arguments.arguments">
           <elementProp name="db_url" elementType="Argument">
             <stringProp name="Argument.name">db_url</stringProp>
-            <stringProp name="Argument.value">${__P(db_url,jdbc:postgresql://127.0.0.1:26257/defaultdb)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.db.url,jdbc:postgresql://127.0.0.1:26257/defaultdb)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">数据库连接jdbc url, default: jdbc:postgresql://127.0.0.1:26257/defaultdb</stringProp>
           </elementProp>
           <elementProp name="db_user" elementType="Argument">
             <stringProp name="Argument.name">db_user</stringProp>
-            <stringProp name="Argument.value">${__P(db_user,root)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.db.user,root)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">数据库连接用户, default: root</stringProp>
           </elementProp>
           <elementProp name="ts_db" elementType="Argument">
             <stringProp name="Argument.name">ts_db</stringProp>
-            <stringProp name="Argument.value">${__P(ts_db,db_shig)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.db.name,db_shig)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">创建时时序库名称, default: db_shig</stringProp>
           </elementProp>
-          <elementProp name="write_throughput" elementType="Argument">
-            <stringProp name="Argument.name">write_throughput</stringProp>
-            <stringProp name="Argument.value">${__P(write_throughput,50000)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">写入吞吐量/min, default: 50000</stringProp>
-          </elementProp>
           <elementProp name="conn_pool_size" elementType="Argument">
             <stringProp name="Argument.name">conn_pool_size</stringProp>
-            <stringProp name="Argument.value">${__P(conn_pool_size,20)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.sys.conn_pool_size,20)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">线程池大小, default: 20</stringProp>
           </elementProp>
-          <elementProp name="device_count_per_thread" elementType="Argument">
-            <stringProp name="Argument.name">device_count_per_thread</stringProp>
-            <stringProp name="Argument.value">${__P(device_count_per_thread,50)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">每个线程模拟设备数量, default: 50</stringProp>
-          </elementProp>
-          <elementProp name="csv_sample_data" elementType="Argument">
-            <stringProp name="Argument.name">csv_sample_data</stringProp>
-            <stringProp name="Argument.value">${__P(csv_sample_data,/data/data.csv)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">插入样本数据文件, default: C:\\Users\\hikari\\Desktop\\data.csv</stringProp>
-          </elementProp>
           <elementProp name="data_ts_step" elementType="Argument">
             <stringProp name="Argument.name">data_ts_step</stringProp>
-            <stringProp name="Argument.value">${__P(data_ts_step,1000)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.sys.data_ts_step,1000)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">生成数据时间戳间隔ms, default: 1000</stringProp>
           </elementProp>
+          <elementProp name="device_count_per_thread" elementType="Argument">
+            <stringProp name="Argument.name">device_count_per_thread</stringProp>
+            <stringProp name="Argument.value">${__P(user.device.count_per_thread,50)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">每个线程模拟设备数量, default: 50</stringProp>
+          </elementProp>
+          <elementProp name="device_no_start" elementType="Argument">
+            <stringProp name="Argument.name">device_no_start</stringProp>
+            <stringProp name="Argument.value">${__P(user.device.no_start,1)}</stringProp>
+            <stringProp name="Argument.desc">起始设备编号,用于分布客户端创建,default: 1</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="device_no_end" elementType="Argument">
+            <stringProp name="Argument.name">device_no_end</stringProp>
+            <stringProp name="Argument.value">${__P(user.device.no_end,10)}</stringProp>
+            <stringProp name="Argument.desc">结束device编号: default:20</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="write_throughput" elementType="Argument">
+            <stringProp name="Argument.name">write_throughput</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.throughput,50000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">写入吞吐量/min, default: 50000</stringProp>
+          </elementProp>
+          <elementProp name="csv_sample_data" elementType="Argument">
+            <stringProp name="Argument.name">csv_sample_data</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.csv_sample_data,/data/data.csv)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">插入样本数据文件, default: C:\\Users\\hikari\\Desktop\\data.csv</stringProp>
+          </elementProp>
           <elementProp name="write_limit_per_thread" elementType="Argument">
             <stringProp name="Argument.name">write_limit_per_thread</stringProp>
-            <stringProp name="Argument.value">${__P(write_limit_per_thread,10000)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.limit_per_thread,10000)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">每个线程执行的数据写入次数, default: 10000</stringProp>
           </elementProp>
           <elementProp name="write_duration" elementType="Argument">
             <stringProp name="Argument.name">write_duration</stringProp>
-            <stringProp name="Argument.value">${__P(write_duration,-1)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.duration,-1)}</stringProp>
             <stringProp name="Argument.desc">写入持续时间,ISO8601时间格式-1表示不限制,default: -1</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="write_stop_at" elementType="Argument">
             <stringProp name="Argument.name">write_stop_at</stringProp>
-            <stringProp name="Argument.value">${__P(write_stop_at,-1)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.stop_at,-1)}</stringProp>
             <stringProp name="Argument.desc">写入终止时间,时间格式参照&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;, -1表示不限制,default: -1</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="device_no_start" elementType="Argument">
-            <stringProp name="Argument.name">device_no_start</stringProp>
-            <stringProp name="Argument.value">${__P(device_no_start,1)}</stringProp>
-            <stringProp name="Argument.desc">起始设备编号,用于分布客户端创建,default: 1</stringProp>
+          <elementProp name="write_lines" elementType="Argument">
+            <stringProp name="Argument.name">write_lines</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.lines,20)}</stringProp>
+            <stringProp name="Argument.desc">单次单表插入数据行数: default:20</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="swap_line_idx" elementType="Argument">
             <stringProp name="Argument.name">swap_line_idx</stringProp>
-            <stringProp name="Argument.value">${__P(swap_line_idx,1)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.swap_line_idx,1)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">生成乱序数据时batch内部使用第几行与第0行交换的索引，从0开始</stringProp>
           </elementProp>
           <elementProp name="disorder_batch_interval" elementType="Argument">
             <stringProp name="Argument.name">disorder_batch_interval</stringProp>
-            <stringProp name="Argument.value">${__P(disorder_batch_interval,0)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.disorder_batch_interval,0)}</stringProp>
             <stringProp name="Argument.desc">产生乱序数据的batch间隔，从1开始，设置为0则关闭乱序</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="write_thread_count" elementType="Argument">
+            <stringProp name="Argument.name">write_thread_count</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.thread_count,20)}</stringProp>
+            <stringProp name="Argument.desc">写线程数量,default: 20</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="down_sampling_param" elementType="Argument">
             <stringProp name="Argument.name">down_sampling_param</stringProp>
-            <stringProp name="Argument.value">${__P(down_sampling_param,RETENTIONS 180m\,360m:30s\,720m:1m SAMPLE avg\,last(elect_name))}</stringProp>
+            <stringProp name="Argument.value">${__P(user.query.down_sampling_param,RETENTIONS 180m\,360m:30s\,720m:1m SAMPLE avg\,last(elect_name))}</stringProp>
             <stringProp name="Argument.desc">降采样参数</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="insert_lines" elementType="Argument">
-            <stringProp name="Argument.name">insert_lines</stringProp>
-            <stringProp name="Argument.value">${__P(insert_lines,20)}</stringProp>
-            <stringProp name="Argument.desc">单次单表插入数据行数: default:20</stringProp>
+          <elementProp name="t_config_loop_cnt" elementType="Argument">
+            <stringProp name="Argument.name">t_config_loop_cnt</stringProp>
+            <stringProp name="Argument.value">${__P(user.threadgroup.config.count,1)}</stringProp>
+            <stringProp name="Argument.desc">[Prepare] 配置执行次数, default: 1</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="device_no_end" elementType="Argument">
-            <stringProp name="Argument.name">device_no_end</stringProp>
-            <stringProp name="Argument.value">${__P(device_no_end,10)}</stringProp>
-            <stringProp name="Argument.desc">结束device编号：default:20</stringProp>
+          <elementProp name="t_db_loop_cnt" elementType="Argument">
+            <stringProp name="Argument.name">t_db_loop_cnt</stringProp>
+            <stringProp name="Argument.value">${__P(user.threadgroup.database.count,1)}</stringProp>
+            <stringProp name="Argument.desc">[Prepare] 创建数据库执行次数, default: 1</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="t_stab_loop_cnt" elementType="Argument">
+            <stringProp name="Argument.name">t_stab_loop_cnt</stringProp>
+            <stringProp name="Argument.value">${__P(user.threadgroup.stable.count,1)}</stringProp>
+            <stringProp name="Argument.desc">[Prepare] 创建模板表执行次数, default: 1</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="t_tab_loop_cnt" elementType="Argument">
+            <stringProp name="Argument.name">t_tab_loop_cnt</stringProp>
+            <stringProp name="Argument.value">${__P(user.threadgroup.table.count,1)}</stringProp>
+            <stringProp name="Argument.desc">[Prepare] 创建表执行次数, default: 1</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="t_write_loop_cnt" elementType="Argument">
+            <stringProp name="Argument.name">t_write_loop_cnt</stringProp>
+            <stringProp name="Argument.value">${__P(user.threadgroup.write.count,1)}</stringProp>
+            <stringProp name="Argument.desc">[Prepare] 执行数据写入执行次数, default: 1</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
       </Arguments>
-      <hashTree/>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[ConfigPro] 读入配置" enabled="true">
-        <collectionProp name="Arguments.arguments">
-          <elementProp name="db_url" elementType="Argument">
-            <stringProp name="Argument.name">db_url</stringProp>
-            <stringProp name="Argument.value">${__P(db_url,jdbc:postgresql://127.0.0.1:26257/defaultdb)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">数据库连接jdbc url, default: jdbc:postgresql://127.0.0.1:26257/defaultdb</stringProp>
-          </elementProp>
-          <elementProp name="db_user" elementType="Argument">
-            <stringProp name="Argument.name">db_user</stringProp>
-            <stringProp name="Argument.value">${__P(db_user,root)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">数据库连接用户, default: root</stringProp>
-          </elementProp>
-          <elementProp name="conn_pool_size" elementType="Argument">
-            <stringProp name="Argument.name">conn_pool_size</stringProp>
-            <stringProp name="Argument.value">${__P(conn_pool_size,15)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">线程池大小, default: 15</stringProp>
-          </elementProp>
-          <elementProp name="device_count_per_thread" elementType="Argument">
-            <stringProp name="Argument.name">device_count_per_thread</stringProp>
-            <stringProp name="Argument.value">${__P(device_count_per_thread,20)}</stringProp>
-            <stringProp name="Argument.desc">每线程对应表数量,default:20</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="device_no_start" elementType="Argument">
-            <stringProp name="Argument.name">device_no_start</stringProp>
-            <stringProp name="Argument.value">${__P(device_no_start,1)}</stringProp>
-            <stringProp name="Argument.desc">起始device编号：default:1</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="device_no_end" elementType="Argument">
-            <stringProp name="Argument.name">device_no_end</stringProp>
-            <stringProp name="Argument.value">${__P(device_no_end,20)}</stringProp>
-            <stringProp name="Argument.desc">结束device编号：default:20</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="insert_lines" elementType="Argument">
-            <stringProp name="Argument.name">insert_lines</stringProp>
-            <stringProp name="Argument.value">${__P(insert_lines,20)}</stringProp>
-            <stringProp name="Argument.desc">单次单表插入数据行数: default:20</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="trace_log" elementType="Argument">
-            <stringProp name="Argument.name">trace_log</stringProp>
-            <stringProp name="Argument.value">${__P(trace_log,TRUE)}</stringProp>
-            <stringProp name="Argument.desc">是否打開trace_log，默認為TRUE</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="down_sampling_param" elementType="Argument">
-            <stringProp name="Argument.name">down_sampling_param</stringProp>
-            <stringProp name="Argument.value">${__P(down_sampling_param,RETENTIONS 180m\,360m:30s\,720m:1m SAMPLE avg\,last(elect_name))}</stringProp>
-            <stringProp name="Argument.desc">降采样参数</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="swap_line_idx" elementType="Argument">
-            <stringProp name="Argument.name">swap_line_idx</stringProp>
-            <stringProp name="Argument.value">${__P(swap_line_idx,1)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">生成乱序数据时batch内部使用第几行与第0行交换的索引，从0开始</stringProp>
-          </elementProp>
-          <elementProp name="disorder_batch_interval" elementType="Argument">
-            <stringProp name="Argument.name">disorder_batch_interval</stringProp>
-            <stringProp name="Argument.value">${__P(disorder_batch_interval,0)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">产生乱序数据的batch间隔，从1开始，设置为0则关闭乱序</stringProp>
-          </elementProp>
-        </collectionProp>
-      </Arguments>
-      <hashTree/>
-      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="[ConfigPro] 从csv读入配置" enabled="true">
-        <stringProp name="delimiter">|</stringProp>
-        <stringProp name="fileEncoding">UTF-8</stringProp>
-        <stringProp name="filename">${__P(config_file, config.csv)}</stringProp>
-        <boolProp name="ignoreFirstLine">true</boolProp>
-        <boolProp name="quotedData">true</boolProp>
-        <boolProp name="recycle">true</boolProp>
-        <stringProp name="shareMode">shareMode.all</stringProp>
-        <boolProp name="stopThread">false</boolProp>
-        <stringProp name="variableNames">ts_db,write_throughput,device_count_per_thread,csv_sample_data,data_ts_step,write_limit_per_thread</stringProp>
-      </CSVDataSet>
       <hashTree/>
       <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
         <stringProp name="dataSource">default_pool</stringProp>
-        <stringProp name="poolMax">50</stringProp>
+        <stringProp name="poolMax">${conn_pool_size}</stringProp>
         <stringProp name="timeout">10000</stringProp>
         <stringProp name="trimInterval">60000</stringProp>
         <boolProp name="autocommit">true</boolProp>
@@ -221,11 +174,11 @@
         <stringProp name="connectionProperties"></stringProp>
       </JDBCDataSource>
       <hashTree/>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 配置" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 配置" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
+          <stringProp name="LoopController.loops">${t_config_loop_cnt}</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -282,11 +235,11 @@
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建数据库" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建数据库" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
+          <stringProp name="LoopController.loops">${t_db_loop_cnt}</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -310,15 +263,15 @@
         </JDBCSampler>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建模板表" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建模板表" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
+          <stringProp name="LoopController.loops">${t_stab_loop_cnt}</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration">10000</stringProp>
         <stringProp name="ThreadGroup.delay">5</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -386,15 +339,15 @@
         </JDBCSampler>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建表" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建表" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
+          <stringProp name="LoopController.loops">${t_tab_loop_cnt}</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
+        <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration">10000</stringProp>
         <stringProp name="ThreadGroup.delay">10</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -444,10 +397,10 @@ SampleResult.setIgnore()</stringProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
+        <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__P(duration,120)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
         <stringProp name="ThreadGroup.delay">1</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
@@ -592,10 +545,10 @@ SampleResult.setIgnore()</stringProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
+        <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__P(duration,120)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
         <stringProp name="ThreadGroup.delay">1</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
@@ -701,10 +654,10 @@ vars.putObject(&quot;last_ts&quot;, nextTs)</stringProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
+        <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__P(duration,120)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
         <stringProp name="ThreadGroup.delay">1</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
@@ -722,17 +675,22 @@ import java.time.Duration
 def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
 
 vars.putObject(&quot;date_formatter&quot;, formatter)
-def maxCount = Integer.parseInt(vars.get(&quot;insert_lines&quot;))
-def rawDatas = new File(vars.get(&quot;csv_sample_data&quot;)).readLines()
-def sampleDatas = new ArrayList(maxCount)
-for(int i = 0; i &lt; maxCount; i++) {
-	sampleDatas.add(rawDatas.get(i % rawDatas.size()))
-}
-vars.putObject(&quot;sample_data&quot;, sampleDatas)
 vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
 vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
+        <hashTree/>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="加载数据" enabled="true">
+          <stringProp name="delimiter">|</stringProp>
+          <stringProp name="fileEncoding">UTF-8</stringProp>
+          <stringProp name="filename">${csv_sample_data}</stringProp>
+          <boolProp name="ignoreFirstLine">false</boolProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">true</boolProp>
+          <stringProp name="shareMode">shareMode.all</stringProp>
+          <boolProp name="stopThread">false</boolProp>
+          <stringProp name="variableNames">data_line</stringProp>
+        </CSVDataSet>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
           <stringProp name="throughput">${write_throughput}</stringProp>
@@ -779,7 +737,7 @@ import java.util.ArrayList
 
 List generateTimestampList() {
   def nextTs = vars.getObject(&quot;last_ts&quot;)
-  int lineNum = Integer.parseInt(vars.get(&quot;insert_lines&quot;))
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
   def tsList = new ArrayList()
   for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
@@ -806,11 +764,10 @@ List getSwapedListOrNot() {
 void generateBatchInsertSQL() {
   def builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
-  int lineIdx = 0
   def swapedList = getSwapedListOrNot()
-  for(String line in vars.getObject(&quot;sample_data&quot;)) {
-    builder.append(&quot;(${swapedList.get(lineIdx)},${line}),&quot;)
-    lineIdx++
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; i &lt; maxCount; lineIdx++) {
+	builder.append(&quot;(${swapedList.get(lineIdx)},${vars.get(&apos;data_line&apos;)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
@@ -885,7 +842,7 @@ import java.util.ArrayList
 
 List generateTimestampList() {
   def nextTs = System.currentTimeMillis()
-  int lineNum = Integer.parseInt(vars.get(&quot;insert_lines&quot;))
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
   def tsList = new ArrayList()
   for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
@@ -911,11 +868,10 @@ List getSwapedListOrNot() {
 void generateBatchInsertSQL() {
   def builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
-  int lineIdx = 0
   def swapedList = getSwapedListOrNot()
-  for(String line in vars.getObject(&quot;sample_data&quot;)) {
-    builder.append(&quot;(${swapedList.get(lineIdx)},${line}),&quot;)
-    lineIdx++
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; i &lt; maxCount; lineIdx++) {
+	builder.append(&quot;(${swapedList.get(lineIdx)},${vars.get(&apos;data_line&apos;)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
@@ -951,13 +907,13 @@ generateBatchInsertSQL()</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除子表" enabled="true">
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除子表" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
+        <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration"></stringProp>
@@ -1003,7 +959,7 @@ SampleResult.setIgnore()</stringProp>
           <hashTree/>
         </hashTree>
       </hashTree>
-      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除模板表" enabled="true">
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除模板表" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -1031,7 +987,7 @@ SampleResult.setIgnore()</stringProp>
         </JDBCSampler>
         <hashTree/>
       </hashTree>
-      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除数据库" enabled="true">
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除数据库" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>

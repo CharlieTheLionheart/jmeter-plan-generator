@@ -1,2 +1,0 @@
-scenarios/shig/meta_data_management/config.jmx
-scenarios/shig/meta_data_management/create_database.jmx

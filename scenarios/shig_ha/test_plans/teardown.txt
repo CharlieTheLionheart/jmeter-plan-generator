@@ -1,4 +1,0 @@
-scenarios/shig_ha/meta_data_management/drop_ts_tables.jmx
-scenarios/shig_ha/meta_data_management/drop_template_table.jmx
-scenarios/shig_ha/meta_data_management/drop_database.jmx
-scenarios/shig_ha/meta_data_management/teardown_replication.jmx
