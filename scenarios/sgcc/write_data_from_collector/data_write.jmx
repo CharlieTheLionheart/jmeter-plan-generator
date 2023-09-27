@@ -485,7 +485,7 @@ SampleResult.setIgnore()</stringProp>
               <boolProp name="CounterConfig.per_user">false</boolProp>
             </CounterConfig>
             <hashTree/>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${ts_db}.inverter_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
@@ -522,7 +522,7 @@ List getSwapedListOrNot() {
 
 void generateBatchInsertSQL() {
   def builder = new StringBuilder()
-  builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.inverter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   int lineIdx = 0
   def swapedList = getSwapedListOrNot()
   for(String line in vars.getObject(&quot;sample_data&quot;)) {
@@ -538,7 +538,7 @@ generateBatchInsertSQL()</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${ts_db}.inverter_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
@@ -591,7 +591,7 @@ generateBatchInsertSQL()</stringProp>
               <boolProp name="CounterConfig.per_user">false</boolProp>
             </CounterConfig>
             <hashTree/>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${ts_db}.inverter_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
@@ -627,7 +627,7 @@ List getSwapedListOrNot() {
 
 void generateBatchInsertSQL() {
   def builder = new StringBuilder()
-  builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  builder.append(&quot;insert into ${vars.get(&quot;ts_db&quot;)}.inverter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   int lineIdx = 0
   def swapedList = getSwapedListOrNot()
   for(String line in vars.getObject(&quot;sample_data&quot;)) {
@@ -643,7 +643,7 @@ generateBatchInsertSQL()</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${ts_db}.electmeter_${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${ts_db}.inverter_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
