@@ -88,8 +88,8 @@
           </elementProp>
           <elementProp name="write_duration" elementType="Argument">
             <stringProp name="Argument.name">write_duration</stringProp>
-            <stringProp name="Argument.value">${__P(user.write.duration,-1)}</stringProp>
-            <stringProp name="Argument.desc">写入持续时间,ISO8601时间格式-1表示不限制,default: -1</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.duration,0)}</stringProp>
+            <stringProp name="Argument.desc">写入持续时间,ISO8601时间格式-1表示不限制,default: 0</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="write_lines" elementType="Argument">
