@@ -170,6 +170,11 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">线程组: [tearDown] 删除数据库, default: 0</stringProp>
           </elementProp>
+          <elementProp name="trace_log" elementType="Argument">
+            <stringProp name="Argument.name">trace_log</stringProp>
+            <stringProp name="Argument.value">${__P(trace_log,)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
