@@ -587,7 +587,7 @@ void generateBatchInsertSQL() {
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
-  for(int lineIdx = 0; i &lt; maxCount; lineIdx++) {
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
 	builder.append(&quot;(${swapedList.get(lineIdx)},${vars.get(&apos;data_line&apos;)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
@@ -691,7 +691,7 @@ void generateBatchInsertSQL() {
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
-  for(int lineIdx = 0; i &lt; maxCount; lineIdx++) {
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
 	builder.append(&quot;(${swapedList.get(lineIdx)},${vars.get(&apos;data_line&apos;)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
