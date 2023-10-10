@@ -116,60 +116,6 @@
             <stringProp name="Argument.desc">写线程数量,default: 20</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="tg_conf_cnt" elementType="Argument">
-            <stringProp name="Argument.name">tg_conf_cnt</stringProp>
-            <stringProp name="Argument.value">${__P(sys.threadgroup.config.count,0)}</stringProp>
-            <stringProp name="Argument.desc">线程组: [Prepare] 配置执行次数, default: 0</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="tg_create_db_cnt" elementType="Argument">
-            <stringProp name="Argument.name">tg_create_db_cnt</stringProp>
-            <stringProp name="Argument.value">${__P(sys.threadgroup.create_db.count,0)}</stringProp>
-            <stringProp name="Argument.desc">线程组: [Prepare] 创建数据库执行次数, default: 0</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="tg_create_stab_cnt" elementType="Argument">
-            <stringProp name="Argument.name">tg_create_stab_cnt</stringProp>
-            <stringProp name="Argument.value">${__P(sys.threadgroup.create_stab.count,0)}</stringProp>
-            <stringProp name="Argument.desc">线程组: [Prepare] 创建模板表执行次数, default: 0</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="tg_create_tab_cnt" elementType="Argument">
-            <stringProp name="Argument.name">tg_create_tab_cnt</stringProp>
-            <stringProp name="Argument.value">${__P(sys.threadgroup.create_tab.count,0)}</stringProp>
-            <stringProp name="Argument.desc">线程组: [Prepare] 创建表执行次数, default: 0</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="tg_write_seq_cnt" elementType="Argument">
-            <stringProp name="Argument.name">tg_write_seq_cnt</stringProp>
-            <stringProp name="Argument.value">${__P(sys.threadgroup.write_seq.count,0)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">线程组: [Write] 执行数据写入(seq), default: 0</stringProp>
-          </elementProp>
-          <elementProp name="tg_write_rand_cnt" elementType="Argument">
-            <stringProp name="Argument.name">tg_write_rand_cnt</stringProp>
-            <stringProp name="Argument.value">${__P(sys.threadgroup.write_rand.count,0)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">线程组: [Write] 执行数据写入(random), default: 0</stringProp>
-          </elementProp>
-          <elementProp name="tg_del_tab_cnt" elementType="Argument">
-            <stringProp name="Argument.name">tg_del_tab_cnt</stringProp>
-            <stringProp name="Argument.value">${__P(sys.threadgroup.delete_tab.count,0)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">线程组: [tearDown] 删除子表, default: 0</stringProp>
-          </elementProp>
-          <elementProp name="tg_del_stab_cnt" elementType="Argument">
-            <stringProp name="Argument.name">tg_del_stab_cnt</stringProp>
-            <stringProp name="Argument.value">${__P(sys.threadgroup.delete_stab.count,0)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">线程组: [tearDown] 删除模板表, default: 0</stringProp>
-          </elementProp>
-          <elementProp name="tg_del_db_cnt" elementType="Argument">
-            <stringProp name="Argument.name">tg_del_db_cnt</stringProp>
-            <stringProp name="Argument.value">${__P(sys.threadgroup.delete_db.count,0)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">线程组: [tearDown] 删除数据库, default: 0</stringProp>
-          </elementProp>
           <elementProp name="trace_log" elementType="Argument">
             <stringProp name="Argument.name">trace_log</stringProp>
             <stringProp name="Argument.value">${__P(trace_log,)}</stringProp>
@@ -201,7 +147,7 @@
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">${tg_conf_cnt}</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -262,7 +208,7 @@
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">${tg_create_db_cnt}</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -290,7 +236,7 @@
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">${tg_create_stab_cnt}</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -366,7 +312,7 @@
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">${tg_create_tab_cnt}</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -414,11 +360,11 @@ SampleResult.setIgnore()</stringProp>
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(seq)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(seq)" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">${tg_write_seq_cnt}</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -527,7 +473,7 @@ vars.putObject(&quot;last_ts&quot;, nextTs)</stringProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">${tg_write_rand_cnt}</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -786,7 +732,7 @@ generateBatchInsertSQL()</stringProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">${tg_del_tab_cnt}</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -838,7 +784,7 @@ SampleResult.setIgnore()</stringProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">${tg_del_stab_cnt}</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -866,7 +812,7 @@ SampleResult.setIgnore()</stringProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">${tg_del_db_cnt}</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
