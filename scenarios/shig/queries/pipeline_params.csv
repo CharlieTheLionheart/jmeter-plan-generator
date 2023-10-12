@@ -1,0 +1,2 @@
+ts_db|write_throughput|device_count_per_thread|csv_sample_data|data_ts_step|write_limit_per_thread|write_duration|write_stop_at|read_loops|read_throughput|read_duration|begin_timestamp|end_timestamp|order_by|page_size|page_no|machine_code
+ts_db|write_throughput|device_count_per_thread|csv_sample_data|data_ts_step|write_limit_per_thread|write_duration|write_stop_at|120|60|90|2023-01-01 12:00:00|2024-01-01 12:00:00|k_timestamp|15|1|1_2
