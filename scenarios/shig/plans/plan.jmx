@@ -66,6 +66,11 @@
             <stringProp name="Argument.desc">结束device编号: default:20</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="machine_code" elementType="Argument">
+            <stringProp name="Argument.name">machine_code</stringProp>
+            <stringProp name="Argument.value">${__P(user.device.machine_code,1_2)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
           <elementProp name="write_throughput" elementType="Argument">
             <stringProp name="Argument.name">write_throughput</stringProp>
             <stringProp name="Argument.value">${__P(user.write.throughput,50000)}</stringProp>
@@ -140,6 +145,31 @@
             <stringProp name="Argument.value">${__P(user.read.webapp_port,8085)}</stringProp>
             <stringProp name="Argument.desc">webapp连接端口，默认 8085</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="page_no" elementType="Argument">
+            <stringProp name="Argument.name">page_no</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.value">${__P(user.read.page_no,1)}</stringProp>
+          </elementProp>
+          <elementProp name="page_size" elementType="Argument">
+            <stringProp name="Argument.name">page_size</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.value">${__P(user.read.page_size,15)}</stringProp>
+          </elementProp>
+          <elementProp name="begin_timestamp" elementType="Argument">
+            <stringProp name="Argument.name">begin_timestamp</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.value">${__P(user.read.begin_timestamp,2023-01-01 12:00:00)}</stringProp>
+          </elementProp>
+          <elementProp name="end_timestamp" elementType="Argument">
+            <stringProp name="Argument.name">end_timestamp</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.value">${__P(user.read.end_timestamp,2024-01-01 12:00:00)}</stringProp>
+          </elementProp>
+          <elementProp name="order_by" elementType="Argument">
+            <stringProp name="Argument.name">order_by</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.value">${__P(user.read.order_by,k_timestamp)}</stringProp>
           </elementProp>
         </collectionProp>
       </Arguments>
