@@ -171,6 +171,12 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.value">${__P(user.read.order_by,k_timestamp)}</stringProp>
           </elementProp>
+          <elementProp name="read_duration" elementType="Argument">
+            <stringProp name="Argument.name">read_duration</stringProp>
+            <stringProp name="Argument.value">${__P(user.read.duration,0)}</stringProp>
+            <stringProp name="Argument.desc">读线程执行时间,default 0</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -793,7 +799,7 @@ generateBatchInsertSQL()</stringProp>
         <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__P(duration,120)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <boolProp name="ThreadGroup.delayedStart">false</boolProp>
@@ -956,7 +962,7 @@ vars.put(&quot;read_loops&quot;, String.valueOf(realReadLoops));</stringProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__P(duration,120)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <boolProp name="ThreadGroup.delayedStart">false</boolProp>
@@ -1204,7 +1210,7 @@ vars.put(&quot;read_loops&quot;, String.valueOf(realReadLoops));</stringProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__P(duration,120)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <boolProp name="ThreadGroup.delayedStart">false</boolProp>
