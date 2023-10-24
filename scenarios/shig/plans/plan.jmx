@@ -301,7 +301,8 @@
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建用户: ${create_user};密码: ${create_password}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">CREATE USER ${create_user} WITH CREATEDB PASSWORD &apos;${create_password}&apos;;</stringProp>
+            <stringProp name="query">CREATE USER ${create_user} WITH PASSWORD &apos;${create_password}&apos;;
+GRANT admin TO ${create_user};</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -321,7 +322,8 @@
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建用户: ${create_user}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">CREATE USER ${create_user} WITH CREATEDB;</stringProp>
+            <stringProp name="query">CREATE USER ${create_user};
+GRANT admin TO ${create_user};</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
