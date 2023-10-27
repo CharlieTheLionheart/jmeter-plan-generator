@@ -16,9 +16,9 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="db_url" elementType="Argument">
             <stringProp name="Argument.name">db_url</stringProp>
-            <stringProp name="Argument.value">${__P(user.db.url,jdbc:postgresql://127.0.0.1:26257/defaultdb)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.db.url,jdbc:kaiwudb://127.0.0.1:26257/defaultdb)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">数据库连接jdbc url, default: jdbc:postgresql://127.0.0.1:26257/defaultdb</stringProp>
+            <stringProp name="Argument.desc">数据库连接jdbc url, default: jdbc:kaiwudb://127.0.0.1:26257/defaultdb</stringProp>
           </elementProp>
           <elementProp name="db_user" elementType="Argument">
             <stringProp name="Argument.name">db_user</stringProp>
@@ -97,12 +97,6 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">插入样本数据文件, default: /data/data.csv</stringProp>
           </elementProp>
-          <elementProp name="write_magnification" elementType="Argument">
-            <stringProp name="Argument.name">write_magnification</stringProp>
-            <stringProp name="Argument.value">${__P(user.write.magnification,10000)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">每个线程执行的数据写入次数, default: 10000</stringProp>
-          </elementProp>
           <elementProp name="write_duration" elementType="Argument">
             <stringProp name="Argument.name">write_duration</stringProp>
             <stringProp name="Argument.value">${__P(user.write.duration,0)}</stringProp>
@@ -141,11 +135,6 @@
           <elementProp name="read_throughput" elementType="Argument">
             <stringProp name="Argument.name">read_throughput</stringProp>
             <stringProp name="Argument.value">${__P(user.read.throughput,50000)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="read_loops" elementType="Argument">
-            <stringProp name="Argument.name">read_loops</stringProp>
-            <stringProp name="Argument.value">${__P(user.read.loops,50000)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="webapp_host" elementType="Argument">
@@ -201,6 +190,12 @@
             <stringProp name="Argument.name">create_password</stringProp>
             <stringProp name="Argument.value">${__P(user.create.password,)}</stringProp>
             <stringProp name="Argument.desc">创建用户用户密码</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="device_insert_non_ex_count" elementType="Argument">
+            <stringProp name="Argument.name">device_insert_non_ex_count</stringProp>
+            <stringProp name="Argument.value">${__P(user.device.insert_non_ex_count,0)}</stringProp>
+            <stringProp name="Argument.desc">插入不存在的设备数量（测试“插入自动建表”功能），default:0</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -736,111 +731,108 @@ generateBatchInsertSQL()</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(seq)" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建预计算" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration">10000</stringProp>
+        <stringProp name="ThreadGroup.delay">10</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.sql.*
-import java.io.*
-import java.text.SimpleDateFormat
-import java.time.Duration
-
-def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
-
-vars.putObject(&quot;date_formatter&quot;, formatter)
-vars.putObject(&quot;sample_data&quot;, new File(vars.get(&quot;sample_data&quot;)).readLines())
-vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
-vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()</stringProp>
-        </JSR223Sampler>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建预计算" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE PRECOMPUTING pc_sum AS SELECT time_bucket(k_timestamp, &apos;1s&apos;) AS bucket, SUM(pallpower) AS sumpallpower FROM db_shig.t_electmeter t GROUP BY bucket;</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
         <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${write_throughput}</stringProp>
-          <intProp name="calcMode">0</intProp>
-        </ConstantThroughputTimer>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 插入自动建表" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="加载数据" enabled="true">
+          <stringProp name="delimiter">|</stringProp>
+          <stringProp name="fileEncoding">UTF-8</stringProp>
+          <stringProp name="filename">${sample_data}</stringProp>
+          <boolProp name="ignoreFirstLine">false</boolProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">true</boolProp>
+          <stringProp name="shareMode">shareMode.all</stringProp>
+          <boolProp name="stopThread">false</boolProp>
+          <stringProp name="variableNames">data_line</stringProp>
+        </CSVDataSet>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="写入倍率" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
-          <stringProp name="LoopController.loops">${write_magnification}</stringProp>
+          <stringProp name="LoopController.loops">${device_insert_non_ex_count}</stringProp>
         </LoopController>
         <hashTree>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="初始化循环变量" enabled="true">
+          <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
+            <stringProp name="CounterConfig.start">1</stringProp>
+            <stringProp name="CounterConfig.end">${device_insert_non_ex_count}</stringProp>
+            <stringProp name="CounterConfig.incr">1</stringProp>
+            <stringProp name="CounterConfig.name">batch_idx</stringProp>
+            <stringProp name="CounterConfig.format"></stringProp>
+            <boolProp name="CounterConfig.per_user">false</boolProp>
+          </CounterConfig>
+          <hashTree/>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据，插入一个不存在的表" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">vars.putObject(&quot;counter&quot;, Integer.parseInt(vars.get(&quot;device_rand_start&quot;)))</stringProp>
-          </JSR223Sampler>
+            <stringProp name="script">  def builder = new StringBuilder()
+  builder.append(&quot;INSERT INTO ${vars.get(&quot;db_name&quot;)}.electmeter_auto_${vars.get(&quot;batch_idx&quot;)} USING ${vars.get(&quot;db_name&quot;)}.t_electmeter (machine_code) ATTRIBUTES (&apos;auto_${vars.get(&quot;batch_idx&quot;)}&apos;) VALUES &quot;)
+  def ts = System.currentTimeMillis()
+  builder.append(&quot;(${ts},${vars.get(&apos;data_line&apos;)}),&quot;)
+  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+  log.debug(&quot;builder={}&quot;, builder.toString())
+  vars.put(&quot;builder&quot;, builder.toString())</stringProp>
+          </JSR223PreProcessor>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
-            <boolProp name="LoopController.continue_forever">true</boolProp>
-            <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
-          </LoopController>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="插入自动建表" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">${builder}</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout">60</stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">import java.sql.*
-import java.io.*
-
-def nextTs = vars.getObject(&quot;last_ts&quot;)
-def builder = new StringBuilder()
-builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.getObject(&quot;counter&quot;)} values &quot;)
-for(String line in vars.getObject(&quot;sample_data&quot;)) {
-  builder.append(&quot;(${nextTs},${line}),&quot;)
-  nextTs += Long.parseLong(vars.get(&quot;data_ts_step&quot;))
-}
-builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-vars.put(&quot;builder&quot;, builder.toString())
-vars.putObject(&quot;last_ts&quot;, nextTs)</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
-              <stringProp name="dataSource">default_pool</stringProp>
-              <stringProp name="queryType">Update Statement</stringProp>
-              <stringProp name="query">${builder}</stringProp>
-              <stringProp name="queryArguments"></stringProp>
-              <stringProp name="queryArgumentsTypes"></stringProp>
-              <stringProp name="variableNames"></stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout">60</stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCSampler>
-            <hashTree>
-              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
-                <collectionProp name="Asserion.test_strings"/>
-                <stringProp name="Assertion.custom_message"></stringProp>
-                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-                <boolProp name="Assertion.assume_success">false</boolProp>
-                <intProp name="Assertion.test_type">16</intProp>
-              </ResponseAssertion>
-              <hashTree/>
-            </hashTree>
-            <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="循环变量处理" enabled="true">
-              <stringProp name="scriptLanguage">groovy</stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="script">vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)</stringProp>
-            </JSR223PostProcessor>
+            <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+              <collectionProp name="Asserion.test_strings"/>
+              <stringProp name="Assertion.custom_message"></stringProp>
+              <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+              <boolProp name="Assertion.assume_success">false</boolProp>
+              <intProp name="Assertion.test_type">16</intProp>
+            </ResponseAssertion>
             <hashTree/>
           </hashTree>
         </hashTree>
@@ -855,7 +847,7 @@ vars.putObject(&quot;last_ts&quot;, nextTs)</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">1</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
@@ -877,7 +869,7 @@ vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="加载数据" enabled="true">
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="加载数据[CSV]" enabled="false">
           <stringProp name="delimiter">|</stringProp>
           <stringProp name="fileEncoding">UTF-8</stringProp>
           <stringProp name="filename">${sample_data}</stringProp>
@@ -888,6 +880,15 @@ SampleResult.setIgnore()</stringProp>
           <boolProp name="stopThread">false</boolProp>
           <stringProp name="variableNames">data_line</stringProp>
         </CSVDataSet>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="加载数据" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">def csv_reader = new RandomAccessFile(vars.get(&quot;sample_data&quot;), &quot;r&quot;)
+vars.putObject(&quot;csv_reader&quot;, csv_reader)</stringProp>
+        </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
           <stringProp name="throughput">${write_throughput}</stringProp>
@@ -902,7 +903,7 @@ SampleResult.setIgnore()</stringProp>
         <hashTree>
           <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
-            <stringProp name="LoopController.loops">${write_magnification}</stringProp>
+            <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
             <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
@@ -958,13 +959,25 @@ List getSwapedListOrNot() {
   return generateTimestampList()
 }
 
+String readNext(RandomAccessFile csv_reader) {
+  def line = csv_reader.readLine()
+  if(!line) {
+    csv_reader.seek(0)
+    if(!(line = csv_reader.readLine())){
+      throw new Exception(&apos;Read csv file error after reset.&apos;)
+    }
+  }
+  return line
+}
+
 void generateBatchInsertSQL() {
+  def csv_reader = vars.getObject(&quot;csv_reader&quot;)
   def builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-	builder.append(&quot;(${swapedList.get(lineIdx)},${vars.get(&apos;data_line&apos;)}),&quot;)
+	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
@@ -1007,7 +1020,7 @@ generateBatchInsertSQL()</stringProp>
         <hashTree>
           <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
-            <stringProp name="LoopController.loops">${write_magnification}</stringProp>
+            <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
             <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
@@ -1062,13 +1075,25 @@ List getSwapedListOrNot() {
   return generateTimestampList()
 }
 
+String readNext(RandomAccessFile csv_reader) {
+  def line = csv_reader.readLine()
+  if(!line) {
+    csv_reader.seek(0)
+    if(!(line = csv_reader.readLine())){
+      throw new Exception(&apos;Read csv file error after reset.&apos;)
+    }
+  }
+  return line
+}
+
 void generateBatchInsertSQL() {
+  def csv_reader = vars.getObject(&quot;csv_reader&quot;)
   def builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-	builder.append(&quot;(${swapedList.get(lineIdx)},${vars.get(&apos;data_line&apos;)}),&quot;)
+	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
@@ -1221,7 +1246,7 @@ vars.put(&quot;read_loops&quot;, String.valueOf(realReadLoops));</stringProp>
         <hashTree/>
         <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
-          <stringProp name="LoopController.loops">${read_loops}</stringProp>
+          <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
           <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="last curs with machine_code" enabled="true">
@@ -1259,7 +1284,7 @@ vars.put(&quot;read_loops&quot;, String.valueOf(realReadLoops));</stringProp>
               <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
               <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
               <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout"></stringProp>
+              <stringProp name="HTTPSampler.response_timeout">30000</stringProp>
             </HTTPSamplerProxy>
             <hashTree>
               <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
@@ -1271,6 +1296,50 @@ vars.put(&quot;read_loops&quot;, String.valueOf(realReadLoops));</stringProp>
                 <boolProp name="ISREGEX">true</boolProp>
               </JSONPathAssertion>
               <hashTree/>
+            </hashTree>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If device_insert_non_ex_count &gt; 0" enabled="true">
+              <boolProp name="IfController.evaluateAll">false</boolProp>
+              <boolProp name="IfController.useExpression">true</boolProp>
+              <stringProp name="IfController.condition">${__groovy(Integer.valueOf(&quot;${device_insert_non_ex_count}&quot;)&gt;0)}</stringProp>
+            </IfController>
+            <hashTree>
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="last curs from non-ex device with machine_code" enabled="true">
+                <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="machineCode" elementType="HTTPArgument">
+                      <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                      <stringProp name="Argument.value">auto_1</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                      <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                      <stringProp name="Argument.name">machineCode</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+                <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
+                <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
+                <stringProp name="HTTPSampler.protocol">http</stringProp>
+                <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
+                <stringProp name="HTTPSampler.path">/shig/electmeters/last-curs</stringProp>
+                <stringProp name="HTTPSampler.method">GET</stringProp>
+                <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+                <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+                <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+                <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+                <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+                <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+                <stringProp name="HTTPSampler.response_timeout"></stringProp>
+              </HTTPSamplerProxy>
+              <hashTree>
+                <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
+                  <stringProp name="JSON_PATH">$.code</stringProp>
+                  <stringProp name="EXPECTED_VALUE">0</stringProp>
+                  <boolProp name="JSONVALIDATION">true</boolProp>
+                  <boolProp name="EXPECT_NULL">false</boolProp>
+                  <boolProp name="INVERT">false</boolProp>
+                  <boolProp name="ISREGEX">true</boolProp>
+                </JSONPathAssertion>
+                <hashTree/>
+              </hashTree>
             </hashTree>
           </hashTree>
         </hashTree>
@@ -1435,7 +1504,7 @@ vars.put(&quot;read_loops&quot;, String.valueOf(realReadLoops));</stringProp>
               <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
               <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
               <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout"></stringProp>
+              <stringProp name="HTTPSampler.response_timeout">120000</stringProp>
             </HTTPSamplerProxy>
             <hashTree>
               <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
@@ -1498,7 +1567,7 @@ vars.put(&quot;read_loops&quot;, String.valueOf(realReadLoops));</stringProp>
               <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
               <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
               <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout"></stringProp>
+              <stringProp name="HTTPSampler.response_timeout">120000</stringProp>
             </HTTPSamplerProxy>
             <hashTree>
               <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
@@ -1622,7 +1691,7 @@ vars.put(&quot;read_loops&quot;, String.valueOf(realReadLoops));</stringProp>
         <hashTree/>
         <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
-          <stringProp name="LoopController.loops">${read_loops}</stringProp>
+          <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
           <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="last curs" enabled="true">
@@ -1652,7 +1721,7 @@ vars.put(&quot;read_loops&quot;, String.valueOf(realReadLoops));</stringProp>
               <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
               <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
               <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout"></stringProp>
+              <stringProp name="HTTPSampler.response_timeout">30000</stringProp>
             </HTTPSamplerProxy>
             <hashTree>
               <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
