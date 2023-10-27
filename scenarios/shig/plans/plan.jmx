@@ -52,7 +52,7 @@
           </elementProp>
           <elementProp name="down_sampling_param" elementType="Argument">
             <stringProp name="Argument.name">down_sampling_param</stringProp>
-            <stringProp name="Argument.value">${__P(user.sys.down_sampling_param,RETENTIONS 180m\,360m:30s\,720m:1m SAMPLE avg\,last(elect_name))}</stringProp>
+            <stringProp name="Argument.value">${__P(user.sys.down_sampling_param,)}</stringProp>
             <stringProp name="Argument.desc">降采样参数</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
@@ -686,15 +686,11 @@ List generateTimestampList() {
   return tsList
 }
 
-List getSwapedListOrNot() {
-  return generateTimestampList()
-}
-
 void generateBatchInsertSQL() {
   def builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_sample values &quot;)
   int lineIdx = 0
-  def swapedList = getSwapedListOrNot()
+  def swapedList = generateTimestampList()
   for(String line in vars.getObject(&quot;sample_data&quot;)) {
     builder.append(&quot;(${swapedList.get(lineIdx)},${line}),&quot;)
     lineIdx++
