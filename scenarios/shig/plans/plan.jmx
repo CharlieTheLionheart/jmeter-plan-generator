@@ -81,7 +81,7 @@
           </elementProp>
           <elementProp name="create_tables_mode" elementType="Argument">
             <stringProp name="Argument.name">create_tables_mode</stringProp>
-            <stringProp name="Argument.value">${__P(user.device.create_tables_mode,batch)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.device.create_tables_mode,single)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">建表模式(single/batch),default:single</stringProp>
           </elementProp>
@@ -219,7 +219,7 @@
         <stringProp name="connectionAge">5000</stringProp>
         <stringProp name="checkQuery"></stringProp>
         <stringProp name="dbUrl">${db_url}</stringProp>
-        <stringProp name="driver">org.postgresql.Driver</stringProp>
+        <stringProp name="driver">com.kaiwudb.Driver</stringProp>
         <stringProp name="username">${db_user}</stringProp>
         <stringProp name="password">${db_password}</stringProp>
         <stringProp name="connectionProperties"></stringProp>
@@ -540,6 +540,200 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="resultSetHandler">Store as Object</stringProp>
           </JDBCSampler>
           <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建insertSelect源表" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.sql.*
+import java.io.*
+import java.text.SimpleDateFormat
+import java.time.Duration
+
+def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
+
+vars.putObject(&quot;date_formatter&quot;, formatter)
+def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+def rawDatas = new File(vars.get(&quot;sample_data&quot;)).readLines()
+def sampleDatas = new ArrayList(maxCount)
+for(int i = 0; i &lt; maxCount; i++) {
+	sampleDatas.add(rawDatas.get(i % rawDatas.size()))
+}
+vars.putObject(&quot;sample_data&quot;, sampleDatas)
+vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
+vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
+SampleResult.setIgnore()</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建不带降采样的模板表: ${db_name}.t_electmeter_sample" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE TABLE ${db_name}.t_electmeter_sample (
+  k_timestamp timestamp NOT NULL,
+  elect_name varchar(63) NOT NULL,
+  vol_a double NOT NULL,
+  cur_a double NOT NULL,
+  powerf_a double,
+  allenergy_a int NOT NULL,
+  pallenergy_a int NOT NULL,
+  rallenergy_a int NOT NULL,
+  allrenergy1_a int NOT NULL,
+  allrenergy2_a int NOT NULL,
+  powera_a double NOT NULL,
+  powerr_a double NOT NULL,
+  powerl_a double NOT NULL,
+  vol_b double NOT NULL,
+  cur_b double NOT NULL,
+  powerf_b double NOT NULL,
+  allenergy_b int NOT NULL,
+  pallenergy_b int NOT NULL,
+  rallenergy_b int NOT NULL,
+  allrenergy1_b int NOT NULL,
+  allrenergy2_b int NOT NULL,
+  powera_b double NOT NULL,
+  powerr_b double NOT NULL,
+  powerl_b double NOT NULL,
+  vol_c double NOT NULL,
+  cur_c double NOT NULL,
+  powerf_c double NOT NULL,
+  allenergy_c int NOT NULL,
+  pallenergy_c int NOT NULL,
+  rallenergy_c int NOT NULL,
+  allrenergy1_c int NOT NULL,
+  allrenergy2_c int NOT NULL,
+  powera_c double NOT NULL,
+  powerr_c double NOT NULL,
+  powerl_c double NOT NULL,
+  vol_ab double,
+  vol_bc double,
+  vol_ca double,
+  infre double NOT NULL,
+  powerf double NOT NULL,
+  allpower double NOT NULL,
+  pallpower double NOT NULL,
+  rallpower double NOT NULL,
+  powerr double NOT NULL,
+  powerl double NOT NULL,
+  allrenergy1 double NOT NULL,
+  allrenergy2 double NOT NULL
+) ATTRIBUTES (machine_code varchar(64));</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建sample表" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE TABLE ${db_name}.electmeter_sample USING ${db_name}.t_electmeter_sample (machine_code) ATTRIBUTES (&apos;sample&apos;);</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="写入sample表" enabled="true"/>
+        <hashTree>
+          <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="加载数据" enabled="true">
+            <stringProp name="delimiter">|</stringProp>
+            <stringProp name="fileEncoding">UTF-8</stringProp>
+            <stringProp name="filename">${sample_data}</stringProp>
+            <boolProp name="ignoreFirstLine">false</boolProp>
+            <boolProp name="quotedData">false</boolProp>
+            <boolProp name="recycle">true</boolProp>
+            <stringProp name="shareMode">shareMode.group</stringProp>
+            <boolProp name="stopThread">false</boolProp>
+            <stringProp name="variableNames">data_line</stringProp>
+          </CSVDataSet>
+          <hashTree/>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="预处理数据: ${db_name}.electmeter_sample" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">false</stringProp>
+            <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+
+List generateTimestampList() {
+  def nextTs = System.currentTimeMillis()
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  return tsList
+}
+
+List getSwapedListOrNot() {
+  return generateTimestampList()
+}
+
+void generateBatchInsertSQL() {
+  def builder = new StringBuilder()
+  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_sample values &quot;)
+  int lineIdx = 0
+  def swapedList = getSwapedListOrNot()
+  for(String line in vars.getObject(&quot;sample_data&quot;)) {
+    builder.append(&quot;(${swapedList.get(lineIdx)},${line}),&quot;)
+    lineIdx++
+  }
+  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+  log.debug(&quot;builder={}&quot;, builder.toString())
+  vars.put(&quot;builder&quot;, builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.electmeter_sample" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">${builder}</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout">60</stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+              <collectionProp name="Asserion.test_strings"/>
+              <stringProp name="Assertion.custom_message"></stringProp>
+              <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+              <boolProp name="Assertion.assume_success">false</boolProp>
+              <intProp name="Assertion.test_type">16</intProp>
+            </ResponseAssertion>
+            <hashTree/>
+          </hashTree>
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(seq)" enabled="false">
@@ -907,200 +1101,6 @@ generateBatchInsertSQL()</stringProp>
               </ResponseAssertion>
               <hashTree/>
             </hashTree>
-          </hashTree>
-        </hashTree>
-      </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[InsertSelect] 执行数据写入准备" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"></stringProp>
-        <stringProp name="ThreadGroup.delay"></stringProp>
-        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
-      </ThreadGroup>
-      <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.sql.*
-import java.io.*
-import java.text.SimpleDateFormat
-import java.time.Duration
-
-def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
-
-vars.putObject(&quot;date_formatter&quot;, formatter)
-def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
-def rawDatas = new File(vars.get(&quot;sample_data&quot;)).readLines()
-def sampleDatas = new ArrayList(maxCount)
-for(int i = 0; i &lt; maxCount; i++) {
-	sampleDatas.add(rawDatas.get(i % rawDatas.size()))
-}
-vars.putObject(&quot;sample_data&quot;, sampleDatas)
-vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
-vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()</stringProp>
-        </JSR223Sampler>
-        <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建不带降采样的模板表: ${db_name}.t_electmeter_sample" enabled="true">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE TABLE ${db_name}.t_electmeter_sample (
-  k_timestamp timestamp NOT NULL,
-  elect_name varchar(63) NOT NULL,
-  vol_a double NOT NULL,
-  cur_a double NOT NULL,
-  powerf_a double,
-  allenergy_a int NOT NULL,
-  pallenergy_a int NOT NULL,
-  rallenergy_a int NOT NULL,
-  allrenergy1_a int NOT NULL,
-  allrenergy2_a int NOT NULL,
-  powera_a double NOT NULL,
-  powerr_a double NOT NULL,
-  powerl_a double NOT NULL,
-  vol_b double NOT NULL,
-  cur_b double NOT NULL,
-  powerf_b double NOT NULL,
-  allenergy_b int NOT NULL,
-  pallenergy_b int NOT NULL,
-  rallenergy_b int NOT NULL,
-  allrenergy1_b int NOT NULL,
-  allrenergy2_b int NOT NULL,
-  powera_b double NOT NULL,
-  powerr_b double NOT NULL,
-  powerl_b double NOT NULL,
-  vol_c double NOT NULL,
-  cur_c double NOT NULL,
-  powerf_c double NOT NULL,
-  allenergy_c int NOT NULL,
-  pallenergy_c int NOT NULL,
-  rallenergy_c int NOT NULL,
-  allrenergy1_c int NOT NULL,
-  allrenergy2_c int NOT NULL,
-  powera_c double NOT NULL,
-  powerr_c double NOT NULL,
-  powerl_c double NOT NULL,
-  vol_ab double,
-  vol_bc double,
-  vol_ca double,
-  infre double NOT NULL,
-  powerf double NOT NULL,
-  allpower double NOT NULL,
-  pallpower double NOT NULL,
-  rallpower double NOT NULL,
-  powerr double NOT NULL,
-  powerl double NOT NULL,
-  allrenergy1 double NOT NULL,
-  allrenergy2 double NOT NULL
-) ATTRIBUTES (machine_code varchar(64));</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout">600</stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建sample表" enabled="true">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE TABLE ${db_name}.electmeter_sample USING ${db_name}.t_electmeter_sample (machine_code) ATTRIBUTES (&apos;sample&apos;);</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout">600</stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="写入sample表" enabled="true"/>
-        <hashTree>
-          <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="加载数据" enabled="true">
-            <stringProp name="delimiter">|</stringProp>
-            <stringProp name="fileEncoding">UTF-8</stringProp>
-            <stringProp name="filename">${sample_data}</stringProp>
-            <boolProp name="ignoreFirstLine">false</boolProp>
-            <boolProp name="quotedData">false</boolProp>
-            <boolProp name="recycle">true</boolProp>
-            <stringProp name="shareMode">shareMode.group</stringProp>
-            <boolProp name="stopThread">false</boolProp>
-            <stringProp name="variableNames">data_line</stringProp>
-          </CSVDataSet>
-          <hashTree/>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="预处理数据: ${db_name}.electmeter_sample" enabled="true">
-            <stringProp name="scriptLanguage">groovy</stringProp>
-            <stringProp name="parameters"></stringProp>
-            <stringProp name="filename"></stringProp>
-            <stringProp name="cacheKey">false</stringProp>
-            <stringProp name="script">import java.sql.*
-import java.io.*
-import java.util.List
-import java.util.ArrayList
-
-List generateTimestampList() {
-  def nextTs = System.currentTimeMillis()
-  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
-  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
-  def tsList = new ArrayList()
-  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
-    tsList.add(nextTs)
-    nextTs += dataTsStep
-  }
-  return tsList
-}
-
-List getSwapedListOrNot() {
-  return generateTimestampList()
-}
-
-void generateBatchInsertSQL() {
-  def builder = new StringBuilder()
-  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_sample values &quot;)
-  int lineIdx = 0
-  def swapedList = getSwapedListOrNot()
-  for(String line in vars.getObject(&quot;sample_data&quot;)) {
-    builder.append(&quot;(${swapedList.get(lineIdx)},${line}),&quot;)
-    lineIdx++
-  }
-  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-  log.debug(&quot;builder={}&quot;, builder.toString())
-  vars.put(&quot;builder&quot;, builder.toString())
-}
-
-generateBatchInsertSQL()</stringProp>
-          </JSR223Sampler>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.electmeter_sample" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">${builder}</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">60</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree>
-            <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
-              <collectionProp name="Asserion.test_strings"/>
-              <stringProp name="Assertion.custom_message"></stringProp>
-              <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-              <boolProp name="Assertion.assume_success">false</boolProp>
-              <intProp name="Assertion.test_type">16</intProp>
-            </ResponseAssertion>
-            <hashTree/>
           </hashTree>
         </hashTree>
       </hashTree>
