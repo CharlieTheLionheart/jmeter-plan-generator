@@ -1702,7 +1702,7 @@ import java.util.List
 import java.util.ArrayList
 
 int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;));
-int should = (lineNum + 1) / 2;
+int should = (lineNum+1)/2;
 
 int beforeCount = Integer.parseInt(vars.get(&quot;before_count_1&quot;));
 int afterCount = Integer.parseInt(vars.get(&quot;after_count_1&quot;));
