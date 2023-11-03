@@ -1652,7 +1652,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="variableName">device_num</stringProp>
           </RandomVariableConfig>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="计算插入前的count: ${db_name}.electmeter_dedup" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="获取插入前的count: ${db_name}.electmeter_dedup" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">select count(1) from ${db_name}.electmeter_dedup;</stringProp>
@@ -1678,7 +1678,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="计算插入后的count: ${db_name}.electmeter_dedup" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="获取插入后的count: ${db_name}.electmeter_dedup" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">select count(1) from ${db_name}.electmeter_dedup;</stringProp>
@@ -1702,7 +1702,7 @@ import java.util.List
 import java.util.ArrayList
 
 int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;));
-int should = lineNum / 2;
+int should = (lineNum + 1) / 2;
 
 int beforeCount = Integer.parseInt(vars.get(&quot;before_count_1&quot;));
 int afterCount = Integer.parseInt(vars.get(&quot;after_count_1&quot;));
