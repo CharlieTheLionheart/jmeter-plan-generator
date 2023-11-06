@@ -95,7 +95,13 @@
             <stringProp name="Argument.name">sample_data</stringProp>
             <stringProp name="Argument.value">${__P(user.write.sample_data,/data/data.csv)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">插入样本数据文件, default: /data/data.csv</stringProp>
+            <stringProp name="Argument.desc">插入样本数据文件(电表), default: /data/data.csv</stringProp>
+          </elementProp>
+          <elementProp name="sample_tighten_data" elementType="Argument">
+            <stringProp name="Argument.name">sample_tighten_data</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.sample_tighten_data,/data/tighten_data.csv)}</stringProp>
+            <stringProp name="Argument.desc">插入样本数据文件(拧紧机), default: /data/tighten_data.csv</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="write_duration" elementType="Argument">
             <stringProp name="Argument.name">write_duration</stringProp>
@@ -441,6 +447,47 @@ GRANT admin TO ${create_user};</stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建拧紧机模板表: ${db_name}.t_tighten" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE TABLE ${db_name}.t_tighten (
+k_timestamp timestamp NOT NULL, 
+cell_id varchar(256), 
+channel_id varchar(256), 
+torque_controller_name varchar(256), 
+vin_number varchar(256),
+job_id varchar(256),
+parameter_set_id varchar(256),
+batch_size varchar(256),
+batch_counter varchar(256),
+tightening_status varchar(256),
+torque_status varchar(256),
+angle_status varchar(256),
+torque_min_limit varchar(30),
+torque_max_limit varchar(30),
+torque_final_target varchar(30),
+torque varchar(30),
+angle_min varchar(30),
+angle_max varchar(30),
+final_angle_target varchar(30),
+angle varchar(30),
+datetime_last_change varchar(256),
+batch_status varchar(256),
+tightening_id varchar(256),
+alarm_content varchar(200) ,
+number varchar(30),
+plc_state varchar(10),
+device_state int
+) ATTRIBUTES (machine_code varchar(64));</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建表" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
@@ -534,6 +581,44 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="resultSetMaxRows"></stringProp>
             <stringProp name="resultSetHandler">Store as Object</stringProp>
           </JDBCSampler>
+          <hashTree/>
+        </hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="初始化循环变量" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">vars.putObject(&quot;counter&quot;, Integer.parseInt(vars.get(&quot;device_rand_start&quot;)))
+vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
+SampleResult.setIgnore()</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
+        </LoopController>
+        <hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]创建拧紧机设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">INSERT INTO ${db_name}.tighten_${__threadNum}_${counter} USING ${db_name}.t_tighten (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1);</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout">600</stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree/>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="循环变量处理" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)
+SampleResult.setIgnore()</stringProp>
+          </JSR223Sampler>
           <hashTree/>
         </hashTree>
       </hashTree>
@@ -1260,7 +1345,10 @@ SampleResult.setIgnore()</stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def csv_reader = new RandomAccessFile(vars.get(&quot;sample_data&quot;), &quot;r&quot;)
-vars.putObject(&quot;csv_reader&quot;, csv_reader)</stringProp>
+vars.putObject(&quot;csv_reader&quot;, csv_reader)
+def tighten_csv_reader = new RandomAccessFile(vars.get(&quot;sample_tighten_data&quot;), &quot;r&quot;)
+vars.putObject(&quot;tighten_csv_reader&quot;, tighten_csv_reader)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
@@ -1345,16 +1433,22 @@ String readNext(RandomAccessFile csv_reader) {
 
 void generateBatchInsertSQL() {
   def csv_reader = vars.getObject(&quot;csv_reader&quot;)
+  def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
   def builder = new StringBuilder()
+  def tighten_builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  tighten_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.tighten_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
 	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
+	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(tighten_csv_reader)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+  tighten_builder.setCharAt(tighten_builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
   vars.put(&quot;builder&quot;, builder.toString())
+  vars.put(&quot;tighten_builder&quot;, tighten_builder.toString())
 }
 
 generateBatchInsertSQL()</stringProp>
@@ -1365,6 +1459,28 @@ generateBatchInsertSQL()</stringProp>
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">60</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                <collectionProp name="Asserion.test_strings"/>
+                <stringProp name="Assertion.custom_message"></stringProp>
+                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                <boolProp name="Assertion.assume_success">false</boolProp>
+                <intProp name="Assertion.test_type">16</intProp>
+              </ResponseAssertion>
+              <hashTree/>
+            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">${tighten_builder}</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames"></stringProp>
@@ -1461,16 +1577,21 @@ String readNext(RandomAccessFile csv_reader) {
 
 void generateBatchInsertSQL() {
   def csv_reader = vars.getObject(&quot;csv_reader&quot;)
+  def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
   def builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  tighten_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.tighten_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
 	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
+	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(tighten_csv_reader)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+  tighten_builder.setCharAt(tighten_builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
   vars.put(&quot;builder&quot;, builder.toString())
+  vars.put(&quot;tighten_builder&quot;, tighten_builder.toString())
 }
 
 generateBatchInsertSQL()</stringProp>
@@ -1481,6 +1602,28 @@ generateBatchInsertSQL()</stringProp>
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">60</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                <collectionProp name="Asserion.test_strings"/>
+                <stringProp name="Assertion.custom_message"></stringProp>
+                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                <boolProp name="Assertion.assume_success">false</boolProp>
+                <intProp name="Assertion.test_type">16</intProp>
+              </ResponseAssertion>
+              <hashTree/>
+            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">${tighten_builder}</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames"></stringProp>
