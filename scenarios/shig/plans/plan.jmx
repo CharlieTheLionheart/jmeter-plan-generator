@@ -386,6 +386,22 @@ GRANT admin TO ${create_user};</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理：组装降采样参数" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">def dsp = vars.get(&apos;down_sampling_param&apos;)
+def elec_dsp=&quot;&quot;
+def tighten_dsp=&quot;&quot;
+if (dsp != null &amp;&amp; dsp != &quot;&quot;) {
+	elec_dsp = (&quot;RETENTIONS &quot; + dsp + &quot; SAMPLE avg,last(elect_name)&quot;)
+	tighten_dsp = (&quot;RETENTIONS &quot; + dsp + &quot; SAMPLE avg, last(torque_controller_name),last(tightening_status),last(torque_status), last(angle_status),last(batch_status),last(tightening_id),last(alarm_content), last(datetime_last_change)&quot;)
+}
+vars.put(&quot;elec_dsp&quot;, elec_dsp)
+vars.put(&quot;tighten_dsp&quot;, tighten_dsp)</stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建模板表: ${db_name}.t_electmeter" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
@@ -437,7 +453,7 @@ GRANT admin TO ${create_user};</stringProp>
   powerl double NOT NULL,
   allrenergy1 double NOT NULL,
   allrenergy2 double NOT NULL
-) ATTRIBUTES (machine_code varchar(64)) ${down_sampling_param};</stringProp>
+) ATTRIBUTES (machine_code varchar(64)) ${elec_dsp};</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
@@ -478,10 +494,7 @@ alarm_content varchar(200),
 number int,
 plc_state int,
 device_state int NOT NULL
-) ATTRIBUTES (machine_code varchar(64)) 
-RETENTIONS 180m,360m:30s,720m:1m SAMPLE avg,
-last(torque_controller_name),last(tightening_status),last(torque_status),
-last(angle_status),last(batch_status),last(tightening_id),last(alarm_content), last(datetime_last_change);</stringProp>
+) ATTRIBUTES (machine_code varchar(64)) ${tighten_dsp};</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
