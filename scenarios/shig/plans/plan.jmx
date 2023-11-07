@@ -204,6 +204,30 @@
             <stringProp name="Argument.desc">插入不存在的设备数量（测试“插入自动建表”功能），default:0</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="import_stable_creates" elementType="Argument">
+            <stringProp name="Argument.name">import_stable_creates</stringProp>
+            <stringProp name="Argument.value">${__P(user.import.stable_creates,/root/stable_creates.csv)}</stringProp>
+            <stringProp name="Argument.desc">创建模板表sql数据,每行一个sql</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="import_list" elementType="Argument">
+            <stringProp name="Argument.name">import_list</stringProp>
+            <stringProp name="Argument.value">${__P(user.import.list,/root/import_list.csv)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">导入数据文件列表路径，每行一个，需要包含模板表名称和字表名称,字表名称与文件名一致</stringProp>
+          </elementProp>
+          <elementProp name="import_parallel" elementType="Argument">
+            <stringProp name="Argument.name">import_parallel</stringProp>
+            <stringProp name="Argument.value">${__P(user.import.parallel,10)}</stringProp>
+            <stringProp name="Argument.desc">创建子表并行线程数， default: 10</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="import_data_root" elementType="Argument">
+            <stringProp name="Argument.name">import_data_root</stringProp>
+            <stringProp name="Argument.value">${__P(user.import.data_root,/root/import_data)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">导入数据的源目录,用于link到extern</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -2867,6 +2891,251 @@ vars.put(&quot;read_loops&quot;, String.valueOf(realReadLoops));</stringProp>
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Export] 导出数据库" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">def transfer_type = vars.get(&quot;transfer_type&quot;)
+if(transfer_type) {
+	vars.put(&quot;transfer_option&quot;, &quot;WITH ${transfer_type}&quot;)
+}
+</stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="导出数据库${db_name} ${transfer_option}" enabled="true">
+          <stringProp name="dataSource">transfer_pool</stringProp>
+          <stringProp name="queryType">Select Statement</stringProp>
+          <stringProp name="query">EXPORT INTO CSV &apos;nodelocal://1/${db_name}&apos; FROM DATABASE ${db_name} ${transfer_option};</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Export] 导出模板表" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">def transfer_type = vars.get(&quot;transfer_type&quot;)
+if(transfer_type) {
+	vars.put(&quot;transfer_option&quot;, &quot;WITH ${transfer_type}&quot;)
+}
+</stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="导出模板表${db_name}.t_electmeter ${transfer_option}" enabled="true">
+          <stringProp name="dataSource">transfer_pool</stringProp>
+          <stringProp name="queryType">Select Statement</stringProp>
+          <stringProp name="query">EXPORT INTO CSV &apos;nodelocal://1/${db_name}.t_electmeter&apos; FROM TABLE ${db_name}.t_electmeter ${transfer_option};</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Import] 导入初始化" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建数据库: ${db_name}" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE TS DATABASE ${db_name};</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </LoopController>
+        <hashTree>
+          <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="加载导入文件路径${import_stable_creates}" enabled="true">
+            <stringProp name="filename">${import_stable_creates}</stringProp>
+            <stringProp name="fileEncoding">UTF-8</stringProp>
+            <stringProp name="variableNames">stable_name,stable_create_sql</stringProp>
+            <boolProp name="ignoreFirstLine">false</boolProp>
+            <stringProp name="delimiter">|</stringProp>
+            <boolProp name="quotedData">true</boolProp>
+            <boolProp name="recycle">false</boolProp>
+            <boolProp name="stopThread">true</boolProp>
+            <stringProp name="shareMode">shareMode.group</stringProp>
+          </CSVDataSet>
+          <hashTree/>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建模板表: ${db_name}.${stable_name}" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">${stable_create_sql};</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="准备将要导入的数据目录: ${stable_name}" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">def server_name=vars.get(&quot;server_name&quot;)
+def stable_name=vars.get(&quot;stable_name&quot;)
+def import_data_root=vars.get(&quot;import_data_root&quot;)
+log.info(&quot;docker exec ${server_name} mkdir -p /kaiwudb/deploy/${server_name}/node1/extern&quot;.execute().text)
+log.info(&quot;docker exec ${server_name} ln -s /${import_data_root}/${stable_name} /kaiwudb/deploy/${server_name}/node1/extern/${stable_name}&quot;.execute().text)
+</stringProp>
+            </JSR223PostProcessor>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Import] 创建子表" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${import_parallel}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </LoopController>
+        <hashTree>
+          <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="加载导入文件路径${import_list}" enabled="true">
+            <stringProp name="filename">${import_list}</stringProp>
+            <stringProp name="fileEncoding">UTF-8</stringProp>
+            <stringProp name="variableNames">import_stable_name,import_table_name</stringProp>
+            <boolProp name="ignoreFirstLine">false</boolProp>
+            <stringProp name="delimiter">|</stringProp>
+            <boolProp name="quotedData">true</boolProp>
+            <boolProp name="recycle">false</boolProp>
+            <boolProp name="stopThread">true</boolProp>
+            <stringProp name="shareMode">shareMode.group</stringProp>
+          </CSVDataSet>
+          <hashTree/>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建子表${db_name}.${import_table_name}" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">CREATE TABLE ${db_name}.${import_table_name} USING ${db_name}.${import_stable_name} ATTRIBUTES (&apos;${import_table_name}&apos;, NULL, NULL);</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Import] 模板表导入" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${import_parallel}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </LoopController>
+        <hashTree>
+          <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="加载导入文件路径${import_stable_creates}" enabled="true">
+            <stringProp name="filename">${import_stable_creates}</stringProp>
+            <stringProp name="fileEncoding">UTF-8</stringProp>
+            <stringProp name="variableNames">stable_name</stringProp>
+            <boolProp name="ignoreFirstLine">false</boolProp>
+            <stringProp name="delimiter">|</stringProp>
+            <boolProp name="quotedData">true</boolProp>
+            <boolProp name="recycle">false</boolProp>
+            <boolProp name="stopThread">true</boolProp>
+            <stringProp name="shareMode">shareMode.group</stringProp>
+          </CSVDataSet>
+          <hashTree/>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="模板表导入${db_name}.${stable_name}" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Select Statement</stringProp>
+            <stringProp name="query">IMPORT INTO ${db_name}.${stable_name} CSV DATA (&apos;nodelocal://1/${stable_name}&apos;);</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree/>
+        </hashTree>
       </hashTree>
       <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 部分列插入断言" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
