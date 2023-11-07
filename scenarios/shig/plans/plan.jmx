@@ -228,6 +228,12 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">导入数据的源目录,用于link到extern</stringProp>
           </elementProp>
+          <elementProp name="server_name" elementType="Argument">
+            <stringProp name="Argument.name">server_name</stringProp>
+            <stringProp name="Argument.value">${__P(user.server.name,server-test-1)}</stringProp>
+            <stringProp name="Argument.desc">数据库服务实例名称</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -3038,7 +3044,7 @@ if(transfer_type) {
 def stable_name=vars.get(&quot;stable_name&quot;)
 def import_data_root=vars.get(&quot;import_data_root&quot;)
 log.info(&quot;docker exec ${server_name} mkdir -p /kaiwudb/deploy/${server_name}/node1/extern&quot;.execute().text)
-log.info(&quot;docker exec ${server_name} ln -s /${import_data_root}/${stable_name} /kaiwudb/deploy/${server_name}/node1/extern/${stable_name}&quot;.execute().text)
+log.info(&quot;docker exec ${server_name} ln -s ${import_data_root}/${stable_name} /kaiwudb/deploy/${server_name}/node1/extern/${stable_name}&quot;.execute().text)
 </stringProp>
             </JSR223PostProcessor>
             <hashTree/>
