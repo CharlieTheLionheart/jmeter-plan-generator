@@ -1616,7 +1616,7 @@ generateBatchInsertSQL()</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.1)线程对象初始化" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -1692,7 +1692,7 @@ SampleResult.setIgnore()</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.1)线程对象初始化" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -1719,7 +1719,8 @@ SampleResult.setIgnore()</stringProp>
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.1)创建整条数据写入去重的测试表" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Callable Statement</stringProp>
-          <stringProp name="query">CREATE TABLE ${db_name}.electmeter_dedup USING ${db_name}.t_electmeter_sample (machine_code) ATTRIBUTES (&apos;dedup&apos;);</stringProp>
+          <stringProp name="query">DROP TABLE IF EXISTS ${db_name}.electmeter_dedup;
+CREATE TABLE ${db_name}.electmeter_dedup USING ${db_name}.t_electmeter_sample (machine_code) ATTRIBUTES (&apos;dedup&apos;);</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
@@ -1892,7 +1893,7 @@ if(afterCount - beforeCount == should){
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.2)线程对象初始化" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -1979,7 +1980,7 @@ generateBatchInsertSQL()</stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
           </JSR223PreProcessor>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入部分列数据1: ${db_name}.electmeter_column_merge" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.2)写入部分列数据1: ${db_name}.electmeter_column_merge" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${builder1}</stringProp>
@@ -2001,7 +2002,7 @@ generateBatchInsertSQL()</stringProp>
             </ResponseAssertion>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入部分列数据2: ${db_name}.electmeter_column_merge" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.2)写入部分列数据2: ${db_name}.electmeter_column_merge" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${builder2}</stringProp>
@@ -2023,7 +2024,7 @@ generateBatchInsertSQL()</stringProp>
             </ResponseAssertion>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入部分列数据3: ${db_name}.electmeter_column_merge" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.2)写入部分列数据3: ${db_name}.electmeter_column_merge" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${builder3}</stringProp>
@@ -3240,7 +3241,7 @@ log.info(&quot;docker exec ${server_name} ln -s ${import_data_root}/${stable_nam
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </PostThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="部分列插入断言:${db_name}.electmeter_column_merge" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.2)部分列插入断言:${db_name}.electmeter_column_merge" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Select Statement</stringProp>
           <stringProp name="query">SELECT count(*) FROM db_shig.electmeter_column_merge WHERE vol_ab = 0 AND vol_bc = 1 AND vol_ca = 2;</stringProp>
