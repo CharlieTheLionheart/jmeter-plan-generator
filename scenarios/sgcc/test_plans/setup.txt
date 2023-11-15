@@ -1,1 +1,0 @@
-scenarios/sgcc/meta_data_management/create_database.jmx

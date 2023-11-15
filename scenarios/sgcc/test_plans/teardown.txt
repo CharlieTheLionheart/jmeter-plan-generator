@@ -1,1 +1,0 @@
-scenarios/sgcc/meta_data_management/drop_database.jmx
