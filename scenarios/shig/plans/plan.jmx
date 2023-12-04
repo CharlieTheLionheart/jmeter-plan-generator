@@ -1657,7 +1657,7 @@ SampleResult.setIgnore()</stringProp>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">insert into ${db_name}.electmeter_${__threadNum}_${device_num} select (now()::bigint+vol_ab::int)::timestamp,elect_name,vol_a,cur_a,1.0,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,3.0,4.0,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2 from ${db_name}.electmeter_sample;</stringProp>
+            <stringProp name="query">insert into ${db_name}.electmeter_${__threadNum}_${device_num} select (now()::bigint+28800000+vol_ab::int)::timestamp,elect_name,vol_a,cur_a,1.0,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,3.0,4.0,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2 from ${db_name}.electmeter_sample;</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -1790,7 +1790,7 @@ SampleResult.setIgnore()</stringProp>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.electmeter_dedup" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">insert into ${db_name}.electmeter_dedup select (now()::bigint+(vol_ab/2)::int)::timestamp,elect_name,vol_a,cur_a,1.0,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,3.0,4.0,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2 from ${db_name}.electmeter_sample;</stringProp>
+            <stringProp name="query">insert into ${db_name}.electmeter_dedup select (now()::bigint+28800000+(vol_ab/2)::int)::timestamp,elect_name,vol_a,cur_a,1.0,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,3.0,4.0,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2 from ${db_name}.electmeter_sample;</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
