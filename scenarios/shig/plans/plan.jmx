@@ -2603,7 +2603,7 @@ generateBatchInsertSQL()</stringProp>
         </ResultCollector>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(超表page_and_sum_1h)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(超表page_and_sum_15min)" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -2620,7 +2620,7 @@ generateBatchInsertSQL()</stringProp>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
           <doubleProp>
             <name>throughput</name>
-            <value>0.03333</value>
+            <value>0.13333</value>
             <savedValue>0.0</savedValue>
           </doubleProp>
           <intProp name="calcMode">0</intProp>
