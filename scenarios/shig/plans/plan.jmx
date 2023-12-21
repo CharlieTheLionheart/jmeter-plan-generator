@@ -234,6 +234,12 @@
             <stringProp name="Argument.desc">数据库服务实例名称</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="bo_white_list" elementType="Argument">
+            <stringProp name="Argument.name">bo_white_list</stringProp>
+            <stringProp name="Argument.value">${__P(bo_white_list,bo_white_list)}</stringProp>
+            <stringProp name="Argument.desc">需要手动额外配置查询下推BO的白名单表达式列表，以分号分隔</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -885,6 +891,63 @@ generateBatchInsertSQL()</stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 开启查询下推" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration">10000</stringProp>
+        <stringProp name="ThreadGroup.delay">10</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="查询下推BO白名单表达式不为空" enabled="true">
+          <stringProp name="TestPlan.comments">d41d8cd98f00b204e9800998ecf8427e:md5 value of empty string</stringProp>
+          <stringProp name="IfController.condition">${__groovy(vars.get(&quot;bo_white_list&quot;).length()&gt;2,)}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="set cluster setting sql.add_bo_white_list =${bo_white_list}" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="script">void generateBatchSettingSQL() {
+  def bo_white_list_builder = new StringBuilder()
+  def whiteLists=vars.get(&quot;bo_white_list&quot;).substring(1, vars.get(&quot;bo_white_list&quot;).length()-1)
+  for (item in whiteLists.split(&quot;;&quot;)) {
+  	bo_white_list_builder.append(&quot;set cluster setting sql.add_bo_white_list = &quot;)
+  	bo_white_list_builder.append(item)
+  	bo_white_list_builder.append(&quot;;&quot;)
+  }
+  log.debug(&quot;bo_white_list_builder={}&quot;, bo_white_list_builder.toString())
+  vars.put(&quot;bo_white_list_builder&quot;, bo_white_list_builder.toString())
+  println bo_white_list_builder.toString()
+}
+
+generateBatchSettingSQL()</stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)设置查询下推BO白名单" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">${bo_white_list_builder}</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout">60</stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree/>
+        </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 模拟数据库可视化工具查询数据库对象" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
