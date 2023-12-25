@@ -236,7 +236,7 @@
           </elementProp>
           <elementProp name="bo_white_list" elementType="Argument">
             <stringProp name="Argument.name">bo_white_list</stringProp>
-            <stringProp name="Argument.value">${__P(bo_white_list,bo_white_list)}</stringProp>
+            <stringProp name="Argument.value">${__P(bo_white_list,&apos;&apos;)}</stringProp>
             <stringProp name="Argument.desc">需要手动额外配置查询下推BO的白名单表达式列表，以分号分隔</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
