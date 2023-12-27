@@ -250,7 +250,7 @@
         <stringProp name="trimInterval">60000</stringProp>
         <boolProp name="autocommit">true</boolProp>
         <stringProp name="transactionIsolation">DEFAULT</stringProp>
-        <boolProp name="preinit">false</boolProp>
+        <boolProp name="preinit">true</boolProp>
         <stringProp name="initQuery"></stringProp>
         <boolProp name="keepAlive">true</boolProp>
         <stringProp name="connectionAge">5000</stringProp>
@@ -289,7 +289,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="开启查询下推" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="开启查询下推" enabled="false">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">set cluster setting sql.between_of_push.enabled=true;</stringProp>
