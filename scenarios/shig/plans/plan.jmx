@@ -240,6 +240,16 @@
             <stringProp name="Argument.desc">需要手动额外配置查询下推BO的白名单表达式列表，以分号分隔</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="cnc_interval" elementType="Argument">
+            <stringProp name="Argument.name">cnc_interval</stringProp>
+            <stringProp name="Argument.value">${__P(user.read.cnc.interval,now() - 1 minute)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="cnc_limit" elementType="Argument">
+            <stringProp name="Argument.name">cnc_limit</stringProp>
+            <stringProp name="Argument.value">${__P(user.read.cnc.limit,8)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -540,6 +550,82 @@ device_state int NOT NULL
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)创建机床模板表: ${db_name}.t_cnc" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE TABLE ${db_name}.t_cnc (
+  k_timestamp timestamp NOT NULL,
+  cnc_sn varchar(200),
+  cnc_sw_mver varchar(30),
+  cnc_sw_sver varchar(30),
+  cnc_tol_mem varchar(10),
+  cnc_use_mem varchar(10),
+  cnc_unuse_mem varchar(10),
+  cnc_status varchar(2),
+  path_quantity varchar(30),
+  axis_quantity varchar(30),
+  axis_path varchar(100),
+  axis_type varchar(100),
+  axis_unit varchar(100),
+  axis_num varchar(100),
+  axis_name varchar(100),
+  sp_name varchar(100),
+  abs_pos varchar(200),
+  rel_pos varchar(200),
+  mach_pos varchar(200),
+  dist_pos varchar(200),
+  sp_override double,
+  sp_set_speed varchar(30),
+  sp_act_speed varchar(30),
+  sp_load varchar(300),
+  feed_set_speed varchar(30),
+  feed_act_speed varchar(30),
+  feed_override varchar(30),
+  servo_load varchar(300),
+  parts_count varchar(30),
+  cnc_cycletime varchar(30),
+  cnc_alivetime varchar(30),
+  cnc_cuttime varchar(30),
+  cnc_runtime varchar(30),
+  mprog_name varchar(500),
+  mprog_num varchar(30),
+  sprog_name varchar(500),
+  sprog_num varchar(30),
+  prog_seq_num varchar(30),
+  prog_seq_content varchar(1000),
+  alarm_count varchar(10),
+  alarm_type varchar(100),
+  alarm_code varchar(100),
+  alarm_content varchar(2000),
+  alarm_time varchar(200),
+  cur_tool_num varchar(20),
+  cur_tool_len_num varchar(20),
+  cur_tool_len varchar(20),
+  cur_tool_len_val varchar(20),
+  cur_tool_x_len varchar(20),
+  cur_tool_x_len_val varchar(20),
+  cur_tool_y_len varchar(20),
+  cur_tool_y_len_val varchar(20),
+  cur_tool_z_len varchar(20),
+  cur_tool_z_len_val varchar(20),
+  cur_tool_rad_num varchar(20),
+  cur_tool_rad varchar(20),
+  cur_tool_rad_val varchar(20),
+  device_state INT,
+  value1 varchar(10),
+  value2 varchar(10),
+  value3 varchar(10),
+  value4 varchar(10),
+  value5 varchar(10)) ATTRIBUTES (machine_code varchar(64)) ${cnc_dsp};</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建表" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
@@ -654,6 +740,19 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">INSERT INTO ${db_name}.tighten_${__threadNum}_${counter} USING ${db_name}.t_tighten (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1);</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout">600</stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree/>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.1)创建cnc设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">INSERT INTO ${db_name}.cnc_${__threadNum}_${counter} USING ${db_name}.t_cnc (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -1665,6 +1764,289 @@ generateBatchInsertSQL()</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行cnc数据写入(random)" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.sql.*
+import java.io.*
+import java.text.SimpleDateFormat
+import java.time.Duration
+
+def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
+
+vars.putObject(&quot;date_formatter&quot;, formatter)
+vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
+vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
+SampleResult.setIgnore()</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="加载数据" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">def csv_reader = new RandomAccessFile(vars.get(&quot;sample_data&quot;), &quot;r&quot;)
+vars.putObject(&quot;csv_reader&quot;, csv_reader)
+SampleResult.setIgnore()</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
+          <stringProp name="throughput">${write_throughput}</stringProp>
+          <intProp name="calcMode">0</intProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF data_ts_step &gt; 5(virtual time)" enabled="true">
+          <stringProp name="IfController.condition">${__groovy(Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5)}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
+            <boolProp name="LoopController.continue_forever">true</boolProp>
+            <intProp name="LoopController.loops">-1</intProp>
+          </LoopController>
+          <hashTree>
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
+              <stringProp name="maximumValue">${device_rand_end}</stringProp>
+              <stringProp name="minimumValue">${device_rand_start}</stringProp>
+              <stringProp name="outputFormat"></stringProp>
+              <boolProp name="perThread">false</boolProp>
+              <stringProp name="randomSeed"></stringProp>
+              <stringProp name="variableName">device_num</stringProp>
+            </RandomVariableConfig>
+            <hashTree/>
+            <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
+              <stringProp name="CounterConfig.start">1</stringProp>
+              <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
+              <stringProp name="CounterConfig.incr">1</stringProp>
+              <stringProp name="CounterConfig.name">batch_idx</stringProp>
+              <stringProp name="CounterConfig.format"></stringProp>
+              <boolProp name="CounterConfig.per_user">false</boolProp>
+            </CounterConfig>
+            <hashTree/>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+import java.nio.charset.StandardCharsets
+
+List generateTimestampList() {
+  def nextTs = vars.getObject(&quot;last_ts&quot;)
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  vars.putObject(&quot;last_ts&quot;, nextTs)
+  return tsList
+}
+
+List getSwapedListOrNot() {
+  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
+  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
+  log.debug(&quot;index={}&quot;, index)
+  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
+  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
+	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
+	log.debug(&quot;tmpList={}&quot;, tmpList)
+    return tmpList
+  }
+  return generateTimestampList()
+}
+
+String readNext(RandomAccessFile csv_reader) {
+  def line = csv_reader.readLine()
+  if(!line) {
+    csv_reader.seek(0)
+    if(!(line = csv_reader.readLine())){
+      throw new Exception(&apos;Read csv file error after reset.&apos;)
+    }
+  }
+  return new String(line.getBytes(&quot;ISO-8859-1&quot;), StandardCharsets.UTF_8)
+}
+
+void generateBatchInsertSQL() {
+  def csv_reader = vars.getObject(&quot;csv_reader&quot;)
+  def builder = new StringBuilder()
+  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  def swapedList = getSwapedListOrNot()
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
+	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
+  }
+  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+  log.debug(&quot;builder={}&quot;, builder.toString())
+  vars.put(&quot;builder&quot;, builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+              <stringProp name="scriptLanguage">groovy</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">${builder}</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">60</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                <collectionProp name="Asserion.test_strings"/>
+                <stringProp name="Assertion.custom_message"></stringProp>
+                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                <boolProp name="Assertion.assume_success">false</boolProp>
+                <intProp name="Assertion.test_type">16</intProp>
+              </ResponseAssertion>
+              <hashTree/>
+            </hashTree>
+          </hashTree>
+        </hashTree>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF data_ts_step &lt;= 5(real time)" enabled="true">
+          <stringProp name="IfController.condition">${__groovy(Integer.valueOf(&quot;${data_ts_step}&quot;)&lt;=5)}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
+            <boolProp name="LoopController.continue_forever">true</boolProp>
+            <intProp name="LoopController.loops">-1</intProp>
+          </LoopController>
+          <hashTree>
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
+              <stringProp name="maximumValue">${device_rand_end}</stringProp>
+              <stringProp name="minimumValue">${device_rand_start}</stringProp>
+              <stringProp name="outputFormat"></stringProp>
+              <boolProp name="perThread">false</boolProp>
+              <stringProp name="randomSeed"></stringProp>
+              <stringProp name="variableName">device_num</stringProp>
+            </RandomVariableConfig>
+            <hashTree/>
+            <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
+              <stringProp name="CounterConfig.start">1</stringProp>
+              <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
+              <stringProp name="CounterConfig.incr">1</stringProp>
+              <stringProp name="CounterConfig.name">batch_idx</stringProp>
+              <stringProp name="CounterConfig.format"></stringProp>
+              <boolProp name="CounterConfig.per_user">false</boolProp>
+            </CounterConfig>
+            <hashTree/>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+import java.nio.charset.StandardCharsets
+
+List generateTimestampList() {
+  def nextTs = System.currentTimeMillis()
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  return tsList
+}
+
+List getSwapedListOrNot() {
+  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
+  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
+  log.debug(&quot;index={}&quot;, index)
+  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
+  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
+	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
+	log.debug(&quot;tmpList={}&quot;, tmpList)
+    return tmpList
+  }
+  return generateTimestampList()
+}
+
+String readNext(RandomAccessFile csv_reader) {
+  def line = csv_reader.readLine()
+  if(!line) {
+    csv_reader.seek(0)
+    if(!(line = csv_reader.readLine())){
+      throw new Exception(&apos;Read csv file error after reset.&apos;)
+    }
+  }
+  return new String(line.getBytes(&quot;ISO-8859-1&quot;), StandardCharsets.UTF_8)
+}
+
+void generateBatchInsertSQL() {
+  def csv_reader = vars.getObject(&quot;csv_reader&quot;)
+  def builder = new StringBuilder()
+  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  def swapedList = getSwapedListOrNot()
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
+	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
+  }
+  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+  log.debug(&quot;builder={}&quot;, builder.toString())
+  vars.put(&quot;builder&quot;, builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+              <stringProp name="scriptLanguage">groovy</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">${builder}</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">60</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                <collectionProp name="Asserion.test_strings"/>
+                <stringProp name="Assertion.custom_message"></stringProp>
+                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                <boolProp name="Assertion.assume_success">false</boolProp>
+                <intProp name="Assertion.test_type">16</intProp>
+              </ResponseAssertion>
+              <hashTree/>
+            </hashTree>
+          </hashTree>
+        </hashTree>
+      </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[InsertSelect] 执行数据写入(random)" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
@@ -2223,6 +2605,161 @@ SampleResult.setIgnore()</stringProp>
               </JSONPathAssertion>
               <hashTree/>
             </hashTree>
+          </hashTree>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床实际主轴转速" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
+          <doubleProp>
+            <name>throughput</name>
+            <value>60.0</value>
+            <savedValue>0.0</savedValue>
+          </doubleProp>
+          <intProp name="calcMode">0</intProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </LoopController>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="sp_act_speed" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="beginTs" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                  <stringProp name="Argument.value">${begin_timestamp}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                  <stringProp name="Argument.name">beginTs</stringProp>
+                </elementProp>
+                <elementProp name="endTs" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                  <stringProp name="Argument.value">${end_timestamp}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                  <stringProp name="Argument.name">endTs</stringProp>
+                </elementProp>
+                <elementProp name="orderBy" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                  <stringProp name="Argument.value">${order_by}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                  <stringProp name="Argument.name">orderBy</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
+            <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
+            <stringProp name="HTTPSampler.path">/shig/cnc/sp_act_speed/${page_no}/${page_size}</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+            <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+            <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+            <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
+              <stringProp name="JSON_PATH">$.code</stringProp>
+              <stringProp name="EXPECTED_VALUE">0</stringProp>
+              <boolProp name="JSONVALIDATION">true</boolProp>
+              <boolProp name="EXPECT_NULL">false</boolProp>
+              <boolProp name="INVERT">false</boolProp>
+              <boolProp name="ISREGEX">true</boolProp>
+            </JSONPathAssertion>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床最新数据​" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
+          <doubleProp>
+            <name>throughput</name>
+            <value>60.0</value>
+            <savedValue>0.0</savedValue>
+          </doubleProp>
+          <intProp name="calcMode">0</intProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </LoopController>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="last_all" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="interval" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                  <stringProp name="Argument.value">${cnc_interval}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                  <stringProp name="Argument.name">interval</stringProp>
+                </elementProp>
+                <elementProp name="limit" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                  <stringProp name="Argument.value">${cnc_limit}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                  <stringProp name="Argument.name">limit</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
+            <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
+            <stringProp name="HTTPSampler.path">/shig/cnc</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+            <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+            <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+            <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
+              <stringProp name="JSON_PATH">$.code</stringProp>
+              <stringProp name="EXPECTED_VALUE">0</stringProp>
+              <boolProp name="JSONVALIDATION">true</boolProp>
+              <boolProp name="EXPECT_NULL">false</boolProp>
+              <boolProp name="INVERT">false</boolProp>
+              <boolProp name="ISREGEX">true</boolProp>
+            </JSONPathAssertion>
+            <hashTree/>
           </hashTree>
         </hashTree>
       </hashTree>
