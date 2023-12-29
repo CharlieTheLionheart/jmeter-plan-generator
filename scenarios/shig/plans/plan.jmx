@@ -440,12 +440,15 @@ GRANT admin TO ${create_user};</stringProp>
           <stringProp name="script">def dsp = vars.get(&apos;down_sampling_param&apos;)
 def elec_dsp=&quot;&quot;
 def tighten_dsp=&quot;&quot;
+def cnc_dsp=&quot;&quot;;
 if (dsp != null &amp;&amp; dsp != &quot;&quot;) {
 	elec_dsp = (&quot;RETENTIONS &quot; + dsp + &quot; SAMPLE avg,last(elect_name)&quot;)
 	tighten_dsp = (&quot;RETENTIONS &quot; + dsp + &quot; SAMPLE avg, last(torque_controller_name),last(tightening_status),last(torque_status), last(angle_status),last(batch_status),last(tightening_id),last(alarm_content), last(datetime_last_change)&quot;)
+	cnc_dsp= (&quot;RETENTIONS &quot; + dsp + &quot; SAMPLE last&quot;)
 }
 vars.put(&quot;elec_dsp&quot;, elec_dsp)
-vars.put(&quot;tighten_dsp&quot;, tighten_dsp)</stringProp>
+vars.put(&quot;tighten_dsp&quot;, tighten_dsp)
+vars.put(&quot;cnc_dsp&quot;, cnc_dsp)</stringProp>
         </JSR223PreProcessor>
         <hashTree/>
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)创建模板表: ${db_name}.t_electmeter" enabled="true">
