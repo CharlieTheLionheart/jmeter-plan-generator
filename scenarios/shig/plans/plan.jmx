@@ -299,19 +299,6 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="开启查询下推" enabled="false">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">set cluster setting sql.between_of_push.enabled=true;</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout">600</stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
         <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF trace on" enabled="true">
           <stringProp name="IfController.condition">${__groovy(&quot;${trace_log}&quot;.indexOf(&quot;TRUE&quot;)&gt;-1)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
