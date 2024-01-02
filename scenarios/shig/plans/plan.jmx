@@ -1549,6 +1549,7 @@ String readNext(RandomAccessFile csv_reader) {
 void generateBatchInsertSQL() {
   def csv_reader = vars.getObject(&quot;csv_reader&quot;)
   def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
+  def cnc_csv_reader = vars.getObject(&quot;cnc_csv_reader&quot;)
   def builder = new StringBuilder()
   def tighten_builder = new StringBuilder()
   def cnc_builder = new StringBuilder()
@@ -1720,6 +1721,7 @@ String readNext(RandomAccessFile csv_reader) {
 void generateBatchInsertSQL() {
   def csv_reader = vars.getObject(&quot;csv_reader&quot;)
   def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
+  def cnc_csv_reader = vars.getObject(&quot;cnc_csv_reader&quot;)
   def builder = new StringBuilder()
   def tighten_builder = new StringBuilder()
   def cnc_builder = new StringBuilder()
