@@ -1461,6 +1461,8 @@ SampleResult.setIgnore()</stringProp>
 vars.putObject(&quot;csv_reader&quot;, csv_reader)
 def tighten_csv_reader = new RandomAccessFile(vars.get(&quot;sample_tighten_data&quot;), &quot;r&quot;)
 vars.putObject(&quot;tighten_csv_reader&quot;, tighten_csv_reader)
+def cnc_csv_reader = new RandomAccessFile(vars.get(&quot;sample_cnc_data&quot;), &quot;r&quot;)
+vars.putObject(&quot;cnc_csv_reader&quot;, cnc_csv_reader)
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
@@ -1549,19 +1551,24 @@ void generateBatchInsertSQL() {
   def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
   def builder = new StringBuilder()
   def tighten_builder = new StringBuilder()
+  def cnc_builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   tighten_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.tighten_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
 	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
 	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(tighten_csv_reader)}),&quot;)
+	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
   tighten_builder.setCharAt(tighten_builder.length() - 1, &apos;;&apos; as char)
+  cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
   vars.put(&quot;builder&quot;, builder.toString())
   vars.put(&quot;tighten_builder&quot;, tighten_builder.toString())
+  vars.put(&quot;cnc_builder&quot;, cnc_builder.toString())
 }
 
 generateBatchInsertSQL()</stringProp>
@@ -1594,6 +1601,28 @@ generateBatchInsertSQL()</stringProp>
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${tighten_builder}</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">60</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                <collectionProp name="Asserion.test_strings"/>
+                <stringProp name="Assertion.custom_message"></stringProp>
+                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                <boolProp name="Assertion.assume_success">false</boolProp>
+                <intProp name="Assertion.test_type">16</intProp>
+              </ResponseAssertion>
+              <hashTree/>
+            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">${cnc_builder}</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames"></stringProp>
@@ -1693,19 +1722,24 @@ void generateBatchInsertSQL() {
   def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
   def builder = new StringBuilder()
   def tighten_builder = new StringBuilder()
+  def cnc_builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   tighten_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.tighten_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
 	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
 	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(tighten_csv_reader)}),&quot;)
+	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
   tighten_builder.setCharAt(tighten_builder.length() - 1, &apos;;&apos; as char)
+  cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
   vars.put(&quot;builder&quot;, builder.toString())
   vars.put(&quot;tighten_builder&quot;, tighten_builder.toString())
+  vars.put(&quot;cnc_builder&quot;, cnc_builder.toString())
 }
 
 generateBatchInsertSQL()</stringProp>
@@ -1756,271 +1790,10 @@ generateBatchInsertSQL()</stringProp>
               </ResponseAssertion>
               <hashTree/>
             </hashTree>
-          </hashTree>
-        </hashTree>
-      </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行cnc数据写入(random)" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay"></stringProp>
-        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
-      </ThreadGroup>
-      <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.sql.*
-import java.io.*
-import java.text.SimpleDateFormat
-import java.time.Duration
-
-def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
-
-vars.putObject(&quot;date_formatter&quot;, formatter)
-vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
-vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()</stringProp>
-        </JSR223Sampler>
-        <hashTree/>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="加载数据" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">def csv_reader = new RandomAccessFile(vars.get(&quot;sample_cnc_data&quot;), &quot;r&quot;)
-vars.putObject(&quot;csv_reader&quot;, csv_reader)
-SampleResult.setIgnore()</stringProp>
-        </JSR223Sampler>
-        <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${write_throughput}</stringProp>
-          <intProp name="calcMode">0</intProp>
-        </ConstantThroughputTimer>
-        <hashTree/>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF data_ts_step &gt; 5(virtual time)" enabled="true">
-          <stringProp name="IfController.condition">${__groovy(Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5)}</stringProp>
-          <boolProp name="IfController.evaluateAll">false</boolProp>
-          <boolProp name="IfController.useExpression">true</boolProp>
-        </IfController>
-        <hashTree>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
-            <boolProp name="LoopController.continue_forever">true</boolProp>
-            <intProp name="LoopController.loops">-1</intProp>
-          </LoopController>
-          <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
-              <stringProp name="maximumValue">${device_rand_end}</stringProp>
-              <stringProp name="minimumValue">${device_rand_start}</stringProp>
-              <stringProp name="outputFormat"></stringProp>
-              <boolProp name="perThread">false</boolProp>
-              <stringProp name="randomSeed"></stringProp>
-              <stringProp name="variableName">device_num</stringProp>
-            </RandomVariableConfig>
-            <hashTree/>
-            <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
-              <stringProp name="CounterConfig.start">1</stringProp>
-              <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
-              <stringProp name="CounterConfig.incr">1</stringProp>
-              <stringProp name="CounterConfig.name">batch_idx</stringProp>
-              <stringProp name="CounterConfig.format"></stringProp>
-              <boolProp name="CounterConfig.per_user">false</boolProp>
-            </CounterConfig>
-            <hashTree/>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">import java.sql.*
-import java.io.*
-import java.util.List
-import java.util.ArrayList
-import java.nio.charset.StandardCharsets
-
-List generateTimestampList() {
-  def nextTs = vars.getObject(&quot;last_ts&quot;)
-  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
-  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
-  def tsList = new ArrayList()
-  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
-    tsList.add(nextTs)
-    nextTs += dataTsStep
-  }
-  vars.putObject(&quot;last_ts&quot;, nextTs)
-  return tsList
-}
-
-List getSwapedListOrNot() {
-  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
-  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
-  log.debug(&quot;index={}&quot;, index)
-  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
-  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
-	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
-	log.debug(&quot;tmpList={}&quot;, tmpList)
-    return tmpList
-  }
-  return generateTimestampList()
-}
-
-String readNext(RandomAccessFile csv_reader) {
-  def line = csv_reader.readLine()
-  if(!line) {
-    csv_reader.seek(0)
-    if(!(line = csv_reader.readLine())){
-      throw new Exception(&apos;Read csv file error after reset.&apos;)
-    }
-  }
-  return new String(line.getBytes(&quot;ISO-8859-1&quot;), StandardCharsets.UTF_8)
-}
-
-void generateBatchInsertSQL() {
-  def csv_reader = vars.getObject(&quot;csv_reader&quot;)
-  def builder = new StringBuilder()
-  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
-  def swapedList = getSwapedListOrNot()
-  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
-  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
-  }
-  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-  log.debug(&quot;builder={}&quot;, builder.toString())
-  vars.put(&quot;builder&quot;, builder.toString())
-}
-
-generateBatchInsertSQL()</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
-              <stringProp name="query">${builder}</stringProp>
-              <stringProp name="queryArguments"></stringProp>
-              <stringProp name="queryArgumentsTypes"></stringProp>
-              <stringProp name="variableNames"></stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout">60</stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCSampler>
-            <hashTree>
-              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
-                <collectionProp name="Asserion.test_strings"/>
-                <stringProp name="Assertion.custom_message"></stringProp>
-                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-                <boolProp name="Assertion.assume_success">false</boolProp>
-                <intProp name="Assertion.test_type">16</intProp>
-              </ResponseAssertion>
-              <hashTree/>
-            </hashTree>
-          </hashTree>
-        </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF data_ts_step &lt;= 5(real time)" enabled="true">
-          <stringProp name="IfController.condition">${__groovy(Integer.valueOf(&quot;${data_ts_step}&quot;)&lt;=5)}</stringProp>
-          <boolProp name="IfController.evaluateAll">false</boolProp>
-          <boolProp name="IfController.useExpression">true</boolProp>
-        </IfController>
-        <hashTree>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
-            <boolProp name="LoopController.continue_forever">true</boolProp>
-            <intProp name="LoopController.loops">-1</intProp>
-          </LoopController>
-          <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
-              <stringProp name="maximumValue">${device_rand_end}</stringProp>
-              <stringProp name="minimumValue">${device_rand_start}</stringProp>
-              <stringProp name="outputFormat"></stringProp>
-              <boolProp name="perThread">false</boolProp>
-              <stringProp name="randomSeed"></stringProp>
-              <stringProp name="variableName">device_num</stringProp>
-            </RandomVariableConfig>
-            <hashTree/>
-            <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
-              <stringProp name="CounterConfig.start">1</stringProp>
-              <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
-              <stringProp name="CounterConfig.incr">1</stringProp>
-              <stringProp name="CounterConfig.name">batch_idx</stringProp>
-              <stringProp name="CounterConfig.format"></stringProp>
-              <boolProp name="CounterConfig.per_user">false</boolProp>
-            </CounterConfig>
-            <hashTree/>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">import java.sql.*
-import java.io.*
-import java.util.List
-import java.util.ArrayList
-import java.nio.charset.StandardCharsets
-
-List generateTimestampList() {
-  def nextTs = System.currentTimeMillis()
-  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
-  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
-  def tsList = new ArrayList()
-  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
-    tsList.add(nextTs)
-    nextTs += dataTsStep
-  }
-  return tsList
-}
-
-List getSwapedListOrNot() {
-  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
-  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
-  log.debug(&quot;index={}&quot;, index)
-  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
-  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
-	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
-	log.debug(&quot;tmpList={}&quot;, tmpList)
-    return tmpList
-  }
-  return generateTimestampList()
-}
-
-String readNext(RandomAccessFile csv_reader) {
-  def line = csv_reader.readLine()
-  if(!line) {
-    csv_reader.seek(0)
-    if(!(line = csv_reader.readLine())){
-      throw new Exception(&apos;Read csv file error after reset.&apos;)
-    }
-  }
-  return new String(line.getBytes(&quot;ISO-8859-1&quot;), StandardCharsets.UTF_8)
-}
-
-void generateBatchInsertSQL() {
-  def csv_reader = vars.getObject(&quot;csv_reader&quot;)
-  def builder = new StringBuilder()
-  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
-  def swapedList = getSwapedListOrNot()
-  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
-  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
-  }
-  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-  log.debug(&quot;builder={}&quot;, builder.toString())
-  vars.put(&quot;builder&quot;, builder.toString())
-}
-
-generateBatchInsertSQL()</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
-              <stringProp name="dataSource">default_pool</stringProp>
-              <stringProp name="queryType">Update Statement</stringProp>
-              <stringProp name="query">${builder}</stringProp>
+              <stringProp name="query">${cnc_builder}</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames"></stringProp>
