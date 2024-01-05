@@ -923,7 +923,21 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="resultSetMaxRows"></stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
-          <hashTree/>
+          <hashTree>
+            <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]创建拧紧机设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
+              <stringProp name="dataSource">td_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">INSERT INTO ${db_name}.tighten_${__threadNum}_${counter} USING ${db_name}.t_tighten (machine_code) TAGS (&apos;${__threadNum}_${counter}&apos;) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1);</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCPostProcessor>
+            <hashTree/>
+          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.1)创建cnc设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
