@@ -255,6 +255,12 @@
             <stringProp name="Argument.value">${__P(user.write.sample_cnc_data,/data/cnc_data.csv)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="db_taos_url" elementType="Argument">
+            <stringProp name="Argument.name">db_taos_url</stringProp>
+            <stringProp name="Argument.value">${__P(user.db.taos_url,jdbc:TAOS://127.0.0.1:6030/)}</stringProp>
+            <stringProp name="Argument.desc">TD数据库连接jdbc url, default: jdbc:TAOS://127.0.0.1:6030/</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -274,6 +280,25 @@
         <stringProp name="driver">com.kaiwudb.Driver</stringProp>
         <stringProp name="username">${db_user}</stringProp>
         <stringProp name="password">${db_password}</stringProp>
+        <stringProp name="connectionProperties"></stringProp>
+      </JDBCDataSource>
+      <hashTree/>
+      <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[TD][JDBC] 创建TD数据库连接池" enabled="true">
+        <stringProp name="dataSource">td_pool</stringProp>
+        <stringProp name="poolMax">${conn_pool_size}</stringProp>
+        <stringProp name="timeout">10000</stringProp>
+        <stringProp name="trimInterval">60000</stringProp>
+        <boolProp name="autocommit">true</boolProp>
+        <stringProp name="transactionIsolation">DEFAULT</stringProp>
+        <boolProp name="preinit">true</boolProp>
+        <stringProp name="initQuery"></stringProp>
+        <boolProp name="keepAlive">true</boolProp>
+        <stringProp name="connectionAge">5000</stringProp>
+        <stringProp name="checkQuery"></stringProp>
+        <stringProp name="dbUrl">${db_taos_url}</stringProp>
+        <stringProp name="driver">com.taosdata.jdbc.TSDBDriver</stringProp>
+        <stringProp name="username">root</stringProp>
+        <stringProp name="password">taosdata</stringProp>
         <stringProp name="connectionProperties"></stringProp>
       </JDBCDataSource>
       <hashTree/>
@@ -503,7 +528,69 @@ vars.put(&quot;cnc_dsp&quot;, cnc_dsp)</stringProp>
           <stringProp name="resultSetMaxRows"></stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
-        <hashTree/>
+        <hashTree>
+          <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]创建模板表: ${db_name}.t_electmeter" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">CREATE STABLE ${db_name}.t_electmeter (
+  k_timestamp timestamp,
+  elect_name varchar(63),
+  vol_a double,
+  cur_a double,
+  powerf_a double,
+  allenergy_a int,
+  pallenergy_a int,
+  rallenergy_a int,
+  allrenergy1_a int,
+  allrenergy2_a int,
+  powera_a double,
+  powerr_a double,
+  powerl_a double,
+  vol_b double,
+  cur_b double,
+  powerf_b double,
+  allenergy_b int,
+  pallenergy_b int,
+  rallenergy_b int,
+  allrenergy1_b int,
+  allrenergy2_b int,
+  powera_b double,
+  powerr_b double,
+  powerl_b double,
+  vol_c double,
+  cur_c double,
+  powerf_c double,
+  allenergy_c int,
+  pallenergy_c int,
+  rallenergy_c int,
+  allrenergy1_c int,
+  allrenergy2_c int,
+  powera_c double,
+  powerr_c double,
+  powerl_c double,
+  vol_ab double,
+  vol_bc double,
+  vol_ca double,
+  infre double,
+  powerf double,
+  allpower double,
+  pallpower double,
+  rallpower double,
+  powerr double,
+  powerl double,
+  allrenergy1 double,
+  allrenergy2 double
+) tags (machine_code varchar(64));</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCPostProcessor>
+          <hashTree/>
+        </hashTree>
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)创建拧紧机模板表: ${db_name}.t_tighten" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
@@ -544,7 +631,49 @@ device_state int NOT NULL
           <stringProp name="resultSetMaxRows"></stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
-        <hashTree/>
+        <hashTree>
+          <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]创建拧紧机模板表: ${db_name}.t_tighten" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">CREATE TABLE ${db_name}.t_tighten (
+k_timestamp timestamp, 
+cell_id int, 
+channel_id int, 
+torque_controller_name varchar(256), 
+vin_number int,
+job_id int,
+parameter_set_id int,
+batch_size int,
+batch_counter int,
+tightening_status varchar(256),
+torque_status varchar(256),
+angle_status varchar(256),
+torque_min_limit double,
+torque_max_limit double,
+torque_final_target double,
+torque double,
+angle_min double,
+angle_max double,
+final_angle_target double,
+angle double,
+datetime_last_change timestamp,
+batch_status varchar(256),
+tightening_id varchar(256),
+alarm_content varchar(200),
+number int,
+plc_state int,
+device_state int
+) tags (machine_code varchar(64));</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCPostProcessor>
+          <hashTree/>
+        </hashTree>
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)创建机床模板表: ${db_name}.t_cnc" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
@@ -716,6 +845,43 @@ SampleResult.setIgnore()</stringProp>
           </JDBCSampler>
           <hashTree/>
         </hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="[TD]初始化循环变量" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">vars.putObject(&quot;counter&quot;, Integer.parseInt(vars.get(&quot;device_rand_start&quot;)))
+SampleResult.setIgnore()</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="[TD]建表" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
+        </LoopController>
+        <hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]创建设备表${__threadNum}_${counter}" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">CREATE TABLE ${db_name}.electmeter_${__threadNum}_${counter} USING ${db_name}.t_electmeter tags (&apos;${__threadNum}_${counter}&apos;);</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout">600</stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree/>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="[TD]循环变量处理" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">vars.putObject(&quot;counter&quot;, vars.getObject(&quot;counter&quot;) + 1)
+SampleResult.setIgnore()</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.1)初始化拧紧机循环变量" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
@@ -867,7 +1033,69 @@ SampleResult.setIgnore()</stringProp>
           <stringProp name="resultSetMaxRows"></stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
-        <hashTree/>
+        <hashTree>
+          <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]创建不带降采样的模板表: ${db_name}.t_electmeter_sample" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">CREATE STABLE ${db_name}.t_electmeter_sample (
+  k_timestamp timestamp,
+  elect_name varchar(63),
+  vol_a double,
+  cur_a double,
+  powerf_a double,
+  allenergy_a int,
+  pallenergy_a int,
+  rallenergy_a int,
+  allrenergy1_a int,
+  allrenergy2_a int,
+  powera_a double,
+  powerr_a double,
+  powerl_a double,
+  vol_b double,
+  cur_b double,
+  powerf_b double,
+  allenergy_b int,
+  pallenergy_b int,
+  rallenergy_b int,
+  allrenergy1_b int,
+  allrenergy2_b int,
+  powera_b double,
+  powerr_b double,
+  powerl_b double,
+  vol_c double,
+  cur_c double,
+  powerf_c double,
+  allenergy_c int,
+  pallenergy_c int,
+  rallenergy_c int,
+  allrenergy1_c int,
+  allrenergy2_c int,
+  powera_c double,
+  powerr_c double,
+  powerl_c double,
+  vol_ab double,
+  vol_bc double,
+  vol_ca double,
+  infre double,
+  powerf double,
+  allpower double,
+  pallpower double,
+  rallpower double,
+  powerr double,
+  powerl double,
+  allrenergy1 double,
+  allrenergy2 double
+) tags (machine_code varchar(64));</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCPostProcessor>
+          <hashTree/>
+        </hashTree>
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)创建sample表" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
@@ -880,7 +1108,21 @@ SampleResult.setIgnore()</stringProp>
           <stringProp name="resultSetMaxRows"></stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
-        <hashTree/>
+        <hashTree>
+          <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]创建sample表" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">CREATE TABLE ${db_name}.electmeter_sample USING ${db_name}.t_electmeter_sample (machine_code) TAGS (&apos;sample&apos;);</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCPostProcessor>
+          <hashTree/>
+        </hashTree>
         <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="写入sample表" enabled="true"/>
         <hashTree>
           <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="加载数据" enabled="true">
@@ -954,6 +1196,19 @@ generateBatchInsertSQL()</stringProp>
               <boolProp name="Assertion.assume_success">false</boolProp>
               <intProp name="Assertion.test_type">16</intProp>
             </ResponseAssertion>
+            <hashTree/>
+            <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]写入数据: ${db_name}.electmeter_sample" enabled="true">
+              <stringProp name="dataSource">td_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">${builder}</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCPostProcessor>
             <hashTree/>
           </hashTree>
         </hashTree>
@@ -1597,6 +1852,19 @@ generateBatchInsertSQL()</stringProp>
                 <intProp name="Assertion.test_type">16</intProp>
               </ResponseAssertion>
               <hashTree/>
+              <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+                <stringProp name="dataSource">td_pool</stringProp>
+                <stringProp name="queryType">Update Statement</stringProp>
+                <stringProp name="query">${builder}</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout"></stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCPostProcessor>
+              <hashTree/>
             </hashTree>
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
@@ -1618,6 +1886,19 @@ generateBatchInsertSQL()</stringProp>
                 <boolProp name="Assertion.assume_success">false</boolProp>
                 <intProp name="Assertion.test_type">16</intProp>
               </ResponseAssertion>
+              <hashTree/>
+              <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
+                <stringProp name="dataSource">td_pool</stringProp>
+                <stringProp name="queryType">Update Statement</stringProp>
+                <stringProp name="query">${tighten_builder}</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout"></stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCPostProcessor>
               <hashTree/>
             </hashTree>
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
@@ -1673,11 +1954,45 @@ generateBatchInsertSQL()</stringProp>
               <boolProp name="CounterConfig.per_user">false</boolProp>
             </CounterConfig>
             <hashTree/>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">import java.sql.*
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">${builder}</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">60</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                <collectionProp name="Asserion.test_strings"/>
+                <stringProp name="Assertion.custom_message"></stringProp>
+                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                <boolProp name="Assertion.assume_success">false</boolProp>
+                <intProp name="Assertion.test_type">16</intProp>
+              </ResponseAssertion>
+              <hashTree/>
+              <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+                <stringProp name="dataSource">td_pool</stringProp>
+                <stringProp name="queryType">Update Statement</stringProp>
+                <stringProp name="query">${builder}</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout"></stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCPostProcessor>
+              <hashTree/>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">import java.sql.*
 import java.io.*
 import java.util.List
 import java.util.ArrayList
@@ -1745,29 +2060,8 @@ void generateBatchInsertSQL() {
 }
 
 generateBatchInsertSQL()</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
-              <stringProp name="dataSource">default_pool</stringProp>
-              <stringProp name="queryType">Update Statement</stringProp>
-              <stringProp name="query">${builder}</stringProp>
-              <stringProp name="queryArguments"></stringProp>
-              <stringProp name="queryArgumentsTypes"></stringProp>
-              <stringProp name="variableNames"></stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout">60</stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCSampler>
-            <hashTree>
-              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
-                <collectionProp name="Asserion.test_strings"/>
-                <stringProp name="Assertion.custom_message"></stringProp>
-                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-                <boolProp name="Assertion.assume_success">false</boolProp>
-                <intProp name="Assertion.test_type">16</intProp>
-              </ResponseAssertion>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
@@ -1790,6 +2084,19 @@ generateBatchInsertSQL()</stringProp>
                 <boolProp name="Assertion.assume_success">false</boolProp>
                 <intProp name="Assertion.test_type">16</intProp>
               </ResponseAssertion>
+              <hashTree/>
+              <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
+                <stringProp name="dataSource">td_pool</stringProp>
+                <stringProp name="queryType">Update Statement</stringProp>
+                <stringProp name="query">${tighten_builder}</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout"></stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCPostProcessor>
               <hashTree/>
             </hashTree>
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
@@ -1872,7 +2179,7 @@ SampleResult.setIgnore()</stringProp>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">insert into ${db_name}.electmeter_${__threadNum}_${device_num} select (now()::bigint+28800000+vol_ab::int)::timestamp,elect_name,vol_a,cur_a,1.0,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,3.0,4.0,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2 from ${db_name}.electmeter_sample;</stringProp>
+            <stringProp name="query">insert into ${db_name}.electmeter_${__threadNum}_${device_num} select (${now_time}+vol_ab::int+28800000)::timestamp,elect_name,vol_a,cur_a,1.0,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,3.0,4.0,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2 from ${db_name}.electmeter_sample;</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -1889,6 +2196,27 @@ SampleResult.setIgnore()</stringProp>
               <boolProp name="Assertion.assume_success">false</boolProp>
               <intProp name="Assertion.test_type">16</intProp>
             </ResponseAssertion>
+            <hashTree/>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预获取时间" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">false</stringProp>
+              <stringProp name="script">vars.putObject(&quot;now_time&quot;, ${__time()})</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+            <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+              <stringProp name="dataSource">td_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">insert into ${db_name}.electmeter_${__threadNum}_${device_num} select (${now_time}+cast(vol_ab as int)),elect_name,vol_a,cur_a,1.0,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,3.0,4.0,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2 from ${db_name}.electmeter_sample;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCPostProcessor>
             <hashTree/>
           </hashTree>
         </hashTree>
@@ -2302,7 +2630,7 @@ SampleResult.setIgnore()</stringProp>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
           <doubleProp>
             <name>throughput</name>
-            <value>0.2</value>
+            <value>0.4</value>
             <savedValue>0.0</savedValue>
           </doubleProp>
           <intProp name="calcMode">0</intProp>
@@ -2313,7 +2641,7 @@ SampleResult.setIgnore()</stringProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="torque-angle" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.1)torque-angle" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -2324,55 +2652,65 @@ SampleResult.setIgnore()</stringProp>
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.1)torque-angle" enabled="true">
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
-                <collectionProp name="Arguments.arguments">
-                  <elementProp name="beginTs" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${begin_timestamp}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">beginTs</stringProp>
-                  </elementProp>
-                  <elementProp name="endTs" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${end_timestamp}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">endTs</stringProp>
-                  </elementProp>
-                  <elementProp name="orderBy" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${order_by}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">orderBy</stringProp>
-                  </elementProp>
-                </collectionProp>
-              </elementProp>
-              <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
-              <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
-              <stringProp name="HTTPSampler.protocol">http</stringProp>
-              <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
-              <stringProp name="HTTPSampler.path">/shig/tighten/torque-angle</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-              <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-              <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-              <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
-            </HTTPSamplerProxy>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="torque-angle" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">select &apos;${machine_code}&apos; as machine_code, count(k_timestamp), avg(torque), avg(angle) from (select k_timestamp, torque, angle from db_shig.tighten_${machine_code} where device_state=0 and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp order by ${order_by});</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames">machine_code1,count1,torque1,angle1</stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
             <hashTree>
-              <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
-                <stringProp name="JSON_PATH">$.code</stringProp>
-                <stringProp name="EXPECTED_VALUE">0</stringProp>
-                <boolProp name="JSONVALIDATION">true</boolProp>
-                <boolProp name="EXPECT_NULL">false</boolProp>
-                <boolProp name="INVERT">false</boolProp>
-                <boolProp name="ISREGEX">true</boolProp>
-              </JSONPathAssertion>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">false</stringProp>
+                <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-1440001M,,)})
+vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-1M,,)})
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]torque-angle" enabled="true">
+              <stringProp name="dataSource">td_pool</stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">select &apos;${machine_code}&apos; as machine_code, count(k_timestamp), avg(torque), avg(angle) from (select k_timestamp, torque, angle from db_shig.tighten_${machine_code} where device_state=0 and k_timestamp &gt; ${begin_timestamp} and k_timestamp &lt; ${end_timestamp} order by ${order_by});</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames">machine_code2,count2,torque2,angle2</stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="script">def machine_code1 = vars.get(&quot;machine_code1_1&quot;);
+def machine_code2= vars.get(&quot;machine_code2_1&quot;);
+def count1 = vars.get(&quot;count1_1&quot;);
+def count2 = vars.get(&quot;count2_1&quot;);
+def torque1 = vars.get(&quot;torque1_1&quot;);
+def torque2 = vars.get(&quot;torque2_1&quot;);
+def angle1 = vars.get(&quot;angle1_1&quot;);
+def angle2 = vars.get(&quot;angle2_1&quot;);
+if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==torque2 &amp;&amp; angle1==angle2){
+	AssertionResult.setFailure(false);
+}else{
+	String failureMessage = &quot;[torque-angle] answer machine_code: &quot; + machine_code1 + &quot;, count: &quot; + count1 + &quot;, torque: &quot; + torque1 + &quot;, angle: &quot; + angle1 +  &quot;, but actually machine_code: &quot; + machine_code2 + &quot;, count: &quot; + count2 + &quot;, torque: &quot; + torque2 + &quot;, angle: &quot; + angle2;
+	AssertionResult.setFailure(true);
+	AssertionResult.setFailureMessage(failureMessage);
+}
+</stringProp>
+              </JSR223Assertion>
               <hashTree/>
             </hashTree>
           </hashTree>
@@ -2568,12 +2906,21 @@ SampleResult.setIgnore()</stringProp>
             </FloatProperty>
           </ThroughputController>
           <hashTree>
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
+              <stringProp name="variableName">device_num</stringProp>
+              <stringProp name="outputFormat"></stringProp>
+              <stringProp name="minimumValue">1</stringProp>
+              <stringProp name="maximumValue">${device_rand_end}</stringProp>
+              <stringProp name="randomSeed"></stringProp>
+              <boolProp name="perThread">false</boolProp>
+            </RandomVariableConfig>
+            <hashTree/>
             <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.0)last curs with machine_code" enabled="true">
               <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
                 <collectionProp name="Arguments.arguments">
                   <elementProp name="machineCode" elementType="HTTPArgument">
                     <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${machine_code}</stringProp>
+                    <stringProp name="Argument.value">${__threadNum}_${device_num}</stringProp>
                     <stringProp name="Argument.metadata">=</stringProp>
                     <boolProp name="HTTPArgument.use_equals">true</boolProp>
                     <stringProp name="Argument.name">machineCode</stringProp>
@@ -2669,7 +3016,7 @@ SampleResult.setIgnore()</stringProp>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
           <doubleProp>
             <name>throughput</name>
-            <value>1.0</value>
+            <value>2.0</value>
             <savedValue>0.0</savedValue>
           </doubleProp>
           <intProp name="calcMode">0</intProp>
@@ -2680,7 +3027,7 @@ SampleResult.setIgnore()</stringProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="max min and avg in electmeters" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.1)max min and avg in electmeters" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -2691,62 +3038,66 @@ SampleResult.setIgnore()</stringProp>
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.1)max min and avg in electmeters" enabled="true">
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
-                <collectionProp name="Arguments.arguments">
-                  <elementProp name="beginTs" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${begin_timestamp}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">beginTs</stringProp>
-                  </elementProp>
-                  <elementProp name="endTs" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${end_timestamp}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">endTs</stringProp>
-                  </elementProp>
-                  <elementProp name="machineCode" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${machine_code}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">machineCode</stringProp>
-                  </elementProp>
-                  <elementProp name="electName" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">a004</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">electName</stringProp>
-                  </elementProp>
-                </collectionProp>
-              </elementProp>
-              <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
-              <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
-              <stringProp name="HTTPSampler.protocol">http</stringProp>
-              <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
-              <stringProp name="HTTPSampler.path">/shig/electmeters/cur_a</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-              <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-              <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-              <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
-            </HTTPSamplerProxy>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="max min and avg in electmeters" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp group by machine_code order by machine_code asc;</stringProp>
+              <stringProp name="queryArguments">${machine_code},a004</stringProp>
+              <stringProp name="queryArgumentsTypes">varchar,varchar</stringProp>
+              <stringProp name="variableNames">machine_code1,max1,min1,avg1</stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
             <hashTree>
-              <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
-                <stringProp name="JSON_PATH">$.code</stringProp>
-                <stringProp name="EXPECTED_VALUE">0</stringProp>
-                <boolProp name="JSONVALIDATION">true</boolProp>
-                <boolProp name="EXPECT_NULL">false</boolProp>
-                <boolProp name="INVERT">false</boolProp>
-                <boolProp name="ISREGEX">true</boolProp>
-              </JSONPathAssertion>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">false</stringProp>
+                <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-121M,,)})
+vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-1M,,)})
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]max min and avg in electmeters" enabled="true">
+              <stringProp name="dataSource">td_pool</stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; ${begin_timestamp} and k_timestamp &lt; ${end_timestamp} group by machine_code order by machine_code asc;</stringProp>
+              <stringProp name="queryArguments">${machine_code},a004</stringProp>
+              <stringProp name="queryArgumentsTypes">varchar,varchar</stringProp>
+              <stringProp name="variableNames">machine_code2,max2,min2,avg2</stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="script">def machine_code1 = vars.get(&quot;machine_code1_1&quot;);
+def machine_code2 = vars.get(&quot;machine_code2_1&quot;);
+def max1 = vars.get(&quot;max1_1&quot;);
+def max2 = vars.get(&quot;max2_1&quot;);
+def min1 = vars.get(&quot;min1_1&quot;);
+def min2 = vars.get(&quot;min2_1&quot;);
+def avg1 = vars.get(&quot;avg1_1&quot;);
+def avg2 = vars.get(&quot;avg2_1&quot;);
+if(machine_code1==machine_code2 &amp;&amp; max1==max2 &amp;&amp; min1==min2 &amp;&amp; avg1==avg2){
+	AssertionResult.setFailure(false);
+}else{
+	String failureMessage = &quot;[cur_a] answer machine_code: &quot; + machine_code1 + &quot;, max: &quot; + max1 + &quot;, min: &quot; + min1 + &quot;, avg: &quot; + avg1 +  &quot;, but actually machine_code: &quot; + machine_code2 + &quot;, max: &quot; + max2 + &quot;, min: &quot; + min2 + &quot;, avg: &quot; + avg2;
+	AssertionResult.setFailure(true);
+	AssertionResult.setFailureMessage(failureMessage);
+}
+
+</stringProp>
+              </JSR223Assertion>
               <hashTree/>
             </hashTree>
           </hashTree>
@@ -2769,7 +3120,7 @@ SampleResult.setIgnore()</stringProp>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
           <doubleProp>
             <name>throughput</name>
-            <value>1.0</value>
+            <value>2.0</value>
             <savedValue>0.0</savedValue>
           </doubleProp>
           <intProp name="calcMode">0</intProp>
@@ -2780,7 +3131,7 @@ SampleResult.setIgnore()</stringProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="in &amp;&amp; group by" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.2)in &amp;&amp; group by" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -2791,55 +3142,77 @@ SampleResult.setIgnore()</stringProp>
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.0)in &amp;&amp; group by" enabled="true">
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
-                <collectionProp name="Arguments.arguments">
-                  <elementProp name="beginTs" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${begin_timestamp}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">beginTs</stringProp>
-                  </elementProp>
-                  <elementProp name="endTs" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${end_timestamp}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">endTs</stringProp>
-                  </elementProp>
-                  <elementProp name="machineCode" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${machine_code}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">machineCode</stringProp>
-                  </elementProp>
-                </collectionProp>
-              </elementProp>
-              <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
-              <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
-              <stringProp name="HTTPSampler.protocol">http</stringProp>
-              <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
-              <stringProp name="HTTPSampler.path">/shig/electmeters/period-count</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-              <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-              <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-              <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
-            </HTTPSamplerProxy>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="in &amp;&amp; group by" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp and abs(infre - 50) &gt; 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
+              <stringProp name="queryArguments">${machine_code}</stringProp>
+              <stringProp name="queryArgumentsTypes">varchar</stringProp>
+              <stringProp name="variableNames">name1,count1</stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
             <hashTree>
-              <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
-                <stringProp name="JSON_PATH">$.code</stringProp>
-                <stringProp name="EXPECTED_VALUE">0</stringProp>
-                <boolProp name="JSONVALIDATION">true</boolProp>
-                <boolProp name="EXPECT_NULL">false</boolProp>
-                <boolProp name="INVERT">false</boolProp>
-                <boolProp name="ISREGEX">true</boolProp>
-              </JSONPathAssertion>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">false</stringProp>
+                <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-1441M,,)})
+vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-1M,,)})
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]in &amp;&amp; group by" enabled="true">
+              <stringProp name="dataSource">td_pool</stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; ${begin_timestamp} and k_timestamp &lt; ${end_timestamp} and abs(infre - 50) &gt; 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
+              <stringProp name="queryArguments">${machine_code}</stringProp>
+              <stringProp name="queryArgumentsTypes">varchar</stringProp>
+              <stringProp name="variableNames">name2,count2</stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="script">def count1_ = vars.get(&quot;count1_#&quot;);
+def count2_= vars.get(&quot;count2_#&quot;);
+if(count1_==count2_){
+	def flag = 1;
+	String failureMessage = &quot;[in &amp;&amp; group by]&quot;;
+	for(int i=1;i&lt;=count1_;i++){
+		String k = String.valueOf(i);
+		def count1 = vars.get(&quot;count1_&quot; + k);
+		def count2= vars.get(&quot;count2_&quot; + k);
+		def name1 = vars.get(&quot;name1_&quot; + k);
+		def name2 = vars.get(&quot;name2_&quot; + k);
+		if(!((count1 == count2) &amp;&amp; (name1 == name2))){
+			failureMessage += &quot; answer elect_name: &quot; + name1 + &quot;, count: &quot; + count1 + &quot;, but actually elect_name: &quot; + name2 + &quot;, count: &quot; + count2 + &quot;;&quot;;
+			flag = 0;
+		}
+	}
+	if(flag == 1){
+		AssertionResult.setFailure(false);
+	}else{
+		AssertionResult.setFailure(true);
+		AssertionResult.setFailureMessage(failureMessage);
+	}
+}else{
+	String failureMessage = &quot;[in &amp;&amp; group by] machine_code: &quot; + machine_code + &quot;, answer result_row_count: &quot; + count1_ + &quot;, but actually result_row_count: &quot; + count2_;
+	AssertionResult.setFailure(true);
+	AssertionResult.setFailureMessage(failureMessage);
+}
+</stringProp>
+              </JSR223Assertion>
               <hashTree/>
             </hashTree>
           </hashTree>
@@ -2862,7 +3235,7 @@ SampleResult.setIgnore()</stringProp>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
           <doubleProp>
             <name>throughput</name>
-            <value>0.13333</value>
+            <value>0.26666</value>
             <savedValue>0.0</savedValue>
           </doubleProp>
           <intProp name="calcMode">0</intProp>
@@ -2873,7 +3246,7 @@ SampleResult.setIgnore()</stringProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="querypage" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.0)querypage" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -2884,59 +3257,85 @@ SampleResult.setIgnore()</stringProp>
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.0)querypage" enabled="true">
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
-                <collectionProp name="Arguments.arguments">
-                  <elementProp name="beginTs" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${begin_timestamp}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">beginTs</stringProp>
-                  </elementProp>
-                  <elementProp name="endTs" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${end_timestamp}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">endTs</stringProp>
-                  </elementProp>
-                  <elementProp name="orderBy" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${order_by}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">orderBy</stringProp>
-                  </elementProp>
-                </collectionProp>
-              </elementProp>
-              <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
-              <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
-              <stringProp name="HTTPSampler.protocol">http</stringProp>
-              <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
-              <stringProp name="HTTPSampler.path">/shig/electmeters/${page_no}/${page_size}</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-              <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-              <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-              <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
-            </HTTPSamplerProxy>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="querypage" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames">k_timestamp1,machine_code1,cur_a1,cur_b1,cur_c1</stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
             <hashTree>
-              <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
-                <stringProp name="JSON_PATH">$.code</stringProp>
-                <stringProp name="EXPECTED_VALUE">0</stringProp>
-                <boolProp name="JSONVALIDATION">true</boolProp>
-                <boolProp name="EXPECT_NULL">false</boolProp>
-                <boolProp name="INVERT">false</boolProp>
-                <boolProp name="ISREGEX">true</boolProp>
-              </JSONPathAssertion>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">false</stringProp>
+                <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-2M,,)})
+vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-1M,,)})
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]querypage" enabled="true">
+              <stringProp name="dataSource">td_pool</stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; ${begin_timestamp} and k_timestamp &lt; ${end_timestamp} order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames">k_timestamp2,machine_code2,cur_a2,cur_b2,cur_c2</stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="script">def count1_ = vars.get(&quot;k_timestamp1_#&quot;);
+def count2_ = vars.get(&quot;k_timestamp2_#&quot;);
+if(count1_==count2_){
+	def flag = 1;
+	String failureMessage = &quot;[querypage] &quot;;
+	for(int i=1;i&lt;=Integer.parseInt(count1_);i++){
+		String k = String.valueOf(i);
+		def machine_code1 = vars.get(&quot;machine_code1_&quot; + k);
+		def machine_code2= vars.get(&quot;machine_code2_&quot; + k);
+		def cur_a1 = vars.get(&quot;cur_a1_&quot; + k);
+		def cur_a2 = vars.get(&quot;cur_a2_&quot; + k);
+		def cur_b1 = vars.get(&quot;cur_b1_&quot; + k);
+		def cur_b2 = vars.get(&quot;cur_b2_&quot; + k);
+		def cur_c1 = vars.get(&quot;cur_c1_&quot; + k);
+		def cur_c2 = vars.get(&quot;cur_c2_&quot; + k);
+		if(!((machine_code1 == machine_code2) &amp;&amp; (cur_a1 == cur_a2) &amp;&amp; (cur_b1 == cur_b2) &amp;&amp; (cur_c1 == cur_c2))){
+			failureMessage += &quot; answer machine_code: &quot; + machine_code1 + &quot;, cur_a: &quot; + cur_a1 + &quot;, cur_b: &quot; + cur_b1 + &quot;, cur_c: &quot; + cur_c1 + &quot;, but actually machine_code: &quot; + machine_code2 + &quot;, cur_a: &quot; + cur_a2 + &quot;, cur_b: &quot; + cur_b2 + &quot;, cur_c: &quot; + cur_c2 + &quot;;&quot;;
+			flag = 0;
+		}
+	}
+	if(flag == 1){
+		AssertionResult.setFailure(false);
+	}else{
+		AssertionResult.setFailure(true);
+		AssertionResult.setFailureMessage(failureMessage);
+	}
+}else{
+	String failureMessage = &quot;[querypage] answer result_row_count: &quot; + count1_ + &quot;, but actually result_row_count: &quot; + count2_;
+	AssertionResult.setFailure(true);
+	AssertionResult.setFailureMessage(failureMessage);
+}
+</stringProp>
+              </JSR223Assertion>
               <hashTree/>
             </hashTree>
           </hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="sumpower" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.0)sumpower" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -2947,55 +3346,59 @@ SampleResult.setIgnore()</stringProp>
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.0)sumpower" enabled="true">
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
-                <collectionProp name="Arguments.arguments">
-                  <elementProp name="beginTs" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${begin_timestamp}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">beginTs</stringProp>
-                  </elementProp>
-                  <elementProp name="endTs" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${end_timestamp}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">endTs</stringProp>
-                  </elementProp>
-                  <elementProp name="orderBy" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${orderBy}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">orderBy</stringProp>
-                  </elementProp>
-                </collectionProp>
-              </elementProp>
-              <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
-              <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
-              <stringProp name="HTTPSampler.protocol">http</stringProp>
-              <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
-              <stringProp name="HTTPSampler.path">/shig/electmeters/sumpower</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-              <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-              <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-              <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
-            </HTTPSamplerProxy>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sumpower" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamp and t.k_timestamp &lt; (${end_timestamp})::timestamp;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames">sumpallpower1,count1</stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
             <hashTree>
-              <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
-                <stringProp name="JSON_PATH">$.code</stringProp>
-                <stringProp name="EXPECTED_VALUE">0</stringProp>
-                <boolProp name="JSONVALIDATION">true</boolProp>
-                <boolProp name="EXPECT_NULL">false</boolProp>
-                <boolProp name="INVERT">false</boolProp>
-                <boolProp name="ISREGEX">true</boolProp>
-              </JSONPathAssertion>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">false</stringProp>
+                <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-1441M,,)})
+vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-1M,,)})</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]sumpower" enabled="true">
+              <stringProp name="dataSource">td_pool</stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; ${begin_timestamp} and t.k_timestamp &lt; ${end_timestamp};</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames">sumpallpower2,count2</stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="script">def sumpallpower1 = vars.get(&quot;sumpallpower1_1&quot;);
+def sumpallpower2 = vars.get(&quot;sumpallpower2_1&quot;);
+if(sumpallpower1==sumpallpower2){
+	AssertionResult.setFailure(false);
+}else{
+	String failureMessage = &quot;[sumpower] answer sumpallpower: &quot; + sumpallpower1 +  &quot;, but actually sumpallpower: &quot; + sumpallpower2;
+	AssertionResult.setFailure(true);
+	AssertionResult.setFailureMessage(failureMessage);
+}
+
+</stringProp>
+              </JSR223Assertion>
               <hashTree/>
             </hashTree>
           </hashTree>
