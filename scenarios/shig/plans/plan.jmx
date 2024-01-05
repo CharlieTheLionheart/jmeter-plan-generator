@@ -433,7 +433,21 @@ GRANT admin TO ${create_user};</stringProp>
           <stringProp name="resultSetMaxRows"></stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
-        <hashTree/>
+        <hashTree>
+          <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]创建时序库：${db_name}" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="query">CREATE DATABASE ${db_name};</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+          </JDBCPostProcessor>
+          <hashTree/>
+        </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建模板表" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
