@@ -794,7 +794,7 @@ device_state int
 SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.0)循环单独建表" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
           </LoopController>
@@ -906,7 +906,7 @@ vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="拧紧机建表" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.1)拧紧机建表" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
         </LoopController>
