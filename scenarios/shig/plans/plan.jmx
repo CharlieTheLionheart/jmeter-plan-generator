@@ -2388,7 +2388,7 @@ SampleResult.setIgnore()</stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.1)循环写入" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
@@ -2475,7 +2475,7 @@ if(afterCount - beforeCount == should){
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
           <hashTree>
-            <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="清理整条数据写入去重的测试表" enabled="true">
+            <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="(1.2.1)清理整条数据写入去重的测试表" enabled="true">
               <boolProp name="TransactionController.includeTimers">false</boolProp>
               <boolProp name="TransactionController.parent">true</boolProp>
             </TransactionController>
@@ -3326,7 +3326,7 @@ if(count1_==count2_){
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.0)循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
