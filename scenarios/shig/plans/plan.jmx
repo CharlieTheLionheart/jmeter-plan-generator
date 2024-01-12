@@ -316,7 +316,7 @@
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建8080用户" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建8080用户" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE USER root1 WITH PASSWORD &apos;123456&apos;;</stringProp>
@@ -329,13 +329,13 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF trace on" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)IF trace on" enabled="true">
           <stringProp name="IfController.condition">${__groovy(&quot;${trace_log}&quot;.indexOf(&quot;TRUE&quot;)&gt;-1)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="增加trace日志" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)增加trace日志" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">set cluster setting timeseries.trace.on_off_list=&apos;ee 4,st 4,su 4,me 4&apos;;</stringProp>
@@ -364,13 +364,13 @@
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="设置了密码" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)设置了密码" enabled="true">
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;create_password&quot;) != &quot;&quot;)}</stringProp>
         </IfController>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建用户: ${create_user};密码: ${create_password}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建用户: ${create_user};密码: ${create_password}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">CREATE USER ${create_user} WITH PASSWORD &apos;${create_password}&apos;;
@@ -385,13 +385,13 @@ GRANT admin TO ${create_user};</stringProp>
           </JDBCSampler>
           <hashTree/>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="没有设置密码" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)没有设置密码" enabled="true">
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;create_password&quot;) == &quot;&quot;)}</stringProp>
         </IfController>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建用户: ${create_user}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建用户: ${create_user}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">CREATE USER ${create_user};
@@ -421,7 +421,7 @@ GRANT admin TO ${create_user};</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)创建时序库: ${db_name}" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建时序库: ${db_name}" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TS DATABASE ${db_name};</stringProp>
@@ -482,7 +482,7 @@ vars.put(&quot;tighten_dsp&quot;, tighten_dsp)
 vars.put(&quot;cnc_dsp&quot;, cnc_dsp)</stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)创建模板表: ${db_name}.t_electmeter" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建模板表: ${db_name}.t_electmeter" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.t_electmeter (
@@ -605,7 +605,7 @@ vars.put(&quot;cnc_dsp&quot;, cnc_dsp)</stringProp>
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)创建拧紧机模板表: ${db_name}.t_tighten" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建拧紧机模板表: ${db_name}.t_tighten" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.t_tighten (
@@ -688,7 +688,7 @@ device_state int
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)创建机床模板表: ${db_name}.t_cnc" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建机床模板表: ${db_name}.t_cnc" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.t_cnc (
@@ -785,7 +785,7 @@ device_state int
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.0)初始化循环变量" enabled="true">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)初始化循环变量" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
@@ -794,12 +794,12 @@ device_state int
 SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.0)循环单独建表" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环单独建表" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.0)创建设备表${__threadNum}_${counter}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)创建设备表${__threadNum}_${counter}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">CREATE TABLE ${db_name}.electmeter_${__threadNum}_${counter} USING ${db_name}.t_electmeter (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;);</stringProp>
@@ -812,7 +812,7 @@ SampleResult.setIgnore()</stringProp>
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree/>
-            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.0)循环变量处理" enabled="true">
+            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)循环变量处理" enabled="true">
               <stringProp name="scriptLanguage">groovy</stringProp>
               <stringProp name="parameters"></stringProp>
               <stringProp name="filename"></stringProp>
@@ -829,7 +829,7 @@ SampleResult.setIgnore()</stringProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.1)编制批量插入ddl" enabled="true">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)编制批量插入ddl" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
@@ -845,7 +845,7 @@ vars.put(&quot;create_ddl&quot;, ddl)
 SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.1)创建设备表${__threadNum}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)创建设备表${__threadNum}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Callable Statement</stringProp>
             <stringProp name="query">${create_ddl}</stringProp>
@@ -896,7 +896,7 @@ SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
         </hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.1)初始化拧紧机循环变量" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)初始化拧紧机循环变量" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -906,12 +906,12 @@ vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.1)拧紧机建表" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)拧紧机建表" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
         </LoopController>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.1)创建拧紧机设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)创建拧紧机设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">INSERT INTO ${db_name}.tighten_${__threadNum}_${counter} USING ${db_name}.t_tighten (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1);</stringProp>
@@ -938,7 +938,7 @@ SampleResult.setIgnore()</stringProp>
             </JDBCPostProcessor>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.1)创建cnc设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)创建cnc设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">INSERT INTO ${db_name}.cnc_${__threadNum}_${counter} USING ${db_name}.t_cnc (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);</stringProp>
@@ -951,7 +951,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.1)循环变量处理" enabled="true">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)循环变量处理" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
@@ -976,7 +976,7 @@ SampleResult.setIgnore()</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.0)线程对象初始化" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -1001,7 +1001,7 @@ vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)创建不带降采样的模板表: ${db_name}.t_electmeter_sample" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建不带降采样的模板表: ${db_name}.t_electmeter_sample" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.t_electmeter_sample (
@@ -1124,7 +1124,7 @@ SampleResult.setIgnore()</stringProp>
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)创建sample表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建sample表" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.electmeter_sample USING ${db_name}.t_electmeter_sample (machine_code) ATTRIBUTES (&apos;sample&apos;);</stringProp>
@@ -1165,7 +1165,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="variableNames">data_line</stringProp>
           </CSVDataSet>
           <hashTree/>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.0)预处理数据: ${db_name}.electmeter_sample" enabled="true">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)预处理数据: ${db_name}.electmeter_sample" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
@@ -1204,7 +1204,7 @@ void generateBatchInsertSQL() {
 generateBatchInsertSQL()</stringProp>
           </JSR223Sampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)写入数据: ${db_name}.electmeter_sample" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.electmeter_sample" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${builder}</stringProp>
@@ -1283,7 +1283,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
           </JSR223PreProcessor>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)设置查询下推BO白名单" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="设置查询下推BO白名单" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${bo_white_list_builder}</stringProp>
@@ -1314,7 +1314,7 @@ generateBatchSettingSQL()</stringProp>
       <hashTree>
         <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询数据库对象" enabled="true"/>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW DATABASES;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW DATABASES;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW DATABASES;</stringProp>
@@ -1327,7 +1327,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)USE ${db_name};" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)USE ${db_name};" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">USE ${db_name};</stringProp>
@@ -1340,7 +1340,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW TABLES;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW TABLES;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW TABLES;</stringProp>
@@ -1353,7 +1353,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW TEMPLATE TABLES;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW TEMPLATE TABLES;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW TEMPLATE TABLES;</stringProp>
@@ -1366,7 +1366,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW CREATE TABLE ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW CREATE TABLE ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW CREATE TABLE ${db_name}.t_electmeter;</stringProp>
@@ -1379,7 +1379,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW COLUMNS FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW COLUMNS FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW COLUMNS FROM ${db_name}.t_electmeter;</stringProp>
@@ -1392,7 +1392,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
@@ -1405,7 +1405,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW TAGS FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW TAGS FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW TAGS FROM ${db_name}.t_electmeter;</stringProp>
@@ -1418,7 +1418,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW CREATE TABLE ${db_name}.electmeter_1_1;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW CREATE TABLE ${db_name}.electmeter_1_1;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW CREATE TABLE ${db_name}.electmeter_1_1;</stringProp>
@@ -1431,7 +1431,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW COLUMNS FROM ${db_name}.electmeter_1_1;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW COLUMNS FROM ${db_name}.electmeter_1_1;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW COLUMNS FROM ${db_name}.electmeter_1_1;</stringProp>
@@ -1444,7 +1444,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;</stringProp>
@@ -1457,7 +1457,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW TAGS FROM ${db_name}.electmeter_1_1;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW TAGS FROM ${db_name}.electmeter_1_1;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW TAGS FROM ${db_name}.electmeter_1_1;</stringProp>
@@ -1470,7 +1470,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW PRECOMPUTING ON TABLE ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW PRECOMPUTING ON TABLE ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW PRECOMPUTING ON TABLE ${db_name}.t_electmeter;</stringProp>
@@ -1483,7 +1483,7 @@ generateBatchSettingSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW TOPICS ON TABLE ${db_name}.electmeter_1_1;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW TOPICS ON TABLE ${db_name}.electmeter_1_1;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW TOPICS ON TABLE ${db_name}.electmeter_1_1;</stringProp>
@@ -1499,7 +1499,7 @@ generateBatchSettingSQL()</stringProp>
         </hashTree>
         <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="维护模板表/实例表属性" enabled="true"/>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)添加属性" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)添加属性" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter ADD ATTRIBUTE workshop varchar(64);
@@ -1515,7 +1515,7 @@ ALTER TABLE ${db_name}.electmeter_1_1 SET ATTRIBUTE workshop = &apos;workshop_1&
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
@@ -1528,7 +1528,7 @@ ALTER TABLE ${db_name}.electmeter_1_1 SET ATTRIBUTE workshop = &apos;workshop_1&
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;</stringProp>
@@ -1541,7 +1541,7 @@ ALTER TABLE ${db_name}.electmeter_1_1 SET ATTRIBUTE workshop = &apos;workshop_1&
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)重命名属性" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)重命名属性" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter RENAME TAG workshop workshop_id;
@@ -1557,7 +1557,7 @@ ALTER TABLE ${db_name}.electmeter_1_1 SET TAG factory_id = &apos;1&apos;;</strin
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
@@ -1570,7 +1570,7 @@ ALTER TABLE ${db_name}.electmeter_1_1 SET TAG factory_id = &apos;1&apos;;</strin
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;</stringProp>
@@ -1583,7 +1583,7 @@ ALTER TABLE ${db_name}.electmeter_1_1 SET TAG factory_id = &apos;1&apos;;</strin
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)移除属性" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)移除属性" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter DROP TAG workshop_id;
@@ -1597,7 +1597,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP ATTRIBUTE factory_id;</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
@@ -1610,7 +1610,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP ATTRIBUTE factory_id;</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.electmeter_1_1;</stringProp>
@@ -1626,7 +1626,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP ATTRIBUTE factory_id;</stringProp>
         </hashTree>
         <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="增删时序表字段" enabled="true"/>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.3) 添加字段" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 添加字段" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter ADD test_add_col_1 int;
@@ -1653,7 +1653,7 @@ ALTER TABLE ${db_name}.t_electmeter ADD COLUMN IF NOT EXISTS test_add_col_4 time
             </ResponseAssertion>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.3) 删除字段" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 删除字段" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter DROP test_add_col_1;
@@ -1681,7 +1681,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
             <hashTree/>
           </hashTree>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)设置时序数据库生命周期" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)设置时序数据库生命周期" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">ALTER ts DATABASE ${db_name} SET lifetime = 7 day;</stringProp>
@@ -1709,7 +1709,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)创建预计算" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建预计算" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE PRECOMPUTING pc_sum AS SELECT time_bucket(k_timestamp, &apos;1s&apos;) AS bucket, SUM(pallpower) AS sumpallpower FROM db_shig.t_electmeter t GROUP BY bucket;</stringProp>
@@ -1737,7 +1737,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.2)创建部分列去重的测试表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)创建部分列去重的测试表" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.electmeter_column_merge USING ${db_name}.t_electmeter (machine_code) ATTRIBUTES (&apos;column_merge&apos;);</stringProp>
@@ -1774,7 +1774,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.0)线程对象初始化" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -1792,7 +1792,7 @@ vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.0)加载数据" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)加载数据" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -1817,7 +1817,7 @@ SampleResult.setIgnore()</stringProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.0)循环写入" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环写入" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -1916,7 +1916,7 @@ generateBatchInsertSQL()</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
@@ -1951,7 +1951,7 @@ generateBatchInsertSQL()</stringProp>
               </JDBCPostProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${tighten_builder}</stringProp>
@@ -1986,7 +1986,7 @@ generateBatchInsertSQL()</stringProp>
               </JDBCPostProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${cnc_builder}</stringProp>
@@ -2016,7 +2016,7 @@ generateBatchInsertSQL()</stringProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.0)循环写入" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环写入" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -2039,7 +2039,7 @@ generateBatchInsertSQL()</stringProp>
               <boolProp name="CounterConfig.per_user">false</boolProp>
             </CounterConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
@@ -2149,7 +2149,7 @@ generateBatchInsertSQL()</stringProp>
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${tighten_builder}</stringProp>
@@ -2184,7 +2184,7 @@ generateBatchInsertSQL()</stringProp>
               </JDBCPostProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.cnc_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${cnc_builder}</stringProp>
@@ -2223,7 +2223,7 @@ generateBatchInsertSQL()</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.1)线程对象初始化" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -2247,7 +2247,7 @@ SampleResult.setIgnore()</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.1)循环写入" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环写入" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
@@ -2261,7 +2261,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="variableName">device_num</stringProp>
           </RandomVariableConfig>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">insert into ${db_name}.electmeter_${__threadNum}_${device_num} select (${now_time}+vol_ab::int+28800000)::timestamp,elect_name,vol_a,cur_a,1.0,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,3.0,4.0,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2 from ${db_name}.electmeter_sample;</stringProp>
@@ -2320,7 +2320,7 @@ SampleResult.setIgnore()</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.1)线程对象初始化" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -2344,7 +2344,7 @@ SampleResult.setIgnore()</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.1)删除整条数据写入去重的测试表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)删除整条数据写入去重的测试表" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Callable Statement</stringProp>
           <stringProp name="query">DROP TABLE IF EXISTS ${db_name}.electmeter_dedup;</stringProp>
@@ -2366,7 +2366,7 @@ SampleResult.setIgnore()</stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.1)创建整条数据写入去重的测试表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)创建整条数据写入去重的测试表" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Callable Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.electmeter_dedup USING ${db_name}.t_electmeter_sample (machine_code) ATTRIBUTES (&apos;dedup&apos;);</stringProp>
@@ -2388,7 +2388,7 @@ SampleResult.setIgnore()</stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.1)循环写入" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环写入" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
@@ -2402,7 +2402,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="variableName">device_num</stringProp>
           </RandomVariableConfig>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)获取插入前的count: ${db_name}.electmeter_dedup" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)获取插入前的count: ${db_name}.electmeter_dedup" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">select count(1) from ${db_name}.electmeter_dedup;</stringProp>
@@ -2415,7 +2415,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)写入数据: ${db_name}.electmeter_dedup" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.electmeter_dedup" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">insert into ${db_name}.electmeter_dedup select (now()::bigint+28800000+(vol_ab/2)::int)::timestamp,elect_name,vol_a,cur_a,1.0,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,3.0,4.0,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2 from ${db_name}.electmeter_sample;</stringProp>
@@ -2428,7 +2428,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)获取插入后的count: ${db_name}.electmeter_dedup" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)获取插入后的count: ${db_name}.electmeter_dedup" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">select count(1) from ${db_name}.electmeter_dedup;</stringProp>
@@ -2475,12 +2475,12 @@ if(afterCount - beforeCount == should){
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
           <hashTree>
-            <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="(1.2.1)清理整条数据写入去重的测试表" enabled="true">
+            <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="(2.0.0)清理整条数据写入去重的测试表" enabled="true">
               <boolProp name="TransactionController.includeTimers">false</boolProp>
               <boolProp name="TransactionController.parent">true</boolProp>
             </TransactionController>
             <hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.1)删除整条数据写入去重的测试表" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)删除整条数据写入去重的测试表" enabled="true">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Callable Statement</stringProp>
                 <stringProp name="query">DROP TABLE ${db_name}.electmeter_dedup;</stringProp>
@@ -2502,7 +2502,7 @@ if(afterCount - beforeCount == should){
                 </ResponseAssertion>
                 <hashTree/>
               </hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](1.2.1)创建整条数据写入去重的测试表" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)创建整条数据写入去重的测试表" enabled="true">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Callable Statement</stringProp>
                 <stringProp name="query">CREATE TABLE ${db_name}.electmeter_dedup USING ${db_name}.t_electmeter_sample (machine_code) ATTRIBUTES (&apos;dedup&apos;);</stringProp>
@@ -2542,7 +2542,7 @@ if(afterCount - beforeCount == should){
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.2)线程对象初始化" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -2568,12 +2568,12 @@ SampleResult.setIgnore()</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.2)循环写入" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环写入" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.2)预处理部分列插入数据: ${db_name}.electmeter_column_merge_${__threadNum}" enabled="true">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)预处理部分列插入数据: ${db_name}.electmeter_column_merge_${__threadNum}" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
@@ -2630,7 +2630,7 @@ generateBatchInsertSQL()
 SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.2)写入部分列数据1: ${db_name}.electmeter_column_merge" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入部分列数据1: ${db_name}.electmeter_column_merge" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${builder1}</stringProp>
@@ -2652,7 +2652,7 @@ SampleResult.setIgnore()</stringProp>
             </ResponseAssertion>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.2)写入部分列数据2: ${db_name}.electmeter_column_merge" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入部分列数据2: ${db_name}.electmeter_column_merge" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${builder2}</stringProp>
@@ -2674,7 +2674,7 @@ SampleResult.setIgnore()</stringProp>
             </ResponseAssertion>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.2)写入部分列数据3: ${db_name}.electmeter_column_merge" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入部分列数据3: ${db_name}.electmeter_column_merge" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${builder3}</stringProp>
@@ -2721,12 +2721,12 @@ SampleResult.setIgnore()</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.1)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.1)torque-angle" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)torque-angle" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -2737,7 +2737,7 @@ SampleResult.setIgnore()</stringProp>
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)torque-angle" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)torque-angle" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select &apos;${machine_code}&apos; as machine_code, count(k_timestamp), avg(torque), avg(angle) from (select k_timestamp, torque, angle from db_shig.tighten_${machine_code} where device_state=0 and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp order by ${order_by});</stringProp>
@@ -2824,12 +2824,12 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.1)循环控制器" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.1)sp_act_speed" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(2.0.0)sp_act_speed" enabled="true">
             <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
               <collectionProp name="Arguments.arguments">
                 <elementProp name="beginTs" elementType="HTTPArgument">
@@ -2905,12 +2905,12 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.2)循环控制器" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.2)last_all" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(2.0.0)last_all" enabled="true">
             <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
               <collectionProp name="Arguments.arguments">
                 <elementProp name="interval" elementType="HTTPArgument">
@@ -2975,12 +2975,12 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.0)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.0)last curs with machine_code" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)last curs with machine_code" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -3000,7 +3000,7 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.0)last curs with machine_code" enabled="true">
+            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(2.0.0)last curs with machine_code" enabled="true">
               <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
                 <collectionProp name="Arguments.arguments">
                   <elementProp name="machineCode" elementType="HTTPArgument">
@@ -3037,13 +3037,13 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
               </JSONPathAssertion>
               <hashTree/>
             </hashTree>
-            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If device_insert_non_ex_count &gt; 0" enabled="true">
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)If device_insert_non_ex_count &gt; 0" enabled="true">
               <boolProp name="IfController.evaluateAll">false</boolProp>
               <boolProp name="IfController.useExpression">true</boolProp>
               <stringProp name="IfController.condition">${__groovy(Integer.valueOf(&quot;${device_insert_non_ex_count}&quot;)&gt;0)}</stringProp>
             </IfController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.1)last curs from non-ex device with machine_code" enabled="true">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(2.0.0)last curs from non-ex device with machine_code" enabled="true">
                 <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
                   <collectionProp name="Arguments.arguments">
                     <elementProp name="machineCode" elementType="HTTPArgument">
@@ -3107,12 +3107,12 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.1)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.1)max min and avg in electmeters" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)max min and avg in electmeters" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -3123,7 +3123,7 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.1)max min and avg in electmeters" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)max min and avg in electmeters" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp group by machine_code order by machine_code asc;</stringProp>
@@ -3211,12 +3211,12 @@ if(machine_code1==machine_code2 &amp;&amp; max1==max2 &amp;&amp; min1==min2 &amp
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.2)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.2)in &amp;&amp; group by" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)in &amp;&amp; group by" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -3227,7 +3227,7 @@ if(machine_code1==machine_code2 &amp;&amp; max1==max2 &amp;&amp; min1==min2 &amp
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.2)in &amp;&amp; group by" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)in &amp;&amp; group by" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp and abs(infre - 50) &gt; 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
@@ -3326,12 +3326,12 @@ if(count1_==count2_){
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.0)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.0)querypage" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)querypage" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -3342,7 +3342,7 @@ if(count1_==count2_){
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)querypage" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)querypage" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
@@ -3420,7 +3420,7 @@ if(count1_==count2_){
               <hashTree/>
             </hashTree>
           </hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.0)sumpower" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)sumpower" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -3431,7 +3431,7 @@ if(count1_==count2_){
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)sumpower" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)sumpower" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamp and t.k_timestamp &lt; (${end_timestamp})::timestamp;</stringProp>
@@ -3512,12 +3512,12 @@ if(sumpallpower1==sumpallpower2){
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.0)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(1.2.0)last curs" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)last curs" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -3528,7 +3528,7 @@ if(sumpallpower1==sumpallpower2){
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(1.2.0)last curs" enabled="true">
+            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(2.0.0)last curs" enabled="true">
               <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
                 <collectionProp name="Arguments.arguments"/>
               </elementProp>
@@ -3583,17 +3583,17 @@ if(sumpallpower1==sumpallpower2){
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(1.2.3)循环执行" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环执行" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="(1.2.3)增删时序表字段" enabled="true">
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="(2.0.0)增删时序表字段" enabled="true">
             <boolProp name="TransactionController.includeTimers">false</boolProp>
             <boolProp name="TransactionController.parent">false</boolProp>
           </TransactionController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.3) 添加字段" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 添加字段" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter ADD test_add_col_1 int;
@@ -3620,7 +3620,7 @@ ALTER TABLE ${db_name}.t_electmeter ADD COLUMN IF NOT EXISTS test_add_col_4 time
               </ResponseAssertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.3) 删除字段" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 删除字段" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter DROP test_add_col_1;
@@ -3750,7 +3750,7 @@ if(transfer_type) {
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="导出数据库${db_name} ${transfer_option}" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)导出数据库${db_name} ${transfer_option}" enabled="true">
           <stringProp name="dataSource">transfer_pool</stringProp>
           <stringProp name="queryType">Select Statement</stringProp>
           <stringProp name="query">EXPORT INTO CSV &apos;nodelocal://1/${db_name}&apos; FROM DATABASE ${db_name} ${transfer_option};</stringProp>
@@ -3790,7 +3790,7 @@ if(transfer_type) {
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="导出模板表${db_name}.t_electmeter ${transfer_option}" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)导出模板表${db_name}.t_electmeter ${transfer_option}" enabled="true">
           <stringProp name="dataSource">transfer_pool</stringProp>
           <stringProp name="queryType">Select Statement</stringProp>
           <stringProp name="query">EXPORT INTO CSV &apos;nodelocal://1/${db_name}.t_electmeter&apos; FROM TABLE ${db_name}.t_electmeter ${transfer_option};</stringProp>
@@ -3818,7 +3818,7 @@ if(transfer_type) {
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建数据库: ${db_name}" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建数据库: ${db_name}" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TS DATABASE ${db_name};</stringProp>
@@ -3848,7 +3848,7 @@ if(transfer_type) {
             <stringProp name="shareMode">shareMode.group</stringProp>
           </CSVDataSet>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建模板表: ${db_name}.${stable_name}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建模板表: ${db_name}.${stable_name}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${stable_create_sql};</stringProp>
@@ -3891,7 +3891,7 @@ log.info(&quot;docker exec ${server_name} ln -s ${import_data_root}/${stable_nam
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
@@ -3908,7 +3908,7 @@ log.info(&quot;docker exec ${server_name} ln -s ${import_data_root}/${stable_nam
             <stringProp name="shareMode">shareMode.group</stringProp>
           </CSVDataSet>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建子表${db_name}.${import_table_name}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建子表${db_name}.${import_table_name}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">CREATE TABLE ${db_name}.${import_table_name} USING ${db_name}.${import_stable_name} ATTRIBUTES (&apos;${import_table_name}&apos;, NULL, NULL);</stringProp>
@@ -3937,7 +3937,7 @@ log.info(&quot;docker exec ${server_name} ln -s ${import_data_root}/${stable_nam
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
@@ -3954,7 +3954,7 @@ log.info(&quot;docker exec ${server_name} ln -s ${import_data_root}/${stable_nam
             <stringProp name="shareMode">shareMode.group</stringProp>
           </CSVDataSet>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="模板表导入${db_name}.${stable_name}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)模板表导入${db_name}.${stable_name}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">IMPORT INTO ${db_name}.${stable_name} CSV DATA (&apos;nodelocal://1/${stable_name}&apos;);</stringProp>
@@ -3983,7 +3983,7 @@ log.info(&quot;docker exec ${server_name} ln -s ${import_data_root}/${stable_nam
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </PostThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.2)部分列插入断言:${db_name}.electmeter_column_merge" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)部分列插入断言:${db_name}.electmeter_column_merge" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Select Statement</stringProp>
           <stringProp name="query">SELECT count(*) FROM db_shig.electmeter_column_merge WHERE vol_ab = 0 AND vol_bc = 1 AND vol_ca = 2;</stringProp>
@@ -4024,7 +4024,7 @@ log.info(&quot;docker exec ${server_name} ln -s ${import_data_root}/${stable_nam
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </PostThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)移除预计算" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)移除预计算" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">DROP PRECOMPUTING pc_sum;</stringProp>
@@ -4052,7 +4052,7 @@ log.info(&quot;docker exec ${server_name} ln -s ${import_data_root}/${stable_nam
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </PostThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.0)初始化循环变量" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)初始化循环变量" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -4061,12 +4061,12 @@ log.info(&quot;docker exec ${server_name} ln -s ${import_data_root}/${stable_nam
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
         </LoopController>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)删除子表:${db_name}.electmeter_${__threadNum}_${counter}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)删除子表:${db_name}.electmeter_${__threadNum}_${counter}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">DROP TABLE ${db_name}.electmeter_${__threadNum}_${counter};</stringProp>
@@ -4079,7 +4079,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(1.2.0)循环变量处理" enabled="true">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)循环变量处理" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
@@ -4104,7 +4104,7 @@ SampleResult.setIgnore()</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </PostThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)删除模板表:${db_name}.t_electmeter" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)删除模板表:${db_name}.t_electmeter" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">DROP TABLE ${db_name}.t_electmeter CASCADE;</stringProp>
@@ -4132,7 +4132,7 @@ SampleResult.setIgnore()</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </PostThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(1.2.0)删除时序库: ${db_name}" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)删除时序库: ${db_name}" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">DROP DATABASE ${db_name};</stringProp>
