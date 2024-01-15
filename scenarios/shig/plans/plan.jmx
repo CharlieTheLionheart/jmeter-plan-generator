@@ -3230,7 +3230,7 @@ if(machine_code1==machine_code2 &amp;&amp; max1==max2 &amp;&amp; min1==min2 &amp
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)in &amp;&amp; group by" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp and abs(infre - 50) &gt; 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
+              <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp and abs(infre - 50) &gt;= 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
               <stringProp name="queryArguments">${machine_code}</stringProp>
               <stringProp name="queryArgumentsTypes">varchar</stringProp>
               <stringProp name="variableNames">name1,count1</stringProp>
@@ -3254,7 +3254,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]in &amp;&amp; group by" enabled="true">
               <stringProp name="dataSource">td_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; ${begin_timestamp} and k_timestamp &lt; ${end_timestamp} and abs(infre - 50) &gt; 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
+              <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; ${begin_timestamp} and k_timestamp &lt; ${end_timestamp} and abs(infre - 50) &gt;= 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
               <stringProp name="queryArguments">${machine_code}</stringProp>
               <stringProp name="queryArgumentsTypes">varchar</stringProp>
               <stringProp name="variableNames">name2,count2</stringProp>
@@ -3472,17 +3472,16 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-1M,,)})</stringProp
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
                 <stringProp name="cacheKey">true</stringProp>
-                <stringProp name="script">def sumpallpower1 = vars.get(&quot;sumpallpower1_1&quot;);
-def sumpallpower2 = vars.get(&quot;sumpallpower2_1&quot;);
-if(sumpallpower1==sumpallpower2){
+                <stringProp name="script">def sumpallpower1 = Double.valueOf(vars.get(&quot;sumpallpower1_1&quot;));
+def sumpallpower2 = Double.valueOf(vars.get(&quot;sumpallpower2_1&quot;));
+def differ = (sumpallpower1 - sumpallpower2) / sumpallpower2
+if(Math.abs(differ) &lt; 1E-8){
 	AssertionResult.setFailure(false);
 }else{
-	String failureMessage = &quot;[sumpower] answer sumpallpower: &quot; + sumpallpower1 +  &quot;, but actually sumpallpower: &quot; + sumpallpower2;
+	String failureMessage = &quot;[sumpower] answer sumpallpower: &quot; + sumpallpower1 +  &quot;, but actually sumpallpower: &quot; + sumpallpower2 + &quot;, percent difference: &quot; + differ;
 	AssertionResult.setFailure(true);
 	AssertionResult.setFailureMessage(failureMessage);
-}
-
-</stringProp>
+}</stringProp>
               </JSR223Assertion>
               <hashTree/>
             </hashTree>
