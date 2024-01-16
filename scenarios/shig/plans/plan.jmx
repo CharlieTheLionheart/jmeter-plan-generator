@@ -20,6 +20,12 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">数据库连接jdbc url, default: jdbc:kaiwudb://127.0.0.1:26257/defaultdb</stringProp>
           </elementProp>
+          <elementProp name="db_taos_url" elementType="Argument">
+            <stringProp name="Argument.name">db_taos_url</stringProp>
+            <stringProp name="Argument.value">${__P(user.db.taos_url,jdbc:TAOS://127.0.0.1:6030/)}</stringProp>
+            <stringProp name="Argument.desc">TD数据库连接jdbc url, default: jdbc:TAOS://127.0.0.1:6030/</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
           <elementProp name="db_user" elementType="Argument">
             <stringProp name="Argument.name">db_user</stringProp>
             <stringProp name="Argument.value">${__P(user.db.user,root)}</stringProp>
@@ -186,6 +192,12 @@
             <stringProp name="Argument.desc">读线程执行时间,default 0</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="http_read_timeout" elementType="Argument">
+            <stringProp name="Argument.name">http_read_timeout</stringProp>
+            <stringProp name="Argument.value">${__P(user.read.http_read_timeout,300000)}</stringProp>
+            <stringProp name="Argument.desc">webapp的http read timeout,default:300000</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
           <elementProp name="create_user" elementType="Argument">
             <stringProp name="Argument.name">create_user</stringProp>
             <stringProp name="Argument.value">${__P(user.create.user,kaiwudb)}</stringProp>
@@ -253,12 +265,6 @@
           <elementProp name="sample_cnc_data" elementType="Argument">
             <stringProp name="Argument.name">sample_cnc_data</stringProp>
             <stringProp name="Argument.value">${__P(user.write.sample_cnc_data,/data/cnc_data.csv)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="db_taos_url" elementType="Argument">
-            <stringProp name="Argument.name">db_taos_url</stringProp>
-            <stringProp name="Argument.value">${__P(user.db.taos_url,jdbc:TAOS://127.0.0.1:6030/)}</stringProp>
-            <stringProp name="Argument.desc">TD数据库连接jdbc url, default: jdbc:TAOS://127.0.0.1:6030/</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -2867,7 +2873,7 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
             <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
             <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
             <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-            <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">${http_read_timeout}</stringProp>
           </HTTPSamplerProxy>
           <hashTree>
             <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
@@ -2941,7 +2947,7 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
             <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
             <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
             <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-            <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">${http_read_timeout}</stringProp>
           </HTTPSamplerProxy>
           <hashTree>
             <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
@@ -3024,7 +3030,7 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
               <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
               <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
               <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
+              <stringProp name="HTTPSampler.response_timeout">${http_read_timeout}</stringProp>
             </HTTPSamplerProxy>
             <hashTree>
               <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
@@ -3067,7 +3073,7 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
                 <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
                 <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
                 <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-                <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
+                <stringProp name="HTTPSampler.response_timeout">${http_read_timeout}</stringProp>
               </HTTPSamplerProxy>
               <hashTree>
                 <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
@@ -3543,7 +3549,7 @@ if(Math.abs(differ) &lt; 1E-8){
               <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
               <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
               <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout">1000000</stringProp>
+              <stringProp name="HTTPSampler.response_timeout">${http_read_timeout}</stringProp>
             </HTTPSamplerProxy>
             <hashTree>
               <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
