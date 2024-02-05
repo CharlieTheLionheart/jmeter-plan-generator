@@ -3312,7 +3312,7 @@ if(count1_==count2_){
         </LoopController>
         <hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)last_all" enabled="true">
-            <stringProp name="dataSource"></stringProp>
+            <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Prepared Select Statement</stringProp>
             <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &gt; ? and machine_code = ? order by k_timestamp desc limit ?;</stringProp>
             <stringProp name="queryArguments">${cnc_interval},${machine_code},${cnc_limit}</stringProp>
@@ -3371,7 +3371,7 @@ if(count1_==count2_){
             </RandomVariableConfig>
             <hashTree/>
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)last curs with machine_code" enabled="true">
-              <stringProp name="dataSource"></stringProp>
+              <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 and machine_code = ? group by machine_code</stringProp>
               <stringProp name="queryArguments">${__threadNum}_${device_num}</stringProp>
@@ -3843,7 +3843,7 @@ if(Math.abs(differ) &lt; 1E-8){
           </ThroughputController>
           <hashTree>
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)last curs" enabled="true">
-              <stringProp name="dataSource"></stringProp>
+              <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 group by machine_code</stringProp>
               <stringProp name="queryArguments"></stringProp>
