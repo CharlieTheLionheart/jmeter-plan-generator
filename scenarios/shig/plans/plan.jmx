@@ -3283,7 +3283,7 @@ if(count1_==count2_){
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="读取机床最新数据​" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床最新数据" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -3311,60 +3311,22 @@ if(count1_==count2_){
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(2.0.0)last_all" enabled="true">
-            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
-              <collectionProp name="Arguments.arguments">
-                <elementProp name="interval" elementType="HTTPArgument">
-                  <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                  <stringProp name="Argument.value">${cnc_interval}</stringProp>
-                  <stringProp name="Argument.metadata">=</stringProp>
-                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                  <stringProp name="Argument.name">interval</stringProp>
-                </elementProp>
-                <elementProp name="limit" elementType="HTTPArgument">
-                  <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                  <stringProp name="Argument.value">${cnc_limit}</stringProp>
-                  <stringProp name="Argument.metadata">=</stringProp>
-                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                  <stringProp name="Argument.name">limit</stringProp>
-                </elementProp>
-                <elementProp name="machineCode" elementType="HTTPArgument">
-                  <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                  <stringProp name="Argument.value">${machine_code}</stringProp>
-                  <stringProp name="Argument.metadata">=</stringProp>
-                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                  <stringProp name="Argument.name">machineCode</stringProp>
-                </elementProp>
-              </collectionProp>
-            </elementProp>
-            <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
-            <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
-            <stringProp name="HTTPSampler.protocol">http</stringProp>
-            <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
-            <stringProp name="HTTPSampler.path">/shig/cnc</stringProp>
-            <stringProp name="HTTPSampler.method">GET</stringProp>
-            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-            <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-            <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-            <stringProp name="HTTPSampler.response_timeout">${http_read_timeout}</stringProp>
-          </HTTPSamplerProxy>
-          <hashTree>
-            <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
-              <stringProp name="JSON_PATH">$.code</stringProp>
-              <stringProp name="EXPECTED_VALUE">0</stringProp>
-              <boolProp name="JSONVALIDATION">true</boolProp>
-              <boolProp name="EXPECT_NULL">false</boolProp>
-              <boolProp name="INVERT">false</boolProp>
-              <boolProp name="ISREGEX">true</boolProp>
-            </JSONPathAssertion>
-            <hashTree/>
-          </hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)last_all" enabled="true">
+            <stringProp name="dataSource"></stringProp>
+            <stringProp name="queryType">Prepared Select Statement</stringProp>
+            <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &gt; ? and machine_code = ? order by k_timestamp desc limit ?;</stringProp>
+            <stringProp name="queryArguments">${cnc_interval},${machine_code},${cnc_limit}</stringProp>
+            <stringProp name="queryArgumentsTypes">varchar,varchar,int</stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="读取Electmeter数据(machine_code last_1s)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(machine_code last_1s)" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -3408,43 +3370,19 @@ if(count1_==count2_){
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(2.0.0)last curs with machine_code" enabled="true">
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
-                <collectionProp name="Arguments.arguments">
-                  <elementProp name="machineCode" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">true</boolProp>
-                    <stringProp name="Argument.value">${__threadNum}_${device_num}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                    <boolProp name="HTTPArgument.use_equals">true</boolProp>
-                    <stringProp name="Argument.name">machineCode</stringProp>
-                  </elementProp>
-                </collectionProp>
-              </elementProp>
-              <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
-              <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
-              <stringProp name="HTTPSampler.protocol">http</stringProp>
-              <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
-              <stringProp name="HTTPSampler.path">/shig/electmeters/last-curs</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-              <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-              <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-              <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout">${http_read_timeout}</stringProp>
-            </HTTPSamplerProxy>
-            <hashTree>
-              <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
-                <stringProp name="JSON_PATH">$.code</stringProp>
-                <stringProp name="EXPECTED_VALUE">0</stringProp>
-                <boolProp name="JSONVALIDATION">true</boolProp>
-                <boolProp name="EXPECT_NULL">false</boolProp>
-                <boolProp name="INVERT">false</boolProp>
-                <boolProp name="ISREGEX">true</boolProp>
-              </JSONPathAssertion>
-              <hashTree/>
-            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)last curs with machine_code" enabled="true">
+              <stringProp name="dataSource"></stringProp>
+              <stringProp name="queryType">Prepared Select Statement</stringProp>
+              <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 and machine_code = ? group by machine_code</stringProp>
+              <stringProp name="queryArguments">${__threadNum}_${device_num}</stringProp>
+              <stringProp name="queryArgumentsTypes">varchar</stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
           </hashTree>
         </hashTree>
       </hashTree>
@@ -3487,30 +3425,6 @@ if(count1_==count2_){
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)max min and avg in electmeters" enabled="true">
-              <stringProp name="dataSource">default_pool</stringProp>
-              <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp group by machine_code order by machine_code asc;</stringProp>
-              <stringProp name="queryArguments">${machine_code},a004</stringProp>
-              <stringProp name="queryArgumentsTypes">varchar,varchar</stringProp>
-              <stringProp name="variableNames">machine_code1,max1,min1,avg1</stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout"></stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCSampler>
-            <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
-                <stringProp name="scriptLanguage">groovy</stringProp>
-                <stringProp name="parameters"></stringProp>
-                <stringProp name="filename"></stringProp>
-                <stringProp name="cacheKey">false</stringProp>
-                <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-121M,,)})
-vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-1M,,)})
-vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
-              </JSR223PreProcessor>
-              <hashTree/>
-            </hashTree>
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)max min and avg in electmeters" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
@@ -3889,7 +3803,7 @@ if(Math.abs(differ) &lt; 1E-8){
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="读取Electmeter数据(last_15min)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(last_15min)" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -3928,35 +3842,19 @@ if(Math.abs(differ) &lt; 1E-8){
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="(2.0.0)last curs" enabled="true">
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
-                <collectionProp name="Arguments.arguments"/>
-              </elementProp>
-              <stringProp name="HTTPSampler.domain">${webapp_host}</stringProp>
-              <stringProp name="HTTPSampler.port">${webapp_port}</stringProp>
-              <stringProp name="HTTPSampler.protocol">http</stringProp>
-              <stringProp name="HTTPSampler.contentEncoding">utf-8</stringProp>
-              <stringProp name="HTTPSampler.path">/shig/electmeters/last-curs</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-              <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-              <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-              <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-              <stringProp name="HTTPSampler.response_timeout">${http_read_timeout}</stringProp>
-            </HTTPSamplerProxy>
-            <hashTree>
-              <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="JSON断言" enabled="true">
-                <stringProp name="JSON_PATH">$.code</stringProp>
-                <stringProp name="EXPECTED_VALUE">0</stringProp>
-                <boolProp name="JSONVALIDATION">true</boolProp>
-                <boolProp name="EXPECT_NULL">false</boolProp>
-                <boolProp name="INVERT">false</boolProp>
-                <boolProp name="ISREGEX">true</boolProp>
-              </JSONPathAssertion>
-              <hashTree/>
-            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)last curs" enabled="true">
+              <stringProp name="dataSource"></stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 group by machine_code</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
           </hashTree>
         </hashTree>
       </hashTree>
