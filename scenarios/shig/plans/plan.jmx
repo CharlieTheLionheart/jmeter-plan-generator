@@ -2141,40 +2141,22 @@ String readNext(RandomAccessFile csv_reader) {
 
 void generateBatchInsertSQL() {
   def csv_reader = vars.getObject(&quot;csv_reader&quot;)
-  def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
-  def cnc_csv_reader = vars.getObject(&quot;cnc_csv_reader&quot;)
   def builder = new StringBuilder()
   def td_builder = new StringBuilder()
-  def tighten_builder = new StringBuilder()
-  def cnc_builder = new StringBuilder()
-  def td_cnc_builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_electmeter values &quot;)
   td_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_electmeter tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values &quot;)
-  tighten_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.tighten_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
-  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc values &quot;)
-  td_cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_cnc tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
 	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
 	td_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
-	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(tighten_csv_reader)}),&quot;)
-	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
-     td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
   td_builder.setCharAt(td_builder.length() - 1, &apos;;&apos; as char)
-  tighten_builder.setCharAt(tighten_builder.length() - 1, &apos;;&apos; as char)
-  cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
-  td_cnc_builder.setCharAt(td_cnc_builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
   log.debug(&quot;td_builder={}&quot;, td_builder.toString())
-  log.debug(&quot;td_cnc_builder={}&quot;, td_cnc_builder.toString())
   vars.put(&quot;builder&quot;, builder.toString())
   vars.put(&quot;td_builder&quot;, td_builder.toString())
-  vars.put(&quot;tighten_builder&quot;, tighten_builder.toString())
-  vars.put(&quot;cnc_builder&quot;, cnc_builder.toString())
-  vars.put(&quot;td_cnc_builder&quot;, td_cnc_builder.toString())
 }
 
 generateBatchInsertSQL()</stringProp>
@@ -2216,6 +2198,69 @@ generateBatchInsertSQL()</stringProp>
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.tighten_${__threadNum}" enabled="true">
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+
+List generateTimestampList() {
+  def nextTs = vars.getObject(&quot;last_ts&quot;)
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  vars.putObject(&quot;last_ts&quot;, nextTs)
+  return tsList
+}
+
+List getSwapedListOrNot() {
+  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
+  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
+  log.debug(&quot;index={}&quot;, index)
+  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
+  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
+	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
+	log.debug(&quot;tmpList={}&quot;, tmpList)
+    return tmpList
+  }
+  return generateTimestampList()
+}
+
+String readNext(RandomAccessFile csv_reader) {
+  def line = csv_reader.readLine()
+  if(!line) {
+    csv_reader.seek(0)
+    if(!(line = csv_reader.readLine())){
+      throw new Exception(&apos;Read csv file error after reset.&apos;)
+    }
+  }
+  return line
+}
+
+void generateBatchInsertSQL() {
+  def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
+  def tighten_builder = new StringBuilder()
+  tighten_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.tighten_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  def swapedList = getSwapedListOrNot()
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
+	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(tighten_csv_reader)}),&quot;)
+  }
+  tighten_builder.setCharAt(tighten_builder.length() - 1, &apos;;&apos; as char)
+  vars.put(&quot;tighten_builder&quot;, tighten_builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
               <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
                 <collectionProp name="Asserion.test_strings"/>
                 <stringProp name="Assertion.custom_message"></stringProp>
@@ -2251,6 +2296,75 @@ generateBatchInsertSQL()</stringProp>
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+
+List generateTimestampList() {
+  def nextTs = vars.getObject(&quot;last_ts&quot;)
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  vars.putObject(&quot;last_ts&quot;, nextTs)
+  return tsList
+}
+
+List getSwapedListOrNot() {
+  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
+  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
+  log.debug(&quot;index={}&quot;, index)
+  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
+  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
+	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
+	log.debug(&quot;tmpList={}&quot;, tmpList)
+    return tmpList
+  }
+  return generateTimestampList()
+}
+
+String readNext(RandomAccessFile csv_reader) {
+  def line = csv_reader.readLine()
+  if(!line) {
+    csv_reader.seek(0)
+    if(!(line = csv_reader.readLine())){
+      throw new Exception(&apos;Read csv file error after reset.&apos;)
+    }
+  }
+  return line
+}
+
+void generateBatchInsertSQL() {
+  def cnc_csv_reader = vars.getObject(&quot;cnc_csv_reader&quot;)
+  def cnc_builder = new StringBuilder()
+  def td_cnc_builder = new StringBuilder()
+  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc values &quot;)
+  td_cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_cnc tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values &quot;)
+  def swapedList = getSwapedListOrNot()
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
+	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
+     td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)}),&quot;)
+  }
+  cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
+  td_cnc_builder.setCharAt(td_cnc_builder.length() - 1, &apos;;&apos; as char)
+  log.debug(&quot;td_cnc_builder={}&quot;, td_cnc_builder.toString())
+  vars.put(&quot;cnc_builder&quot;, cnc_builder.toString())
+  vars.put(&quot;td_cnc_builder&quot;, td_cnc_builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
               <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
                 <collectionProp name="Asserion.test_strings"/>
                 <stringProp name="Assertion.custom_message"></stringProp>
@@ -2364,40 +2478,22 @@ String readNext(RandomAccessFile csv_reader) {
 
 void generateBatchInsertSQL() {
   def csv_reader = vars.getObject(&quot;csv_reader&quot;)
-  def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
-  def cnc_csv_reader = vars.getObject(&quot;cnc_csv_reader&quot;)
   def builder = new StringBuilder()
   def td_builder = new StringBuilder()
-  def tighten_builder = new StringBuilder()
-  def cnc_builder = new StringBuilder()
-  def td_cnc_builder = new StringBuilder()
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_electmeter values &quot;)
   td_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_electmeter tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values &quot;)
-  tighten_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.tighten_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
-  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc values &quot;)
-  td_cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_cnc tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
 	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
 	td_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
-	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(tighten_csv_reader)}),&quot;)
-	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
-     td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
   td_builder.setCharAt(td_builder.length() - 1, &apos;;&apos; as char)
-  tighten_builder.setCharAt(tighten_builder.length() - 1, &apos;;&apos; as char)
-  cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
-  td_cnc_builder.setCharAt(td_cnc_builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
   log.debug(&quot;td_builder={}&quot;, td_builder.toString())
-  log.debug(&quot;td_cnc_builder={}&quot;, td_cnc_builder.toString())
   vars.put(&quot;builder&quot;, builder.toString())
   vars.put(&quot;td_builder&quot;, td_builder.toString())
-  vars.put(&quot;tighten_builder&quot;, tighten_builder.toString())
-  vars.put(&quot;cnc_builder&quot;, cnc_builder.toString())
-  vars.put(&quot;td_cnc_builder&quot;, td_cnc_builder.toString())
 }
 
 generateBatchInsertSQL()</stringProp>
@@ -2439,6 +2535,68 @@ generateBatchInsertSQL()</stringProp>
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.tighten_${__threadNum}" enabled="true">
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+
+List generateTimestampList() {
+  def nextTs = System.currentTimeMillis()
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  return tsList
+}
+
+List getSwapedListOrNot() {
+  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
+  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
+  log.debug(&quot;index={}&quot;, index)
+  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
+  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
+	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
+	log.debug(&quot;tmpList={}&quot;, tmpList)
+    return tmpList
+  }
+  return generateTimestampList()
+}
+
+String readNext(RandomAccessFile csv_reader) {
+  def line = csv_reader.readLine()
+  if(!line) {
+    csv_reader.seek(0)
+    if(!(line = csv_reader.readLine())){
+      throw new Exception(&apos;Read csv file error after reset.&apos;)
+    }
+  }
+  return line
+}
+
+void generateBatchInsertSQL() {
+  def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
+  def tighten_builder = new StringBuilder()
+  tighten_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.tighten_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
+  def swapedList = getSwapedListOrNot()
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
+	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(tighten_csv_reader)}),&quot;)
+  }
+  tighten_builder.setCharAt(tighten_builder.length() - 1, &apos;;&apos; as char)
+  vars.put(&quot;tighten_builder&quot;, tighten_builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
               <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
                 <collectionProp name="Asserion.test_strings"/>
                 <stringProp name="Assertion.custom_message"></stringProp>
@@ -2474,6 +2632,74 @@ generateBatchInsertSQL()</stringProp>
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+
+List generateTimestampList() {
+  def nextTs = System.currentTimeMillis()
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  return tsList
+}
+
+List getSwapedListOrNot() {
+  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
+  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
+  log.debug(&quot;index={}&quot;, index)
+  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
+  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
+	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
+	log.debug(&quot;tmpList={}&quot;, tmpList)
+    return tmpList
+  }
+  return generateTimestampList()
+}
+
+String readNext(RandomAccessFile csv_reader) {
+  def line = csv_reader.readLine()
+  if(!line) {
+    csv_reader.seek(0)
+    if(!(line = csv_reader.readLine())){
+      throw new Exception(&apos;Read csv file error after reset.&apos;)
+    }
+  }
+  return line
+}
+
+void generateBatchInsertSQL() {
+  def cnc_csv_reader = vars.getObject(&quot;cnc_csv_reader&quot;)
+  def cnc_builder = new StringBuilder()
+  def td_cnc_builder = new StringBuilder()
+  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc values &quot;)
+  td_cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_cnc tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values &quot;)
+  def swapedList = getSwapedListOrNot()
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
+	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
+     td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)}),&quot;)
+  }
+  cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
+  td_cnc_builder.setCharAt(td_cnc_builder.length() - 1, &apos;;&apos; as char)
+  log.debug(&quot;td_cnc_builder={}&quot;, td_cnc_builder.toString())
+  vars.put(&quot;cnc_builder&quot;, cnc_builder.toString())
+  vars.put(&quot;td_cnc_builder&quot;, td_cnc_builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
               <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
                 <collectionProp name="Asserion.test_strings"/>
                 <stringProp name="Assertion.custom_message"></stringProp>
