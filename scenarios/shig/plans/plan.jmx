@@ -3315,8 +3315,8 @@ if(count1_==count2_){
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Prepared Select Statement</stringProp>
             <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &gt; now() - 1 minute and machine_code = ? order by k_timestamp desc limit ?;</stringProp>
-            <stringProp name="queryArguments">${cnc_interval},${machine_code},${cnc_limit}</stringProp>
-            <stringProp name="queryArgumentsTypes">varchar,varchar,integer</stringProp>
+            <stringProp name="queryArguments">${machine_code},${cnc_limit}</stringProp>
+            <stringProp name="queryArgumentsTypes">varchar,integer</stringProp>
             <stringProp name="variableNames"></stringProp>
             <stringProp name="resultVariable"></stringProp>
             <stringProp name="queryTimeout"></stringProp>
