@@ -3456,7 +3456,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]sp_act_speed" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD](2.0.0)sp_act_speed" enabled="true">
               <stringProp name="dataSource">td_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__threadNum}&apos; and machine_code = &apos;${machine_code}&apos; and k_timestamp &gt; ${begin_timestamp} and k_timestamp &lt; ${end_timestamp} order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
@@ -3540,7 +3540,7 @@ if(count1_==count2_){
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)last_all" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Prepared Select Statement</stringProp>
-            <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &amp;gt; now() - 1 minute and machine_code = ?;</stringProp>
+            <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &gt; now() - 1 minute and machine_code = ?;</stringProp>
             <stringProp name="queryArguments">${machine_code}</stringProp>
             <stringProp name="queryArgumentsTypes">varchar</stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -3675,7 +3675,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]max min and avg in electmeters" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD](2.0.0)max min and avg in electmeters" enabled="true">
               <stringProp name="dataSource">td_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; ${begin_timestamp} and k_timestamp &lt; ${end_timestamp} group by machine_code order by machine_code asc;</stringProp>
@@ -3779,7 +3779,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]in &amp;&amp; group by" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD](2.0.0)in &amp;&amp; group by" enabled="true">
               <stringProp name="dataSource">td_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; ${begin_timestamp} and k_timestamp &lt; ${end_timestamp} and abs(infre - 50) &gt;= 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
@@ -3894,7 +3894,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]querypage" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD](2.0.0)querypage" enabled="true">
               <stringProp name="dataSource">td_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; ${begin_timestamp} and k_timestamp &lt; ${end_timestamp} order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
@@ -3982,7 +3982,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-1M,,)})</stringProp
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]sumpower" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD](2.0.0)sumpower" enabled="true">
               <stringProp name="dataSource">td_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; ${begin_timestamp} and t.k_timestamp &lt; ${end_timestamp};</stringProp>
