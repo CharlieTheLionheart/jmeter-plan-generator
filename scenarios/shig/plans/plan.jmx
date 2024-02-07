@@ -876,7 +876,7 @@ SampleResult.setIgnore()</stringProp>
             <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]创建设备表${__threadNum}_${counter}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建设备表${__threadNum}_${counter}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">CREATE TABLE ${db_name}.electmeter_${__threadNum}_${counter} USING ${db_name}.t_electmeter (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;);</stringProp>
@@ -922,7 +922,7 @@ vars.put(&quot;create_ddl&quot;, ddl)
 SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]创建设备表${__threadNum}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建设备表${__threadNum}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Callable Statement</stringProp>
             <stringProp name="query">${create_ddl}</stringProp>
@@ -988,7 +988,7 @@ SampleResult.setIgnore()</stringProp>
           <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
         </LoopController>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]创建拧紧机设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建拧紧机设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">INSERT INTO ${db_name}.tighten_${__threadNum}_${counter} USING ${db_name}.t_tighten (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1);</stringProp>
@@ -1015,7 +1015,7 @@ SampleResult.setIgnore()</stringProp>
             </JDBCPostProcessor>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]创建cnc设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建cnc设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">INSERT INTO ${db_name}.cnc_${__threadNum}_${counter} USING ${db_name}.t_cnc (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);</stringProp>
@@ -1977,7 +1977,7 @@ vars.put(&quot;elec_dsp&quot;, elec_dsp)</stringProp>
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]创建部分列去重的测试表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建部分列去重的测试表" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.electmeter_column_merge USING ${db_name}.t_electmeter_merge (machine_code) ATTRIBUTES (&apos;column_merge&apos;);</stringProp>
@@ -2080,7 +2080,7 @@ SampleResult.setIgnore()</stringProp>
               <boolProp name="CounterConfig.per_user">false</boolProp>
             </CounterConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
@@ -2185,7 +2185,7 @@ generateBatchInsertSQL()</stringProp>
               </ResponseAssertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${tighten_builder}</stringProp>
@@ -2283,7 +2283,7 @@ generateBatchInsertSQL()</stringProp>
               </JDBCPostProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${cnc_builder}</stringProp>
@@ -2418,7 +2418,7 @@ generateBatchInsertSQL()</stringProp>
               <boolProp name="CounterConfig.per_user">false</boolProp>
             </CounterConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
@@ -2522,7 +2522,7 @@ generateBatchInsertSQL()</stringProp>
               </ResponseAssertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS]写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.tighten_${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${tighten_builder}</stringProp>
@@ -2619,7 +2619,7 @@ generateBatchInsertSQL()</stringProp>
               </JDBCPostProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${cnc_builder}</stringProp>
@@ -2933,7 +2933,7 @@ SampleResult.setIgnore()</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)删除整条数据写入去重的测试表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)删除整条数据写入去重的测试表" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Callable Statement</stringProp>
           <stringProp name="query">DROP TABLE IF EXISTS ${db_name}.electmeter_dedup;</stringProp>
@@ -2955,7 +2955,7 @@ SampleResult.setIgnore()</stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)创建整条数据写入去重的测试表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建整条数据写入去重的测试表" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Callable Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.electmeter_dedup USING ${db_name}.t_electmeter_sample (machine_code) ATTRIBUTES (&apos;dedup&apos;);</stringProp>
@@ -3069,7 +3069,7 @@ if(afterCount - beforeCount == should){
               <boolProp name="TransactionController.parent">true</boolProp>
             </TransactionController>
             <hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)删除整条数据写入去重的测试表" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)删除整条数据写入去重的测试表" enabled="true">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Callable Statement</stringProp>
                 <stringProp name="query">DROP TABLE ${db_name}.electmeter_dedup;</stringProp>
@@ -3091,7 +3091,7 @@ if(afterCount - beforeCount == should){
                 </ResponseAssertion>
                 <hashTree/>
               </hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)创建整条数据写入去重的测试表" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建整条数据写入去重的测试表" enabled="true">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Callable Statement</stringProp>
                 <stringProp name="query">CREATE TABLE ${db_name}.electmeter_dedup USING ${db_name}.t_electmeter_sample (machine_code) ATTRIBUTES (&apos;dedup&apos;);</stringProp>
@@ -3429,7 +3429,7 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)sp_act_speed" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)sp_act_speed" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__threadNum}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
@@ -3651,7 +3651,7 @@ if(count1_==count2_){
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)max min and avg in electmeters" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)max min and avg in electmeters" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp group by machine_code order by machine_code asc;</stringProp>
@@ -3755,7 +3755,7 @@ if(machine_code1==machine_code2 &amp;&amp; max1==max2 &amp;&amp; min1==min2 &amp
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)in &amp;&amp; group by" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)in &amp;&amp; group by" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp and abs(infre - 50) &gt;= 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
@@ -3870,7 +3870,7 @@ if(count1_==count2_){
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)querypage" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)querypage" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
@@ -3959,7 +3959,7 @@ if(count1_==count2_){
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TS](2.0.0)sumpower" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)sumpower" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamp and t.k_timestamp &lt; (${end_timestamp})::timestamp;</stringProp>
