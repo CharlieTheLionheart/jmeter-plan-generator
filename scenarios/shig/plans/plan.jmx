@@ -354,7 +354,8 @@ GRANT admin TO root1;</stringProp>
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">set cluster setting server.sql_connections.max_limit=1200;
-set cluster setting sql.max_device_count=100000;</stringProp>
+set cluster setting sql.max_device_count=100000;
+set cluster setting server.user_login.timeout = &apos;100s&apos;;</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
