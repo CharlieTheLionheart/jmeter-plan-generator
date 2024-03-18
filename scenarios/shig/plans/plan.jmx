@@ -339,7 +339,7 @@ GRANT admin TO root1;</stringProp>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)增加trace日志" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">set cluster setting timeseries.trace.on_off_list=&apos;ee 4,st 4,su 4,me 4&apos;;</stringProp>
+            <stringProp name="query">set cluster setting ts.trace.on_off_list=&apos;ee 4,st 4,su 4,me 4&apos;;</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -350,21 +350,6 @@ GRANT admin TO root1;</stringProp>
           </JDBCSampler>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)设置集群参数" enabled="true">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">set cluster setting server.sql_connections.max_limit=1200;
-set cluster setting sql.max_device_count=100000;
-set cluster setting server.user_login.timeout = &apos;100s&apos;;</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout">600</stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[User] 创建用户" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
@@ -2096,7 +2081,7 @@ SampleResult.setIgnore()</stringProp>
               <boolProp name="CounterConfig.per_user">false</boolProp>
             </CounterConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: " enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
