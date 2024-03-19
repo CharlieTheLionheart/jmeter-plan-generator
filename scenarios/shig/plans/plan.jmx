@@ -266,7 +266,7 @@
       <hashTree/>
       <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
         <stringProp name="dataSource">default_pool</stringProp>
-        <stringProp name="poolMax">${conn_pool_size}</stringProp>
+        <stringProp name="poolMax">0</stringProp>
         <stringProp name="timeout">10000</stringProp>
         <stringProp name="trimInterval">60000</stringProp>
         <boolProp name="autocommit">true</boolProp>
