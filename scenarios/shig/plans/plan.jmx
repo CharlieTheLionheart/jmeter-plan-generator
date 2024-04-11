@@ -951,10 +951,23 @@ SampleResult.setIgnore()</stringProp>
           <stringProp name="LoopController.loops">${device_count_per_thread}</stringProp>
         </LoopController>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]创建设备表${__threadNum}_${counter}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]创建电表设备表${__threadNum}_${counter}" enabled="true">
             <stringProp name="dataSource">td_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">CREATE TABLE ${db_name}.electmeter_${__threadNum}_${counter} USING ${db_name}.t_electmeter tags (&apos;${__threadNum}_${counter}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)});</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout">600</stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree/>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]创建机床设备表${__threadNum}_${counter}" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">CREATE TABLE ${db_name}.cnc_${__threadNum}_${counter} USING ${db_name}.t_cnc tags (&apos;${__threadNum}_${counter}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)});</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -1016,47 +1029,7 @@ SampleResult.setIgnore()</stringProp>
             </JDBCPostProcessor>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建cnc设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">INSERT INTO ${db_name}.cnc_${__threadNum}_${counter} USING ${db_name}.t_cnc (machine_code) ATTRIBUTES (&apos;${__threadNum}_${counter}&apos;) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree>
-            <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[T1D]创建cnc设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
-              <stringProp name="dataSource">td_pool</stringProp>
-              <stringProp name="queryType">Update Statement</stringProp>
-              <stringProp name="query">INSERT INTO ${db_name}.cnc_${__threadNum}_${counter} USING ${db_name}.t_cnc (machine_code) TAGS (&apos;${__threadNum}_${counter}&apos;) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);</stringProp>
-              <stringProp name="queryArguments"></stringProp>
-              <stringProp name="queryArgumentsTypes"></stringProp>
-              <stringProp name="variableNames"></stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout"></stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCPostProcessor>
-            <hashTree/>
-          </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]创建cnc设备表${__threadNum}_${counter}（插入自动建表）" enabled="true">
-            <stringProp name="dataSource">td_pool</stringProp>
-            <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">INSERT INTO ${db_name}.cnc_${__threadNum}_${counter} USING ${db_name}.t_cnc (machine_code,op_group,brand,number_of_molds) TAGS (&apos;${__threadNum}_${counter}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values (${last_ts},NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)循环变量处理" enabled="true">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="循环变量处理" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
@@ -2149,8 +2122,9 @@ void generateBatchInsertSQL() {
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
-	td_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
+  	def nextLine = readNext(csv_reader)
+	builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
+	td_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
   td_builder.setCharAt(td_builder.length() - 1, &apos;;&apos; as char)
@@ -2352,8 +2326,9 @@ void generateBatchInsertSQL() {
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
-     td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)}),&quot;)
+  	def nextLine = readNext(cnc_csv_reader)
+	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
+     td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
   }
   cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
   td_cnc_builder.setCharAt(td_cnc_builder.length() - 1, &apos;;&apos; as char)
@@ -2486,8 +2461,9 @@ void generateBatchInsertSQL() {
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-	builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
-	td_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(csv_reader)}),&quot;)
+  	def nextLine = readNext(csv_reader)
+	builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
+	td_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
   td_builder.setCharAt(td_builder.length() - 1, &apos;;&apos; as char)
@@ -2687,8 +2663,9 @@ void generateBatchInsertSQL() {
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
-     td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(cnc_csv_reader)}),&quot;)
+  	def nextLine = readNext(cnc_csv_reader)
+	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
+     td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
   }
   cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
   td_cnc_builder.setCharAt(td_cnc_builder.length() - 1, &apos;;&apos; as char)
