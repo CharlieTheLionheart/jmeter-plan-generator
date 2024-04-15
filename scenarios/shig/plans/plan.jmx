@@ -3307,7 +3307,7 @@ SampleResult.setIgnore()</stringProp>
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)torque-angle" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">select &apos;${machine_code}&apos; as machine_code, count(k_timestamp), avg(torque), avg(angle) from (select k_timestamp, torque, angle from db_shig.tighten_${machine_code} where device_state=0 and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp order by ${order_by});</stringProp>
+              <stringProp name="query">select &apos;${machine_code}&apos; as machine_code, count(k_timestamp), avg(torque), avg(angle) from (select k_timestamp, torque, angle from db_shig.tighten_${machine_code} where device_state=0 and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by ${order_by});</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames">machine_code1,count1,torque1,angle1</stringProp>
@@ -3410,7 +3410,7 @@ if(machine_code1==machine_code2 &amp;&amp; count1==count2 &amp;&amp; torque1==to
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)sp_act_speed" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__threadNum}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
+              <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__threadNum}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames">k_timestamp1,sp_act_speed1</stringProp>
@@ -3632,7 +3632,7 @@ if(count1_==count2_){
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)max min and avg in electmeters" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp group by machine_code order by machine_code asc;</stringProp>
+              <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz group by machine_code order by machine_code asc;</stringProp>
               <stringProp name="queryArguments">${machine_code},a004</stringProp>
               <stringProp name="queryArgumentsTypes">varchar,varchar</stringProp>
               <stringProp name="variableNames">machine_code1,max1,min1,avg1</stringProp>
@@ -3736,7 +3736,7 @@ if(machine_code1==machine_code2 &amp;&amp; max1==max2 &amp;&amp; min1==min2 &amp
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)in &amp;&amp; group by" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp and abs(infre - 50) &gt;= 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
+              <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz and abs(infre - 50) &gt;= 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
               <stringProp name="queryArguments">${machine_code}</stringProp>
               <stringProp name="queryArgumentsTypes">varchar</stringProp>
               <stringProp name="variableNames">name1,count1</stringProp>
@@ -3851,7 +3851,7 @@ if(count1_==count2_){
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)querypage" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; (${begin_timestamp})::timestamp and k_timestamp &lt; (${end_timestamp})::timestamp order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
+              <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames">k_timestamp1,machine_code1,cur_a1,cur_b1,cur_c1</stringProp>
@@ -3940,7 +3940,7 @@ if(count1_==count2_){
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)sumpower" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamp and t.k_timestamp &lt; (${end_timestamp})::timestamp;</stringProp>
+              <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamptz and t.k_timestamp &lt; (${end_timestamp})::timestamptz;</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames">sumpallpower1,count1</stringProp>
@@ -3993,7 +3993,10 @@ if (null == sumpallpower1 &amp;&amp; null != sumpallpower2){
 	return
 }
 
-def differ = (sumpallpower1 - sumpallpower2) / sumpallpower2
+double sumpallpower_kw = Double.parseDouble(sumpallpower1);
+double sumpallpower_td = Double.parseDouble(sumpallpower2);
+
+def differ = (sumpallpower_kw - sumpallpower_td) / sumpallpower_td
 if(Math.abs(differ) &lt; 1E-8){
 	AssertionResult.setFailure(false);
 }else{
