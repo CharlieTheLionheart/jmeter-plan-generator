@@ -1,12 +1,10 @@
 #!/bin/env python3
 # coding: utf-8
 
-from subprocess import run as subrun, PIPE, STDOUT
 from os import path, makedirs
 from shutil import copytree, rmtree
 from xml.etree.cElementTree import parse as xmlparse
 from copy import deepcopy
-from sys import argv
 
 
 def process_pipec():
@@ -73,15 +71,5 @@ def process_shig():
 
 
 if __name__ == '__main__':
-  if len(argv) < 2:
-    print("Invalid docker image name")
-    exit(1)
-
   process_pipec()
   process_shig()
-
-  print(subrun([
-    f"docker build -f Dockerfile -t {argv[1]} ."
-  ], shell=True, universal_newlines=True,
-      cwd=path.realpath(path.join(path.curdir, 'docker')),
-      stderr=STDOUT, stdout=PIPE).stdout)
