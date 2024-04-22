@@ -534,7 +534,7 @@ vars.put(&quot;cnc_dsp&quot;, cnc_dsp)</stringProp>
   powerl double NOT NULL,
   allrenergy1 double NOT NULL,
   allrenergy2 double NOT NULL
-) ATTRIBUTES (machine_code varchar(64) NOT NULL, op_group varchar(64) NOT NULL, location varchar(64) NOT NULL, cnc_number int) PRIMARY TAGS(machine_code) activetime 1h partition interval 1d retentions 3d ${elec_dsp};</stringProp>
+) ATTRIBUTES (machine_code varchar(64) NOT NULL, op_group varchar(64) NOT NULL, location varchar(64) NOT NULL, cnc_number int) PRIMARY TAGS(machine_code) retentions 3d activetime 1h partition interval 1d ${elec_dsp};</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
@@ -637,7 +637,7 @@ alarm_content varchar(200),
 number int,
 plc_state int,
 device_state int NOT NULL
-) ATTRIBUTES (machine_code varchar(64)) activetime 1h partition interval 1d retentions 3d ${tighten_dsp};</stringProp>
+) ATTRIBUTES (machine_code varchar(64)) retentions 3d activetime 1h partition interval 1d ${tighten_dsp};</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
@@ -755,7 +755,7 @@ device_state int
   value2 varchar(10),
   value3 varchar(10),
   value4 varchar(10),
-  value5 varchar(10)) ATTRIBUTES (machine_code varchar(64) NOT NULL, op_group varchar(64) NOT NULL, brand varchar(64) NOT NULL, number_of_molds int) PRIMARY TAGS(machine_code, op_group) activetime 1h partition interval 1d retentions 3d ${cnc_dsp};</stringProp>
+  value5 varchar(10)) ATTRIBUTES (machine_code varchar(64) NOT NULL, op_group varchar(64) NOT NULL, brand varchar(64) NOT NULL, number_of_molds int) PRIMARY TAGS(machine_code, op_group) retentions 3d activetime 1h partition interval 1d ${cnc_dsp};</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
