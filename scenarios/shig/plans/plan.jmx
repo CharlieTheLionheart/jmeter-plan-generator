@@ -52,7 +52,7 @@
           </elementProp>
           <elementProp name="data_ts_step" elementType="Argument">
             <stringProp name="Argument.name">data_ts_step</stringProp>
-            <stringProp name="Argument.value">${__P(user.sys.data_ts_step,1000)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.sys.data_ts_step,1)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">生成数据时间戳间隔ms, default: 1000</stringProp>
           </elementProp>
