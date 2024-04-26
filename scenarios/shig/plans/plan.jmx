@@ -2713,7 +2713,7 @@ generateBatchInsertSQL()</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
         <stringProp name="ThreadGroup.duration">10000</stringProp>
-        <stringProp name="ThreadGroup.delay">${__BeanShell(,${write_duratioin} + 300)} </stringProp>
+        <stringProp name="ThreadGroup.delay">${__BeanShell(${write_duration} + 300,)}</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
       </ThreadGroup>
       <hashTree>
