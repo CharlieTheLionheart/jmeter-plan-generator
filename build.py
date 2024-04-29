@@ -89,6 +89,11 @@ def process_shig():
         element.set("enabled", "true")
       else:
         element.set("enabled", "false")
+  # 查询并行
+  for element in jmx_query1.getroot().findall(
+          './/boolProp/[@name="TestPlan.serialize_threadgroups"]'):
+    element.text = 'false'
+
   jmx_query1.write(path.realpath(path.join(dir_plan, 'query-1.jmx')))
 
 
