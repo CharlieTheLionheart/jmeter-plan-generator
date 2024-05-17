@@ -319,8 +319,8 @@
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建8080用户" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE USER root1 WITH PASSWORD &apos;123456&apos;;
-GRANT admin TO root1;</stringProp>
+          <stringProp name="query">CREATE USER shig_svt_debugger WITH PASSWORD &apos;GTYY9$180/cup&apos;;
+GRANT admin TO shig_svt_debugger;</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
