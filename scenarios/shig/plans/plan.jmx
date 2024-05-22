@@ -261,6 +261,16 @@
             <stringProp name="Argument.value">${__P(user.write.sample_cnc_data,/data/cnc_data.csv)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="db_relation_name" elementType="Argument">
+            <stringProp name="Argument.name">db_relation_name</stringProp>
+            <stringProp name="Argument.value">db_shig_meta</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="random_string_charset" elementType="Argument">
+            <stringProp name="Argument.name">random_string_charset</stringProp>
+            <stringProp name="Argument.value">ABCDEFGHIJKLMNOPQRSTUVWXYZ</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -449,6 +459,33 @@ GRANT admin TO ${create_user};</stringProp>
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建关系库: ${db_relation_name}" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE DATABASE ${db_relation_name};</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree>
+          <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]创建时序库：${db_name}" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="query">CREATE DATABASE ${db_name};</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+          </JDBCPostProcessor>
+          <hashTree/>
+        </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建表" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
@@ -534,7 +571,7 @@ vars.put(&quot;cnc_dsp&quot;, cnc_dsp)</stringProp>
   powerl double NOT NULL,
   allrenergy1 double NOT NULL,
   allrenergy2 double NOT NULL
-) ATTRIBUTES (machine_code varchar(64) NOT NULL, op_group varchar(64) NOT NULL, location varchar(64) NOT NULL, cnc_number int) PRIMARY TAGS(machine_code) retentions 3d activetime 1h partition interval 1d ${elec_dsp};</stringProp>
+) ATTRIBUTES (machine_code varchar(64) NOT NULL, op_group varchar(64) NOT NULL, workshop_id int2 NOT NULL, cnc_number int) PRIMARY TAGS(machine_code) retentions 3d activetime 1h partition interval 1d ${elec_dsp};</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
@@ -595,7 +632,7 @@ vars.put(&quot;cnc_dsp&quot;, cnc_dsp)</stringProp>
   powerl double,
   allrenergy1 double,
   allrenergy2 double
-) tags (machine_code varchar(64), op_group varchar(64), location varchar(64), cnc_number int);</stringProp>
+) tags (machine_code varchar(64), op_group varchar(64), workshop_id smallint, cnc_number int);</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -755,7 +792,7 @@ device_state int
   value2 char(10),
   value3 char(10),
   value4 char(10),
-  value5 char(10)) ATTRIBUTES (machine_code varchar(64) NOT NULL, op_group varchar(64) NOT NULL, brand varchar(64) NOT NULL, number_of_molds int) PRIMARY TAGS(machine_code, op_group) retentions 3d activetime 1h partition interval 1d ${cnc_dsp};</stringProp>
+  value5 char(10)) ATTRIBUTES (machine_code varchar(64) NOT NULL, op_group varchar(64) NOT NULL, workshop_id int2 NOT NULL, number_of_molds int) PRIMARY TAGS(machine_code, op_group) retentions 3d activetime 1h partition interval 1d ${cnc_dsp};</stringProp>
           <stringProp name="queryArguments"></stringProp>
           <stringProp name="queryArgumentsTypes"></stringProp>
           <stringProp name="variableNames"></stringProp>
@@ -831,7 +868,165 @@ device_state int
   value2 varchar(10),
   value3 varchar(10),
   value4 varchar(10),
-  value5 varchar(10)) tags (machine_code varchar(64), op_group varchar(64), brand varchar(64), number_of_molds int);</stringProp>
+  value5 varchar(10)) tags (machine_code varchar(64), op_group varchar(64), workshop_id smallint, number_of_molds int);</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCPostProcessor>
+          <hashTree/>
+        </hashTree>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建厂区关系表: ${db_relation_name}.factory" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE TABLE ${db_relation_name}.factory (
+  id int2 PRIMARY KEY,
+  name varchar(8),
+  sub_comp_id int2 NOT NULL
+);</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree>
+          <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]创建模板表: ${db_name}.t_electmeter" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">CREATE STABLE ${db_name}.t_electmeter (
+  k_timestamp timestamp,
+  elect_name varchar(63),
+  vol_a double,
+  cur_a double,
+  powerf_a double,
+  allenergy_a int,
+  pallenergy_a int,
+  rallenergy_a int,
+  allrenergy1_a int,
+  allrenergy2_a int,
+  powera_a double,
+  powerr_a double,
+  powerl_a double,
+  vol_b double,
+  cur_b double,
+  powerf_b double,
+  allenergy_b int,
+  pallenergy_b int,
+  rallenergy_b int,
+  allrenergy1_b int,
+  allrenergy2_b int,
+  powera_b double,
+  powerr_b double,
+  powerl_b double,
+  vol_c double,
+  cur_c double,
+  powerf_c double,
+  allenergy_c int,
+  pallenergy_c int,
+  rallenergy_c int,
+  allrenergy1_c int,
+  allrenergy2_c int,
+  powera_c double,
+  powerr_c double,
+  powerl_c double,
+  vol_ab double,
+  vol_bc double,
+  vol_ca double,
+  infre double,
+  powerf double,
+  allpower double,
+  pallpower double,
+  rallpower double,
+  powerr double,
+  powerl double,
+  allrenergy1 double,
+  allrenergy2 double
+) tags (machine_code varchar(64), op_group varchar(64), location varchar(64), cnc_number int);</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCPostProcessor>
+          <hashTree/>
+        </hashTree>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建车间关系表: ${db_relation_name}.workshop" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE TABLE ${db_relation_name}.workshop (
+  id int2 PRIMARY KEY,
+  name varchar(8),
+  factory_id int2 NOT NULL
+);</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree>
+          <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]创建模板表: ${db_name}.t_electmeter" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">CREATE STABLE ${db_name}.t_electmeter (
+  k_timestamp timestamp,
+  elect_name varchar(63),
+  vol_a double,
+  cur_a double,
+  powerf_a double,
+  allenergy_a int,
+  pallenergy_a int,
+  rallenergy_a int,
+  allrenergy1_a int,
+  allrenergy2_a int,
+  powera_a double,
+  powerr_a double,
+  powerl_a double,
+  vol_b double,
+  cur_b double,
+  powerf_b double,
+  allenergy_b int,
+  pallenergy_b int,
+  rallenergy_b int,
+  allrenergy1_b int,
+  allrenergy2_b int,
+  powera_b double,
+  powerr_b double,
+  powerl_b double,
+  vol_c double,
+  cur_c double,
+  powerf_c double,
+  allenergy_c int,
+  pallenergy_c int,
+  rallenergy_c int,
+  allrenergy1_c int,
+  allrenergy2_c int,
+  powera_c double,
+  powerr_c double,
+  powerl_c double,
+  vol_ab double,
+  vol_bc double,
+  vol_ca double,
+  infre double,
+  powerf double,
+  allpower double,
+  pallpower double,
+  rallpower double,
+  powerr double,
+  powerl double,
+  allrenergy1 double,
+  allrenergy2 double
+) tags (machine_code varchar(64), op_group varchar(64), location varchar(64), cnc_number int);</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -954,7 +1149,7 @@ SampleResult.setIgnore()</stringProp>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]创建电表设备表${__threadNum}_${counter}" enabled="true">
             <stringProp name="dataSource">td_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">CREATE TABLE ${db_name}.electmeter_${__threadNum}_${counter} USING ${db_name}.t_electmeter tags (&apos;${__threadNum}_${counter}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)});</stringProp>
+            <stringProp name="query">CREATE TABLE ${db_name}.electmeter_${__threadNum}_${counter} USING ${db_name}.t_electmeter tags (&apos;${__threadNum}_${counter}&apos;,&apos;op_group_${__threadNum}&apos;,0,${__Random(1,20,)});</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -967,7 +1162,7 @@ SampleResult.setIgnore()</stringProp>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[TD]创建机床设备表${__threadNum}_${counter}" enabled="true">
             <stringProp name="dataSource">td_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">CREATE TABLE ${db_name}.cnc_${__threadNum}_${counter} USING ${db_name}.t_cnc tags (&apos;${__threadNum}_${counter}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)});</stringProp>
+            <stringProp name="query">CREATE TABLE ${db_name}.cnc_${__threadNum}_${counter} USING ${db_name}.t_cnc tags (&apos;${__threadNum}_${counter}&apos;,&apos;op_group_${__threadNum}&apos;,0,${__Random(1,20,)});</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -1039,6 +1234,167 @@ SampleResult.setIgnore()</stringProp>
           </JSR223Sampler>
           <hashTree/>
         </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 初始化关系数据" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration">10000</stringProp>
+        <stringProp name="ThreadGroup.delay">5</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 写入厂区元数据" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">INSERT INTO ${db_relation_name}.factory VALUES 
+(1, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 1),
+(2, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 1),
+(3, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 1),
+(4, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 1),
+(5, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 1),
+(6, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 2),
+(7, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 2),
+(8, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 2),
+(9, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 2),
+(10, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 2),
+(11, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 3),
+(12, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 3),
+(13, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 3),
+(14, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 3),
+(15, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 3),
+(16, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 4),
+(17, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 4),
+(18, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 4),
+(19, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 4),
+(20, &apos;${__RandomString(${__Random(1,5,)},${random_string_charset},)}FAC&apos;, 4);</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 写入车间元数据" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">INSERT INTO ${db_relation_name}.workshop VALUES 
+(1, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 1),
+(2, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 1),
+(3, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 1),
+(4, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 1),
+(5, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 1),
+(6, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 2),
+(7, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 2),
+(8, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 2),
+(9, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 2),
+(10, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 2),
+(11, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 3),
+(12, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 3),
+(13, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 3),
+(14, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 3),
+(15, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 3),
+(16, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 4),
+(17, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 4),
+(18, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 4),
+(19, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 4),
+(20, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 4),
+(21, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 5),
+(22, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 5),
+(23, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 5),
+(24, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 5),
+(25, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 5),
+(26, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 6),
+(27, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 6),
+(28, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 6),
+(29, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 6),
+(30, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 6),
+(31, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 7),
+(32, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 7),
+(33, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 7),
+(34, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 7),
+(35, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 7),
+(36, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 8),
+(37, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 8),
+(38, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 8),
+(39, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 8),
+(40, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 8),
+(41, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 9),
+(42, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 9),
+(43, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 9),
+(44, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 9),
+(45, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 9),
+(46, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 10),
+(47, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 10),
+(48, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 10),
+(49, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 10),
+(50, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 10),
+(51, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 11),
+(52, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 11),
+(53, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 11),
+(54, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 11),
+(55, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 11),
+(56, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 12),
+(57, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 12),
+(58, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 12),
+(59, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 12),
+(60, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 12),
+(61, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 13),
+(62, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 13),
+(63, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 13),
+(64, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 13),
+(65, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 13),
+(66, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 14),
+(67, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 14),
+(68, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 14),
+(69, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 14),
+(70, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 14),
+(71, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 15),
+(72, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 15),
+(73, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 15),
+(74, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 15),
+(75, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 15),
+(76, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 16),
+(77, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 16),
+(78, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 16),
+(79, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 16),
+(80, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 16),
+(81, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 17),
+(82, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 17),
+(83, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 17),
+(84, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 17),
+(85, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 17),
+(86, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 18),
+(87, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 18),
+(88, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 18),
+(89, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 18),
+(90, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 18),
+(91, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 19),
+(92, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 19),
+(93, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 19),
+(94, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 19),
+(95, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 19),
+(96, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 20),
+(97, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 20),
+(98, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 20),
+(99, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 20),
+(100, &apos;${__RandomString(${__Random(1,6,)},${random_string_charset},)}WS&apos;, 20);</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="创建insertSelect源表" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
@@ -2117,13 +2473,18 @@ void generateBatchInsertSQL() {
   def csv_reader = vars.getObject(&quot;csv_reader&quot;)
   def builder = new StringBuilder()
   def td_builder = new StringBuilder()
-  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_electmeter (k_timestamp, elect_name,vol_a,cur_a, powerf_a, allenergy_a, pallenergy_a, rallenergy_a, allrenergy1_a, allrenergy2_a, powera_a, powerr_a, powerl_a, vol_b, cur_b, powerf_b, allenergy_b, pallenergy_b, rallenergy_b, allrenergy1_b, allrenergy2_b, powera_b, powerr_b, powerl_b, vol_c, cur_c, powerf_c, allenergy_c, pallenergy_c, rallenergy_c, allrenergy1_c, allrenergy2_c, powera_c, powerr_c, powerl_c, vol_ab, vol_bc, vol_ca, infre, powerf, allpower, pallpower, rallpower, powerr, powerl, allrenergy1, allrenergy2, machine_code, op_group, location, cnc_number) values &quot;)
-  td_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_electmeter tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values &quot;)
+  int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
+  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_electmeter (k_timestamp, elect_name,vol_a,cur_a, powerf_a, allenergy_a, pallenergy_a, rallenergy_a, allrenergy1_a, allrenergy2_a, powera_a, powerr_a, powerl_a, vol_b, cur_b, powerf_b, allenergy_b, pallenergy_b, rallenergy_b, allrenergy1_b, allrenergy2_b, powera_b, powerr_b, powerl_b, vol_c, cur_c, powerf_c, allenergy_c, pallenergy_c, rallenergy_c, allrenergy1_c, allrenergy2_c, powera_c, powerr_c, powerl_c, vol_ab, vol_bc, vol_ca, infre, powerf, allpower, pallpower, rallpower, powerr, powerl, allrenergy1, allrenergy2, machine_code, op_group, workshop_id, cnc_number) values &quot;)
+  td_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_electmeter tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+  td_builder.append(workshop_id)
+  td_builder.append(&quot;,${__Random(1,20,)}) values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
   	def nextLine = readNext(csv_reader)
-	builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
+	builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	builder.append(workshop_id)
+	builder.append(&quot;,${__Random(1,20,)}),&quot;)
 	td_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
@@ -2321,13 +2682,18 @@ void generateBatchInsertSQL() {
   def cnc_csv_reader = vars.getObject(&quot;cnc_csv_reader&quot;)
   def cnc_builder = new StringBuilder()
   def td_cnc_builder = new StringBuilder()
-  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc (k_timestamp, cnc_sn, cnc_sw_mver, cnc_sw_sver, cnc_tol_mem, cnc_use_mem, cnc_unuse_mem, cnc_status, path_quantity, axis_quantity, axis_path, axis_type, axis_unit, axis_num, axis_name, sp_name, abs_pos, rel_pos, mach_pos, dist_pos, sp_override, sp_set_speed, sp_act_speed, sp_load, feed_set_speed, feed_act_speed, feed_override, servo_load, parts_count, cnc_cycletime, cnc_alivetime, cnc_cuttime, cnc_runtime, mprog_name, mprog_num, sprog_name, sprog_num, prog_seq_num, prog_seq_content, alarm_count, alarm_type, alarm_code, alarm_content, alarm_time, cur_tool_num, cur_tool_len_num, cur_tool_len, cur_tool_len_val, cur_tool_x_len, cur_tool_x_len_val, cur_tool_y_len, cur_tool_y_len_val, cur_tool_z_len, cur_tool_z_len_val, cur_tool_rad_num, cur_tool_rad, cur_tool_rad_val, device_state, value1, value2, value3, value4, value5, machine_code, op_group, brand, number_of_molds) values &quot;)
-  td_cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_cnc tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values &quot;)
+  int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
+  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc (k_timestamp, cnc_sn, cnc_sw_mver, cnc_sw_sver, cnc_tol_mem, cnc_use_mem, cnc_unuse_mem, cnc_status, path_quantity, axis_quantity, axis_path, axis_type, axis_unit, axis_num, axis_name, sp_name, abs_pos, rel_pos, mach_pos, dist_pos, sp_override, sp_set_speed, sp_act_speed, sp_load, feed_set_speed, feed_act_speed, feed_override, servo_load, parts_count, cnc_cycletime, cnc_alivetime, cnc_cuttime, cnc_runtime, mprog_name, mprog_num, sprog_name, sprog_num, prog_seq_num, prog_seq_content, alarm_count, alarm_type, alarm_code, alarm_content, alarm_time, cur_tool_num, cur_tool_len_num, cur_tool_len, cur_tool_len_val, cur_tool_x_len, cur_tool_x_len_val, cur_tool_y_len, cur_tool_y_len_val, cur_tool_z_len, cur_tool_z_len_val, cur_tool_rad_num, cur_tool_rad, cur_tool_rad_val, device_state, value1, value2, value3, value4, value5, machine_code, op_group, workshop_id, number_of_molds) values &quot;)
+  td_cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_cnc tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+  td_cnc_builder.append(workshop_id)
+  td_cnc_builder.append(&quot;,${__Random(1,20,)}) values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
   	def nextLine = readNext(cnc_csv_reader)
-	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
+	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	cnc_builder.append(workshop_id)
+	cnc_builder.append(&quot;,${__Random(1,20,)}),&quot;)
      td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
   }
   cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
@@ -2456,13 +2822,18 @@ void generateBatchInsertSQL() {
   def csv_reader = vars.getObject(&quot;csv_reader&quot;)
   def builder = new StringBuilder()
   def td_builder = new StringBuilder()
-  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_electmeter (k_timestamp, elect_name,vol_a,cur_a, powerf_a, allenergy_a, pallenergy_a, rallenergy_a, allrenergy1_a, allrenergy2_a, powera_a, powerr_a, powerl_a, vol_b, cur_b, powerf_b, allenergy_b, pallenergy_b, rallenergy_b, allrenergy1_b, allrenergy2_b, powera_b, powerr_b, powerl_b, vol_c, cur_c, powerf_c, allenergy_c, pallenergy_c, rallenergy_c, allrenergy1_c, allrenergy2_c, powera_c, powerr_c, powerl_c, vol_ab, vol_bc, vol_ca, infre, powerf, allpower, pallpower, rallpower, powerr, powerl, allrenergy1, allrenergy2, machine_code, op_group, location, cnc_number) values &quot;)
-  td_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_electmeter tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values &quot;)
+  int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
+  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_electmeter (k_timestamp, elect_name,vol_a,cur_a, powerf_a, allenergy_a, pallenergy_a, rallenergy_a, allrenergy1_a, allrenergy2_a, powera_a, powerr_a, powerl_a, vol_b, cur_b, powerf_b, allenergy_b, pallenergy_b, rallenergy_b, allrenergy1_b, allrenergy2_b, powera_b, powerr_b, powerl_b, vol_c, cur_c, powerf_c, allenergy_c, pallenergy_c, rallenergy_c, allrenergy1_c, allrenergy2_c, powera_c, powerr_c, powerl_c, vol_ab, vol_bc, vol_ca, infre, powerf, allpower, pallpower, rallpower, powerr, powerl, allrenergy1, allrenergy2, machine_code, op_group, workshop_id, cnc_number) values &quot;)
+  td_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_electmeter tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+  td_builder.append(workshop_id)
+  td_builder.append(&quot;,${__Random(1,20,)}) values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
   	def nextLine = readNext(csv_reader)
-	builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
+	builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	builder.append(workshop_id)
+	builder.append(&quot;,${__Random(1,20,)}),&quot;)
 	td_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
@@ -2658,13 +3029,18 @@ void generateBatchInsertSQL() {
   def cnc_csv_reader = vars.getObject(&quot;cnc_csv_reader&quot;)
   def cnc_builder = new StringBuilder()
   def td_cnc_builder = new StringBuilder()
-  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc (k_timestamp, cnc_sn, cnc_sw_mver, cnc_sw_sver, cnc_tol_mem, cnc_use_mem, cnc_unuse_mem, cnc_status, path_quantity, axis_quantity, axis_path, axis_type, axis_unit, axis_num, axis_name, sp_name, abs_pos, rel_pos, mach_pos, dist_pos, sp_override, sp_set_speed, sp_act_speed, sp_load, feed_set_speed, feed_act_speed, feed_override, servo_load, parts_count, cnc_cycletime, cnc_alivetime, cnc_cuttime, cnc_runtime, mprog_name, mprog_num, sprog_name, sprog_num, prog_seq_num, prog_seq_content, alarm_count, alarm_type, alarm_code, alarm_content, alarm_time, cur_tool_num, cur_tool_len_num, cur_tool_len, cur_tool_len_val, cur_tool_x_len, cur_tool_x_len_val, cur_tool_y_len, cur_tool_y_len_val, cur_tool_z_len, cur_tool_z_len_val, cur_tool_rad_num, cur_tool_rad, cur_tool_rad_val, device_state, value1, value2, value3, value4, value5, machine_code, op_group, brand, number_of_molds) values &quot;)
-  td_cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_cnc tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}) values &quot;)
+  int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
+  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc (k_timestamp, cnc_sn, cnc_sw_mver, cnc_sw_sver, cnc_tol_mem, cnc_use_mem, cnc_unuse_mem, cnc_status, path_quantity, axis_quantity, axis_path, axis_type, axis_unit, axis_num, axis_name, sp_name, abs_pos, rel_pos, mach_pos, dist_pos, sp_override, sp_set_speed, sp_act_speed, sp_load, feed_set_speed, feed_act_speed, feed_override, servo_load, parts_count, cnc_cycletime, cnc_alivetime, cnc_cuttime, cnc_runtime, mprog_name, mprog_num, sprog_name, sprog_num, prog_seq_num, prog_seq_content, alarm_count, alarm_type, alarm_code, alarm_content, alarm_time, cur_tool_num, cur_tool_len_num, cur_tool_len, cur_tool_len_val, cur_tool_x_len, cur_tool_x_len_val, cur_tool_y_len, cur_tool_y_len_val, cur_tool_z_len, cur_tool_z_len_val, cur_tool_rad_num, cur_tool_rad, cur_tool_rad_val, device_state, value1, value2, value3, value4, value5, machine_code, op_group, workshop_id, number_of_molds) values &quot;)
+  td_cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_cnc tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+  td_cnc_builder.append(workshop_id)
+  td_cnc_builder.append(&quot;,${__Random(1,20,)}) values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
   	def nextLine = readNext(cnc_csv_reader)
-	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&apos;${__UUID}&apos;,${__Random(1,20,)}),&quot;)
+	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	cnc_builder.append(workshop_id)
+	cnc_builder.append(&quot;,${__Random(1,20,)}),&quot;)
      td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
   }
   cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
@@ -2858,10 +3234,10 @@ UPDATE ${db_name}.t_electmeter SET factory = &apos;factory_1&apos; WHERE machine
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)重命名属性" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter RENAME TAG workshop TO workshop_id;
-ALTER TABLE ${db_name}.t_electmeter RENAME ATTRIBUTE factory TO factory_id;
-UPDATE ${db_name}.t_electmeter SET workshop_id = &apos;1&apos; WHERE machine_code = &apos;1_1&apos;;
-UPDATE ${db_name}.t_electmeter SET factory_id = &apos;1&apos; WHERE machine_code = &apos;1_2&apos;;</stringProp>
+            <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter RENAME TAG workshop TO workshop_name;
+ALTER TABLE ${db_name}.t_electmeter RENAME ATTRIBUTE factory TO factory_name;
+UPDATE ${db_name}.t_electmeter SET workshop_name = &apos;1&apos; WHERE machine_code = &apos;1_1&apos;;
+UPDATE ${db_name}.t_electmeter SET factory_name = &apos;1&apos; WHERE machine_code = &apos;1_2&apos;;</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -2887,8 +3263,8 @@ UPDATE ${db_name}.t_electmeter SET factory_id = &apos;1&apos; WHERE machine_code
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)移除属性" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter DROP TAG workshop_id;
-ALTER TABLE ${db_name}.t_electmeter DROP ATTRIBUTE factory_id;</stringProp>
+            <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter DROP TAG workshop_name;
+ALTER TABLE ${db_name}.t_electmeter DROP ATTRIBUTE factory_name;</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -4328,6 +4704,75 @@ if(Math.abs(differ) &lt; 1E-8){
               <stringProp name="resultSetMaxRows"></stringProp>
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query] 跨模查询" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
+          <doubleProp>
+            <name>throughput</name>
+            <value>0.066666667</value>
+            <savedValue>0.0</savedValue>
+          </doubleProp>
+          <intProp name="calcMode">0</intProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </LoopController>
+        <hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)sum_all_energy_a_in_company" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Select Statement</stringProp>
+            <stringProp name="query">select sum(allenergy_a) from 
+  (select w.id as workshop_id from db_shig_meta.factory f, db_shig_meta.workshop w 
+           where f.id = w.factory_id and f.sub_comp_id = 1) m, 
+  db_shig.t_electmeter e where e.workshop_id = m.workshop_id 
+and k_timestamp &gt; &apos;${q_begin_ts}&apos; and k_timestamp &lt; &apos;${q_end_ts}&apos;</stringProp>
+            <stringProp name="queryArguments">${machine_code}</stringProp>
+            <stringProp name="queryArgumentsTypes">varchar</stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="获取当前时间的月初和月末时间" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">false</stringProp>
+              <stringProp name="script">import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
+
+DateTimeFormatter dtf = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;);
+LocalDateTime now = LocalDateTime.now();
+LocalDateTime monthBegin = LocalDateTime.of(now.getYear(), now.getMonth(), 1, 0, 0, 0);
+LocalDateTime monthEnd = LocalDateTime.of(now.getYear(), now.getMonth(), now.with(TemporalAdjusters.lastDayOfMonth()).getDayOfMonth(), 23, 59, 59);
+
+vars.put(&quot;q_begin_ts&quot;, dtf.format(monthBegin))
+vars.put(&quot;q_end_ts&quot;, dtf.format(monthEnd))
+
+log.info(&quot;q_begin_ts={}&quot;, vars.get(&quot;q_begin_ts&quot;))
+log.info(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
+            </JSR223PreProcessor>
             <hashTree/>
           </hashTree>
         </hashTree>
