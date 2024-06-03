@@ -4,3 +4,5 @@ USER root
 
 COPY data /data
 COPY plans /plans
+
+COPY svt-jar-with-dependencies.jar /usr/local/lib/apache-jmeter-5.5/lib/ext/
