@@ -2367,12 +2367,38 @@ SampleResult.setIgnore()</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">def csv_reader = new RandomAccessFile(vars.get(&quot;sample_data&quot;), &quot;r&quot;)
-vars.putObject(&quot;csv_reader&quot;, csv_reader)
+          <stringProp name="script">String line;
+List csv_list = new ArrayList();
+List tighten_csv_list = new ArrayList();
+List cnc_csv_list = new ArrayList();
+
+def csv_reader = new RandomAccessFile(vars.get(&quot;sample_data&quot;), &quot;r&quot;)
+do {
+    line = csv_reader.readLine();
+    if (line != null) {
+        csv_list.add(line);
+    }
+} while (line != null);
+vars.putObject(&quot;csv_list&quot;, csv_list)
+
 def tighten_csv_reader = new RandomAccessFile(vars.get(&quot;sample_tighten_data&quot;), &quot;r&quot;)
-vars.putObject(&quot;tighten_csv_reader&quot;, tighten_csv_reader)
+do {
+    line = tighten_csv_reader.readLine();
+    if (line != null) {
+        tighten_csv_list.add(line);
+    }
+} while (line != null);
+vars.putObject(&quot;tighten_csv_list&quot;, tighten_csv_list)
+
 def cnc_csv_reader = new RandomAccessFile(vars.get(&quot;sample_cnc_data&quot;), &quot;r&quot;)
 vars.putObject(&quot;cnc_csv_reader&quot;, cnc_csv_reader)
+do {
+    line = cnc_csv_reader.readLine();
+    if (line != null) {
+        cnc_csv_list.add(line);
+    }
+} while (line != null);
+vars.putObject(&quot;cnc_csv_list&quot;, cnc_csv_list)
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
@@ -2458,19 +2484,8 @@ List getSwapedListOrNot() {
   return generateTimestampList()
 }
 
-String readNext(RandomAccessFile csv_reader) {
-  def line = csv_reader.readLine()
-  if(!line) {
-    csv_reader.seek(0)
-    if(!(line = csv_reader.readLine())){
-      throw new Exception(&apos;Read csv file error after reset.&apos;)
-    }
-  }
-  return line
-}
-
 void generateBatchInsertSQL() {
-  def csv_reader = vars.getObject(&quot;csv_reader&quot;)
+  def csv_list = vars.getObject(&quot;csv_list&quot;)
   def builder = new StringBuilder()
   def td_builder = new StringBuilder()
   int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
@@ -2481,7 +2496,7 @@ void generateBatchInsertSQL() {
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-  	def nextLine = readNext(csv_reader)
+  	def nextLine = csv_list.get(lineIdx)
 	builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
 	builder.append(workshop_id)
 	builder.append(&quot;,${__Random(1,20,)}),&quot;)
@@ -2569,25 +2584,14 @@ List getSwapedListOrNot() {
   return generateTimestampList()
 }
 
-String readNext(RandomAccessFile csv_reader) {
-  def line = csv_reader.readLine()
-  if(!line) {
-    csv_reader.seek(0)
-    if(!(line = csv_reader.readLine())){
-      throw new Exception(&apos;Read csv file error after reset.&apos;)
-    }
-  }
-  return line
-}
-
 void generateBatchInsertSQL() {
-  def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
+  def tighten_csv_list = vars.getObject(&quot;tighten_csv_list&quot;)
   def tighten_builder = new StringBuilder()
   tighten_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.tighten_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(tighten_csv_reader)}),&quot;)
+	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${tighten_csv_list.get(lineIdx)}),&quot;)
   }
   tighten_builder.setCharAt(tighten_builder.length() - 1, &apos;;&apos; as char)
   vars.put(&quot;tighten_builder&quot;, tighten_builder.toString())
@@ -2667,19 +2671,8 @@ List getSwapedListOrNot() {
   return generateTimestampList()
 }
 
-String readNext(RandomAccessFile csv_reader) {
-  def line = csv_reader.readLine()
-  if(!line) {
-    csv_reader.seek(0)
-    if(!(line = csv_reader.readLine())){
-      throw new Exception(&apos;Read csv file error after reset.&apos;)
-    }
-  }
-  return line
-}
-
 void generateBatchInsertSQL() {
-  def cnc_csv_reader = vars.getObject(&quot;cnc_csv_reader&quot;)
+  def cnc_csv_list = vars.getObject(&quot;cnc_csv_list&quot;)
   def cnc_builder = new StringBuilder()
   def td_cnc_builder = new StringBuilder()
   int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
@@ -2690,7 +2683,7 @@ void generateBatchInsertSQL() {
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-  	def nextLine = readNext(cnc_csv_reader)
+  	def nextLine = cnc_csv_list.get(lineIdx)
 	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
 	cnc_builder.append(workshop_id)
 	cnc_builder.append(&quot;,${__Random(1,20,)}),&quot;)
@@ -2807,19 +2800,8 @@ List getSwapedListOrNot() {
   return generateTimestampList()
 }
 
-String readNext(RandomAccessFile csv_reader) {
-  def line = csv_reader.readLine()
-  if(!line) {
-    csv_reader.seek(0)
-    if(!(line = csv_reader.readLine())){
-      throw new Exception(&apos;Read csv file error after reset.&apos;)
-    }
-  }
-  return line
-}
-
 void generateBatchInsertSQL() {
-  def csv_reader = vars.getObject(&quot;csv_reader&quot;)
+  def csv_list = vars.getObject(&quot;csv_list&quot;)
   def builder = new StringBuilder()
   def td_builder = new StringBuilder()
   int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
@@ -2830,7 +2812,7 @@ void generateBatchInsertSQL() {
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-  	def nextLine = readNext(csv_reader)
+  	def nextLine = csv_list.get(lineIdx)
 	builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
 	builder.append(workshop_id)
 	builder.append(&quot;,${__Random(1,20,)}),&quot;)
@@ -2917,25 +2899,14 @@ List getSwapedListOrNot() {
   return generateTimestampList()
 }
 
-String readNext(RandomAccessFile csv_reader) {
-  def line = csv_reader.readLine()
-  if(!line) {
-    csv_reader.seek(0)
-    if(!(line = csv_reader.readLine())){
-      throw new Exception(&apos;Read csv file error after reset.&apos;)
-    }
-  }
-  return line
-}
-
 void generateBatchInsertSQL() {
-  def tighten_csv_reader = vars.getObject(&quot;tighten_csv_reader&quot;)
+  def tighten_csv_list = vars.getObject(&quot;tighten_csv_list&quot;)
   def tighten_builder = new StringBuilder()
   tighten_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.tighten_${__threadNum}_${vars.get(&quot;device_num&quot;)} values &quot;)
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${readNext(tighten_csv_reader)}),&quot;)
+	tighten_builder.append(&quot;(${swapedList.get(lineIdx)},${tighten_csv_list.get(lineIdx)}),&quot;)
   }
   tighten_builder.setCharAt(tighten_builder.length() - 1, &apos;;&apos; as char)
   vars.put(&quot;tighten_builder&quot;, tighten_builder.toString())
@@ -3014,19 +2985,8 @@ List getSwapedListOrNot() {
   return generateTimestampList()
 }
 
-String readNext(RandomAccessFile csv_reader) {
-  def line = csv_reader.readLine()
-  if(!line) {
-    csv_reader.seek(0)
-    if(!(line = csv_reader.readLine())){
-      throw new Exception(&apos;Read csv file error after reset.&apos;)
-    }
-  }
-  return line
-}
-
 void generateBatchInsertSQL() {
-  def cnc_csv_reader = vars.getObject(&quot;cnc_csv_reader&quot;)
+  def cnc_csv_list = vars.getObject(&quot;cnc_csv_list&quot;)
   def cnc_builder = new StringBuilder()
   def td_cnc_builder = new StringBuilder()
   int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
@@ -3037,7 +2997,7 @@ void generateBatchInsertSQL() {
   def swapedList = getSwapedListOrNot()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
-  	def nextLine = readNext(cnc_csv_reader)
+  	def nextLine = cnc_csv_list.get(lineIdx)
 	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
 	cnc_builder.append(workshop_id)
 	cnc_builder.append(&quot;,${__Random(1,20,)}),&quot;)
