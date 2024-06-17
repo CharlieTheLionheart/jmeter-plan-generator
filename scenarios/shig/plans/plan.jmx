@@ -1037,6 +1037,84 @@ device_state int
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建电表车间关系表: ${db_relation_name}.workshop_electmeter" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE TABLE ${db_relation_name}.workshop_electmeter (
+  machine_code varchar(64) PRIMARY KEY,
+  workshop_id int2 NOT NULL
+);</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree>
+          <JDBCPostProcessor guiclass="TestBeanGUI" testclass="JDBCPostProcessor" testname="[TD]创建模板表: ${db_name}.t_electmeter" enabled="true">
+            <stringProp name="dataSource">td_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">CREATE STABLE ${db_name}.t_electmeter (
+  k_timestamp timestamp,
+  elect_name varchar(63),
+  vol_a double,
+  cur_a double,
+  powerf_a double,
+  allenergy_a int,
+  pallenergy_a int,
+  rallenergy_a int,
+  allrenergy1_a int,
+  allrenergy2_a int,
+  powera_a double,
+  powerr_a double,
+  powerl_a double,
+  vol_b double,
+  cur_b double,
+  powerf_b double,
+  allenergy_b int,
+  pallenergy_b int,
+  rallenergy_b int,
+  allrenergy1_b int,
+  allrenergy2_b int,
+  powera_b double,
+  powerr_b double,
+  powerl_b double,
+  vol_c double,
+  cur_c double,
+  powerf_c double,
+  allenergy_c int,
+  pallenergy_c int,
+  rallenergy_c int,
+  allrenergy1_c int,
+  allrenergy2_c int,
+  powera_c double,
+  powerr_c double,
+  powerl_c double,
+  vol_ab double,
+  vol_bc double,
+  vol_ca double,
+  infre double,
+  powerf double,
+  allpower double,
+  pallpower double,
+  rallpower double,
+  powerr double,
+  powerl double,
+  allrenergy1 double,
+  allrenergy2 double
+) tags (machine_code varchar(64), op_group varchar(64), location varchar(64), cnc_number int);</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCPostProcessor>
+          <hashTree/>
+        </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建实例表" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
@@ -1395,6 +1473,39 @@ SampleResult.setIgnore()</stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 写入电表车间关系元数据" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">${workshopElectmeterInsertSql}</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout">600</stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="script">def sqlBuilder = new StringBuilder(&quot;insert into db_shig_meta.workshop_electmeter values &quot;)
+def threadCount = Integer.parseInt(vars.get(&quot;write_thread_count&quot;));
+def devicePerThreadCount = Integer.parseInt(vars.get(&quot;device_count_per_thread&quot;));
+def deviceCountPerWorkshop = threadCount * devicePerThreadCount / 100
+for (int threadIndex = 1; threadIndex &lt;= threadCount; threadIndex++) {
+	for (int deviceIndex = 1; deviceIndex &lt;= devicePerThreadCount; deviceIndex++) {
+		int workshopId = threadIndex * devicePerThreadCount / deviceCountPerWorkshop + (deviceIndex - 1) / deviceCountPerWorkshop + 1
+	     sqlBuilder.append(&quot;(&apos;&quot; + threadIndex + &quot;_&quot;  + deviceIndex + &quot;&apos;, &quot; + workshopId +  &quot;),&quot;)
+	}
+}
+sqlBuilder.setCharAt(sqlBuilder.length() - 1, &apos;;&apos; as char)
+vars.put(&quot;workshopElectmeterInsertSql&quot;, sqlBuilder.toString())</stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
+        </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="创建insertSelect源表" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
@@ -4700,9 +4811,9 @@ if(Math.abs(differ) &lt; 1E-8){
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">select sum(allenergy_a) from 
-  (select w.id as workshop_id from db_shig_meta.factory f, db_shig_meta.workshop w 
-           where f.id = w.factory_id and f.sub_comp_id = 1) m, 
-  db_shig.t_electmeter e where e.workshop_id = m.workshop_id 
+  (select we.machine_code as machine_code from db_shig_meta.factory f, db_shig_meta.workshop w, db_shig_meta.workshop_electmeter we
+           where we.workshop_id = w.id and f.id = w.factory_id and f.sub_comp_id = 1) m, 
+  db_shig.t_electmeter e where e.machine_code = m.machine_code 
 and k_timestamp &gt; &apos;${q_begin_ts}&apos; and k_timestamp &lt; &apos;${q_end_ts}&apos;</stringProp>
             <stringProp name="queryArguments">${machine_code}</stringProp>
             <stringProp name="queryArgumentsTypes">varchar</stringProp>
