@@ -312,7 +312,7 @@
         <stringProp name="connectionProperties"></stringProp>
       </JDBCDataSource>
       <hashTree/>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[User] 配置" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[User] 配置">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -337,28 +337,8 @@ GRANT admin TO shig_svt_debugger;</stringProp>
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)IF trace on" enabled="true">
-          <stringProp name="IfController.condition">${__groovy(&quot;${trace_log}&quot;.indexOf(&quot;TRUE&quot;)&gt;-1)}</stringProp>
-          <boolProp name="IfController.evaluateAll">false</boolProp>
-          <boolProp name="IfController.useExpression">true</boolProp>
-        </IfController>
-        <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)增加trace日志" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">set cluster setting ts.trace.on_off_list=&apos;ee 4,st 4,su 4,me 4&apos;;</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-        </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[User] 创建用户" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[User] 创建用户">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -390,7 +370,7 @@ GRANT admin TO ${create_user};</stringProp>
           </JDBCSampler>
           <hashTree/>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)没有设置密码" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)没有设置密码">
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;create_password&quot;) == &quot;&quot;)}</stringProp>
@@ -412,7 +392,7 @@ GRANT admin TO ${create_user};</stringProp>
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建数据库" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建数据库">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -510,7 +490,7 @@ vars.put(&quot;tighten_dsp&quot;, tighten_dsp)
 vars.put(&quot;cnc_dsp&quot;, cnc_dsp)</stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建电表时序表: ${db_name}.t_electmeter">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建电表时序表: ${db_name}.t_electmeter" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.t_electmeter (
@@ -633,7 +613,7 @@ vars.put(&quot;cnc_dsp&quot;, cnc_dsp)</stringProp>
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[tighten]创建拧紧机模板表: ${db_name}.t_tighten">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[tighten]创建拧紧机模板表: ${db_name}.t_tighten" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.t_tighten (
@@ -716,7 +696,7 @@ device_state int
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建机床时序表: ${db_name}.t_cnc">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建机床时序表: ${db_name}.t_cnc" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_name}.t_cnc (
@@ -869,7 +849,7 @@ device_state int
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建厂区关系表: ${db_relation_name}.factory">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建厂区关系表: ${db_relation_name}.factory" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_relation_name}.factory (
@@ -948,7 +928,7 @@ device_state int
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建车间关系表: ${db_relation_name}.workshop">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建车间关系表: ${db_relation_name}.workshop" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_relation_name}.workshop (
@@ -1027,7 +1007,7 @@ device_state int
           </JDBCPostProcessor>
           <hashTree/>
         </hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建电表车间关系表: ${db_relation_name}.workshop_electmeter">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建电表车间关系表: ${db_relation_name}.workshop_electmeter" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_relation_name}.workshop_electmeter (
