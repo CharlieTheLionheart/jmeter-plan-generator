@@ -1,0 +1,24 @@
+<settings>
+    <!-- omitted xml -->
+    <profiles>
+        <profile>
+            <id>Repository Proxy</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <repositories>
+                <repository>
+                    <id>ZDP-KWDB-qcd_maven</id>
+                    <name>KWDB-qcd_maven</name>
+                    <url>https://devops.inspur.com/ISG/ZDP/Repo/LOCAL_REPO/KWDB-qcd_maven</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
+</settings>

@@ -23,3 +23,7 @@
 hs_err_pid*
 
 .vscode
+.gitee
+.idea
+
+docker/line2-om-utils

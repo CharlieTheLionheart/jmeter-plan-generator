@@ -1,0 +1,5 @@
+k_timestamp timestamp false false serial_time []
+voltage double true false random_float [0.0,20000.0,2]
+current double true false random_float [0.0,120.0,2]
+temperature double true false random_float [-237.0,250.0,2]
+number int false true get_serial_number [1,1000000,1,1]
