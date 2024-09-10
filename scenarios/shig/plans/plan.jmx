@@ -22,7 +22,7 @@
             <stringProp name="Argument.name">db_user</stringProp>
             <stringProp name="Argument.value">${__P(user.db.user,kaiwudb)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">数据库连接用户, default: root</stringProp>
+            <stringProp name="Argument.desc">数据库连接用户, default: kaiwudb</stringProp>
           </elementProp>
           <elementProp name="db_name" elementType="Argument">
             <stringProp name="Argument.name">db_name</stringProp>
@@ -40,7 +40,7 @@
             <stringProp name="Argument.name">data_ts_step</stringProp>
             <stringProp name="Argument.value">${__P(user.sys.data_ts_step,1)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">生成数据时间戳间隔ms, default: 1000</stringProp>
+            <stringProp name="Argument.desc">生成数据时间戳间隔ms, default: 1</stringProp>
           </elementProp>
           <elementProp name="device_count_per_thread" elementType="Argument">
             <stringProp name="Argument.name">device_count_per_thread</stringProp>
@@ -75,7 +75,7 @@
             <stringProp name="Argument.name">write_throughput</stringProp>
             <stringProp name="Argument.value">${__P(user.write.throughput,60)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">写入吞吐量/min, default: 50000</stringProp>
+            <stringProp name="Argument.desc">写入吞吐量/min, default: 60</stringProp>
           </elementProp>
           <elementProp name="sample_data" elementType="Argument">
             <stringProp name="Argument.name">sample_data</stringProp>
@@ -83,34 +83,16 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">插入样本数据文件(电表), default: /data/data.csv</stringProp>
           </elementProp>
-          <elementProp name="sample_tighten_data" elementType="Argument">
-            <stringProp name="Argument.name">sample_tighten_data</stringProp>
-            <stringProp name="Argument.value">${__P(user.write.sample_tighten_data,/data/shig/tighten_data.csv)}</stringProp>
-            <stringProp name="Argument.desc">插入样本数据文件(拧紧机), default: /data/tighten_data.csv</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
           <elementProp name="write_duration" elementType="Argument">
             <stringProp name="Argument.name">write_duration</stringProp>
             <stringProp name="Argument.value">${__P(user.write.duration,60)}</stringProp>
-            <stringProp name="Argument.desc">写入持续时间,ISO8601时间格式-1表示不限制,default: 0</stringProp>
+            <stringProp name="Argument.desc">写入持续时间,ISO8601时间格式-1表示不限制,default: 60</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="write_lines" elementType="Argument">
             <stringProp name="Argument.name">write_lines</stringProp>
             <stringProp name="Argument.value">${__P(user.write.lines,100)}</stringProp>
-            <stringProp name="Argument.desc">单次单表插入数据行数: default:20</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="swap_line_idx" elementType="Argument">
-            <stringProp name="Argument.name">swap_line_idx</stringProp>
-            <stringProp name="Argument.value">${__P(user.write.swap_line_idx,1)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">生成乱序数据时batch内部使用第几行与第0行交换的索引，从0开始</stringProp>
-          </elementProp>
-          <elementProp name="disorder_batch_interval" elementType="Argument">
-            <stringProp name="Argument.name">disorder_batch_interval</stringProp>
-            <stringProp name="Argument.value">${__P(user.write.disorder_batch_interval,0)}</stringProp>
-            <stringProp name="Argument.desc">产生乱序数据的batch间隔，从1开始，设置为0则关闭乱序</stringProp>
+            <stringProp name="Argument.desc">单次单表插入数据行数: default:100</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="write_thread_count" elementType="Argument">
@@ -160,12 +142,6 @@
             <stringProp name="Argument.desc">读线程执行时间,default 0</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="http_read_timeout" elementType="Argument">
-            <stringProp name="Argument.name">http_read_timeout</stringProp>
-            <stringProp name="Argument.value">${__P(user.read.http_read_timeout,300000)}</stringProp>
-            <stringProp name="Argument.desc">webapp的http read timeout,default:300000</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
           <elementProp name="server_name" elementType="Argument">
             <stringProp name="Argument.name">server_name</stringProp>
             <stringProp name="Argument.value">${__P(user.server.name,server-test-1)}</stringProp>
@@ -199,7 +175,7 @@
           </elementProp>
           <elementProp name="ddl_delay" elementType="Argument">
             <stringProp name="Argument.name">ddl_delay</stringProp>
-            <stringProp name="Argument.value">${__P(user.write.ddl_delay,65)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.write.ddl_delay,70)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="drop_db" elementType="Argument">
@@ -222,6 +198,16 @@
             <stringProp name="Argument.value">${__P(user.t_cnc_ddl_csv,/data/shig/t_cnc_ddl.csv)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="electmeter_count_expect" elementType="Argument">
+            <stringProp name="Argument.name">electmeter_count_expect</stringProp>
+            <stringProp name="Argument.value">${__P(electmeter_count_expect, 1000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="cnc_count_expect" elementType="Argument">
+            <stringProp name="Argument.name">cnc_count_expect</stringProp>
+            <stringProp name="Argument.value">${__P(cnc_count_expect, 1000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -240,7 +226,7 @@
         <stringProp name="dbUrl">${db_url}</stringProp>
         <stringProp name="driver">com.kaiwudb.Driver</stringProp>
         <stringProp name="username">${db_user}</stringProp>
-        <stringProp name="password">${db_password}</stringProp>
+        <stringProp name="password"></stringProp>
         <stringProp name="connectionProperties"></stringProp>
       </JDBCDataSource>
       <hashTree/>
@@ -280,7 +266,7 @@
         <stringProp name="shareMode">shareMode.all</stringProp>
       </CSVDataSet>
       <hashTree/>
-      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="[Setup] 初始化" enabled="true">
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="[Setup] 初始化">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -291,7 +277,7 @@
         </elementProp>
       </SetupThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建时序库: ${db_name}" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建时序库: ${db_name}" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TS DATABASE ${db_name};</stringProp>
@@ -304,7 +290,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建关系库: ${db_relation_name}" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建关系库: ${db_relation_name}" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE DATABASE ${db_relation_name};</stringProp>
@@ -317,7 +303,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建电表时序表: ${db_name}.t_electmeter" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建电表时序表: ${db_name}.t_electmeter" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">${electmeter_ddl};</stringProp>
@@ -330,7 +316,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建机床时序表: ${db_name}.t_cnc" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建机床时序表: ${db_name}.t_cnc" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">${cnc_ddl};</stringProp>
@@ -343,7 +329,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建厂区关系表: ${db_relation_name}.factory" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建厂区关系表: ${db_relation_name}.factory" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_relation_name}.factory (
@@ -360,7 +346,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建车间关系表: ${db_relation_name}.workshop" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建车间关系表: ${db_relation_name}.workshop" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_relation_name}.workshop (
@@ -377,7 +363,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建电表车间关系表: ${db_relation_name}.workshop_electmeter" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建电表车间关系表: ${db_relation_name}.workshop_electmeter" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TABLE ${db_relation_name}.workshop_electmeter (
@@ -393,7 +379,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 写入厂区元数据" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入厂区元数据" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">INSERT INTO ${db_relation_name}.factory VALUES
@@ -426,7 +412,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 写入车间元数据" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入车间元数据" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">INSERT INTO ${db_relation_name}.workshop VALUES
@@ -539,7 +525,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 写入电表车间关系元数据" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入电表车间关系元数据" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">${workshopElectmeterInsertSql}</stringProp>
@@ -572,6 +558,105 @@ vars.put(&quot;workshopElectmeterInsertSql&quot;, sqlBuilder.toString())</string
           </JSR223PreProcessor>
           <hashTree/>
         </hashTree>
+        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="特征值处理"/>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="特征值处理">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import org.apache.jmeter.util.JMeterUtils;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+String line;
+List csv_list = new ArrayList();
+List cnc_csv_list = new ArrayList();
+
+// init electmeter list
+def csv_reader = new RandomAccessFile(vars.get(&quot;sample_data&quot;), &quot;r&quot;)
+do {
+    line = csv_reader.readLine();
+    if (line != null) {
+        csv_list.add(line);
+    }
+} while (line != null);
+
+// init cnc list
+def cnc_csv_reader = new RandomAccessFile(vars.get(&quot;sample_cnc_data&quot;), &quot;r&quot;)
+do {
+    line = cnc_csv_reader.readLine();
+    if (line != null) {
+        cnc_csv_list.add(line);
+    }
+} while (line != null);
+
+
+// SQL3&amp;SQL8: last_electmeter_expect
+JMeterUtils.setProperty(&quot;last_electmeter_expect&quot;, csv_list.get(csv_list.size() - 1))
+
+// not used, preserved for later test case
+JMeterUtils.setProperty(&quot;last_cnc_expect&quot;, cnc_csv_list.get(cnc_csv_list.size() - 1))
+
+// SQL1: sp_act_speed_list_expect
+List spActSpeedListExpect = new ArrayList();
+for (String cnc_line : cnc_csv_list) {
+    cnc_col_arr = cnc_line.split(&quot;,&quot;)
+    spActSpeedListExpect.add(cnc_col_arr[21].replaceAll(&quot;&apos;&quot;,&quot;&quot;))
+}
+spActSpeedListString = spActSpeedListExpect.toString().replaceAll(&quot; &quot;,&quot;&quot;)
+JMeterUtils.setProperty(&quot;sp_act_speed_list_expect&quot;, spActSpeedListString.substring(1, spActSpeedListString.length() - 1))
+
+// SQL4: max_cur_expect min_cur_expect avg_cur_expect &amp; SQL7: sum pallpower
+BigDecimal max_cur = new BigDecimal(0)
+BigDecimal min_cur = new BigDecimal(0)
+BigDecimal sum_cur = new BigDecimal(0)
+BigDecimal sum_pallpower = new BigDecimal(0)
+BigDecimal sum_allenergy_a = new BigDecimal(0)
+int count = 0;
+
+for (String elect_line : csv_list) {
+    elect_col_arr = elect_line.split(&quot;,&quot;)
+    if (&quot;a004&quot;.equals(elect_col_arr[0].replaceAll(&quot;&apos;&quot;,&quot;&quot;))) {
+        BigDecimal line_cur_a = new BigDecimal(elect_col_arr[2])
+        if (count == 0) {
+            max_cur = line_cur_a
+            min_cur = line_cur_a
+        }
+        if (line_cur_a.compareTo(max_cur) &gt; 0) {
+            max_cur = line_cur_a;
+        }
+        if (line_cur_a.compareTo(min_cur) &lt; 0) {
+            min_cur = line_cur_a;
+        }
+        sum_cur = sum_cur.add(line_cur_a);
+        count++;
+    }
+    BigDecimal line_pallpower = new BigDecimal(elect_col_arr[40])
+    sum_pallpower = sum_pallpower.add(line_pallpower);
+
+    BigDecimal line_allenergy_a = new BigDecimal(elect_col_arr[4])
+    sum_allenergy_a = sum_allenergy_a.add(line_allenergy_a)
+}
+log.debug(max_cur.toString())
+log.debug(min_cur.toString())
+log.debug(sum_cur.toString())
+log.debug(sum_pallpower.toString())
+log.info(sum_allenergy_a.toString())
+log.debug(count + &quot;&quot;)
+log.debug(csv_list.size() + &quot;&quot;)
+BigDecimal avg_cur = sum_cur.divide(new BigDecimal(count)).setScale(16, RoundingMode.HALF_UP)
+JMeterUtils.setProperty(&quot;max_cur_expect&quot;, max_cur.setScale(2, RoundingMode.HALF_UP).toString())
+JMeterUtils.setProperty(&quot;min_cur_expect&quot;, min_cur.setScale(2, RoundingMode.HALF_UP).toString())
+JMeterUtils.setProperty(&quot;avg_cur_expect&quot;, avg_cur.setScale(16, RoundingMode.HALF_UP).toString())
+JMeterUtils.setProperty(&quot;sum_pallpower_in_csv&quot;, sum_pallpower.setScale(2, RoundingMode.HALF_UP).toString())
+JMeterUtils.setProperty(&quot;sum_allenergy_a_in_csv&quot;, sum_allenergy_a.setScale(2, RoundingMode.HALF_UP).toString())
+JMeterUtils.setProperty(&quot;csv_line_amount&quot;, csv_list.size() + &quot;&quot;)
+
+SampleResult.setIgnore()</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(random)" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
@@ -586,25 +671,7 @@ vars.put(&quot;workshopElectmeterInsertSql&quot;, sqlBuilder.toString())</string
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.sql.*
-import java.io.*
-import java.text.SimpleDateFormat
-import java.time.Duration
-
-def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
-
-vars.putObject(&quot;date_formatter&quot;, formatter)
-vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
-vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()</stringProp>
-        </JSR223Sampler>
-        <hashTree/>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)加载数据" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="加载数据" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -623,15 +690,6 @@ do {
 } while (line != null);
 vars.putObject(&quot;csv_list&quot;, csv_list)
 
-def tighten_csv_reader = new RandomAccessFile(vars.get(&quot;sample_tighten_data&quot;), &quot;r&quot;)
-do {
-    line = tighten_csv_reader.readLine();
-    if (line != null) {
-        tighten_csv_list.add(line);
-    }
-} while (line != null);
-vars.putObject(&quot;tighten_csv_list&quot;, tighten_csv_list)
-
 def cnc_csv_reader = new RandomAccessFile(vars.get(&quot;sample_cnc_data&quot;), &quot;r&quot;)
 vars.putObject(&quot;cnc_csv_reader&quot;, cnc_csv_reader)
 do {
@@ -644,18 +702,36 @@ vars.putObject(&quot;cnc_csv_list&quot;, cnc_csv_list)
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.sql.*
+import java.io.*
+import java.text.SimpleDateFormat
+import java.time.Duration
+
+def formatter = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
+
+vars.putObject(&quot;date_formatter&quot;, formatter)
+vars.putObject(&quot;write_start_at&quot;, System.currentTimeMillis())
+vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
+SampleResult.setIgnore()</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
           <stringProp name="throughput">${write_throughput}</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)IF data_ts_step &gt; 5(virtual time)" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF data_ts_step &gt; 5(virtual time)" enabled="true">
           <stringProp name="IfController.condition">${__groovy(Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环写入" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -678,7 +754,7 @@ SampleResult.setIgnore()</stringProp>
               <boolProp name="CounterConfig.per_user">false</boolProp>
             </CounterConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
@@ -713,43 +789,22 @@ List generateTimestampList() {
   return tsList
 }
 
-List getSwapedListOrNot() {
-  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
-  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
-  log.debug(&quot;index={}&quot;, index)
-  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
-  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
-	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
-	log.debug(&quot;tmpList={}&quot;, tmpList)
-    return tmpList
-  }
-  return generateTimestampList()
-}
-
 void generateBatchInsertSQL() {
   def csv_list = vars.getObject(&quot;csv_list&quot;)
   def builder = new StringBuilder()
-  def td_builder = new StringBuilder()
   int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_electmeter (k_timestamp, elect_name,vol_a,cur_a, powerf_a, allenergy_a, pallenergy_a, rallenergy_a, allrenergy1_a, allrenergy2_a, powera_a, powerr_a, powerl_a, vol_b, cur_b, powerf_b, allenergy_b, pallenergy_b, rallenergy_b, allrenergy1_b, allrenergy2_b, powera_b, powerr_b, powerl_b, vol_c, cur_c, powerf_c, allenergy_c, pallenergy_c, rallenergy_c, allrenergy1_c, allrenergy2_c, powera_c, powerr_c, powerl_c, vol_ab, vol_bc, vol_ca, infre, powerf, allpower, pallpower, rallpower, powerr, powerl, allrenergy1, allrenergy2, machine_code, op_group, workshop_id, cnc_number) values &quot;)
-  td_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_electmeter tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
-  td_builder.append(workshop_id)
-  td_builder.append(&quot;,${__Random(1,20,)}) values &quot;)
-  def swapedList = getSwapedListOrNot()
+  def timestampedList = generateTimestampList()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
   	def nextLine = csv_list.get(lineIdx)
-	builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
-	builder.append(workshop_id)
-	builder.append(&quot;,${__Random(1,20,)}),&quot;)
-	td_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
+	  builder.append(&quot;(${timestampedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	  builder.append(workshop_id)
+	  builder.append(&quot;,${__Random(1,20,)}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-  td_builder.setCharAt(td_builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
-  log.debug(&quot;td_builder={}&quot;, td_builder.toString())
   vars.put(&quot;builder&quot;, builder.toString())
-  vars.put(&quot;td_builder&quot;, td_builder.toString())
 }
 
 generateBatchInsertSQL()</stringProp>
@@ -765,7 +820,7 @@ generateBatchInsertSQL()</stringProp>
               </ResponseAssertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${cnc_builder}</stringProp>
@@ -800,42 +855,22 @@ List generateTimestampList() {
   return tsList
 }
 
-List getSwapedListOrNot() {
-  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
-  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
-  log.debug(&quot;index={}&quot;, index)
-  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
-  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
-	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
-	log.debug(&quot;tmpList={}&quot;, tmpList)
-    return tmpList
-  }
-  return generateTimestampList()
-}
-
 void generateBatchInsertSQL() {
   def cnc_csv_list = vars.getObject(&quot;cnc_csv_list&quot;)
   def cnc_builder = new StringBuilder()
-  def td_cnc_builder = new StringBuilder()
   int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
   cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc (k_timestamp, cnc_sn, cnc_sw_mver, cnc_sw_sver, cnc_tol_mem, cnc_use_mem, cnc_unuse_mem, cnc_status, path_quantity, axis_quantity, axis_path, axis_type, axis_unit, axis_num, axis_name, sp_name, abs_pos, rel_pos, mach_pos, dist_pos, sp_override, sp_set_speed, sp_act_speed, sp_load, feed_set_speed, feed_act_speed, feed_override, servo_load, parts_count, cnc_cycletime, cnc_alivetime, cnc_cuttime, cnc_runtime, mprog_name, mprog_num, sprog_name, sprog_num, prog_seq_num, prog_seq_content, alarm_count, alarm_type, alarm_code, alarm_content, alarm_time, cur_tool_num, cur_tool_len_num, cur_tool_len, cur_tool_len_val, cur_tool_x_len, cur_tool_x_len_val, cur_tool_y_len, cur_tool_y_len_val, cur_tool_z_len, cur_tool_z_len_val, cur_tool_rad_num, cur_tool_rad, cur_tool_rad_val, device_state, value1, value2, value3, value4, value5, machine_code, op_group, workshop_id, number_of_molds) values &quot;)
-  td_cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_cnc tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
-  td_cnc_builder.append(workshop_id)
-  td_cnc_builder.append(&quot;,${__Random(1,20,)}) values &quot;)
-  def swapedList = getSwapedListOrNot()
+  def timestampedList = generateTimestampList()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
   	def nextLine = cnc_csv_list.get(lineIdx)
-	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
-	cnc_builder.append(workshop_id)
-	cnc_builder.append(&quot;,${__Random(1,20,)}),&quot;)
-     td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
+	  cnc_builder.append(&quot;(${timestampedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	  cnc_builder.append(workshop_id)
+	  cnc_builder.append(&quot;,${__Random(1,20,)}),&quot;)
   }
   cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
-  td_cnc_builder.setCharAt(td_cnc_builder.length() - 1, &apos;;&apos; as char)
-  log.debug(&quot;td_cnc_builder={}&quot;, td_cnc_builder.toString())
+
   vars.put(&quot;cnc_builder&quot;, cnc_builder.toString())
-  vars.put(&quot;td_cnc_builder&quot;, td_cnc_builder.toString())
 }
 
 generateBatchInsertSQL()</stringProp>
@@ -853,13 +888,13 @@ generateBatchInsertSQL()</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)IF data_ts_step &lt;= 5(real time)" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF data_ts_step &lt;= 5(real time)" enabled="true">
           <stringProp name="IfController.condition">${__groovy(Integer.valueOf(&quot;${data_ts_step}&quot;)&lt;=5)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环写入" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -882,7 +917,7 @@ generateBatchInsertSQL()</stringProp>
               <boolProp name="CounterConfig.per_user">false</boolProp>
             </CounterConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${builder}</stringProp>
@@ -916,43 +951,23 @@ List generateTimestampList() {
   return tsList
 }
 
-List getSwapedListOrNot() {
-  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
-  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
-  log.debug(&quot;index={}&quot;, index)
-  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
-  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
-	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
-	log.debug(&quot;tmpList={}&quot;, tmpList)
-    return tmpList
-  }
-  return generateTimestampList()
-}
-
 void generateBatchInsertSQL() {
   def csv_list = vars.getObject(&quot;csv_list&quot;)
   def builder = new StringBuilder()
-  def td_builder = new StringBuilder()
   int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
   builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_electmeter (k_timestamp, elect_name,vol_a,cur_a, powerf_a, allenergy_a, pallenergy_a, rallenergy_a, allrenergy1_a, allrenergy2_a, powera_a, powerr_a, powerl_a, vol_b, cur_b, powerf_b, allenergy_b, pallenergy_b, rallenergy_b, allrenergy1_b, allrenergy2_b, powera_b, powerr_b, powerl_b, vol_c, cur_c, powerf_c, allenergy_c, pallenergy_c, rallenergy_c, allrenergy1_c, allrenergy2_c, powera_c, powerr_c, powerl_c, vol_ab, vol_bc, vol_ca, infre, powerf, allpower, pallpower, rallpower, powerr, powerl, allrenergy1, allrenergy2, machine_code, op_group, workshop_id, cnc_number) values &quot;)
-  td_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.electmeter_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_electmeter tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
-  td_builder.append(workshop_id)
-  td_builder.append(&quot;,${__Random(1,20,)}) values &quot;)
-  def swapedList = getSwapedListOrNot()
+
+  def timestampedList = generateTimestampList()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
   	def nextLine = csv_list.get(lineIdx)
-	builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	builder.append(&quot;(${timestampedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
 	builder.append(workshop_id)
 	builder.append(&quot;,${__Random(1,20,)}),&quot;)
-	td_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
   }
   builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
-  td_builder.setCharAt(td_builder.length() - 1, &apos;;&apos; as char)
   log.debug(&quot;builder={}&quot;, builder.toString())
-  log.debug(&quot;td_builder={}&quot;, td_builder.toString())
   vars.put(&quot;builder&quot;, builder.toString())
-  vars.put(&quot;td_builder&quot;, td_builder.toString())
 }
 
 generateBatchInsertSQL()</stringProp>
@@ -968,7 +983,7 @@ generateBatchInsertSQL()</stringProp>
               </ResponseAssertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Update Statement</stringProp>
               <stringProp name="query">${cnc_builder}</stringProp>
@@ -1002,42 +1017,23 @@ List generateTimestampList() {
   return tsList
 }
 
-List getSwapedListOrNot() {
-  int index = Integer.parseInt(vars.get(&quot;batch_idx&quot;))
-  int disorderBatchInterval = Integer.parseInt(vars.get(&quot;disorder_batch_interval&quot;))
-  log.debug(&quot;index={}&quot;, index)
-  log.debug(&quot;disorderBatchInterval={}&quot;, disorderBatchInterval)
-  if (disorderBatchInterval != 0 &amp;&amp; index % disorderBatchInterval == 0) {
-	tmpList = generateTimestampList().swap(0, Integer.parseInt(vars.get(&quot;swap_line_idx&quot;)))
-	log.debug(&quot;tmpList={}&quot;, tmpList)
-    return tmpList
-  }
-  return generateTimestampList()
-}
-
 void generateBatchInsertSQL() {
   def cnc_csv_list = vars.getObject(&quot;cnc_csv_list&quot;)
   def cnc_builder = new StringBuilder()
-  def td_cnc_builder = new StringBuilder()
   int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
   cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc (k_timestamp, cnc_sn, cnc_sw_mver, cnc_sw_sver, cnc_tol_mem, cnc_use_mem, cnc_unuse_mem, cnc_status, path_quantity, axis_quantity, axis_path, axis_type, axis_unit, axis_num, axis_name, sp_name, abs_pos, rel_pos, mach_pos, dist_pos, sp_override, sp_set_speed, sp_act_speed, sp_load, feed_set_speed, feed_act_speed, feed_override, servo_load, parts_count, cnc_cycletime, cnc_alivetime, cnc_cuttime, cnc_runtime, mprog_name, mprog_num, sprog_name, sprog_num, prog_seq_num, prog_seq_content, alarm_count, alarm_type, alarm_code, alarm_content, alarm_time, cur_tool_num, cur_tool_len_num, cur_tool_len, cur_tool_len_val, cur_tool_x_len, cur_tool_x_len_val, cur_tool_y_len, cur_tool_y_len_val, cur_tool_z_len, cur_tool_z_len_val, cur_tool_rad_num, cur_tool_rad, cur_tool_rad_val, device_state, value1, value2, value3, value4, value5, machine_code, op_group, workshop_id, number_of_molds) values &quot;)
-  td_cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.cnc_${__threadNum}_${vars.get(&quot;device_num&quot;)} using ${vars.get(&quot;db_name&quot;)}.t_cnc tags (&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
-  td_cnc_builder.append(workshop_id)
-  td_cnc_builder.append(&quot;,${__Random(1,20,)}) values &quot;)
-  def swapedList = getSwapedListOrNot()
+
+  def timestampedList = generateTimestampList()
   def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
   for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
   	def nextLine = cnc_csv_list.get(lineIdx)
-	cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
-	cnc_builder.append(workshop_id)
-	cnc_builder.append(&quot;,${__Random(1,20,)}),&quot;)
-     td_cnc_builder.append(&quot;(${swapedList.get(lineIdx)},${nextLine}),&quot;)
+	  cnc_builder.append(&quot;(${timestampedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	  cnc_builder.append(workshop_id)
+	  cnc_builder.append(&quot;,${__Random(1,20,)}),&quot;)
   }
   cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
-  td_cnc_builder.setCharAt(td_cnc_builder.length() - 1, &apos;;&apos; as char)
-  log.debug(&quot;td_cnc_builder={}&quot;, td_cnc_builder.toString())
+
   vars.put(&quot;cnc_builder&quot;, cnc_builder.toString())
-  vars.put(&quot;td_cnc_builder&quot;, td_cnc_builder.toString())
 }
 
 generateBatchInsertSQL()</stringProp>
@@ -1072,7 +1068,7 @@ generateBatchInsertSQL()</stringProp>
       <hashTree>
         <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询数据库对象" enabled="true"/>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW DATABASES;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW DATABASES;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW DATABASES;</stringProp>
@@ -1085,7 +1081,7 @@ generateBatchInsertSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)USE ${db_name};" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="USE ${db_name};" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">USE ${db_name};</stringProp>
@@ -1098,7 +1094,7 @@ generateBatchInsertSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW TABLES;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TABLES;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW TABLES;</stringProp>
@@ -1111,7 +1107,7 @@ generateBatchInsertSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW TEMPLATE TABLES;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TEMPLATE TABLES;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW TEMPLATE TABLES;</stringProp>
@@ -1124,7 +1120,7 @@ generateBatchInsertSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW CREATE TABLE ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW CREATE TABLE ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW CREATE TABLE ${db_name}.t_electmeter;</stringProp>
@@ -1137,7 +1133,7 @@ generateBatchInsertSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW COLUMNS FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW COLUMNS FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW COLUMNS FROM ${db_name}.t_electmeter;</stringProp>
@@ -1150,7 +1146,7 @@ generateBatchInsertSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
@@ -1163,7 +1159,7 @@ generateBatchInsertSQL()</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW TAGS FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TAGS FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW TAGS FROM ${db_name}.t_electmeter;</stringProp>
@@ -1179,7 +1175,7 @@ generateBatchInsertSQL()</stringProp>
         </hashTree>
         <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="维护模板表/实例表属性" enabled="true"/>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)添加属性" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="添加属性" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter ADD ATTRIBUTE workshop varchar(64);
@@ -1195,7 +1191,7 @@ UPDATE ${db_name}.t_electmeter SET factory = &apos;factory_1&apos; WHERE machine
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
@@ -1208,7 +1204,7 @@ UPDATE ${db_name}.t_electmeter SET factory = &apos;factory_1&apos; WHERE machine
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)重命名属性" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="重命名属性" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter RENAME TAG workshop TO workshop_name;
@@ -1224,7 +1220,7 @@ UPDATE ${db_name}.t_electmeter SET factory_name = &apos;1&apos; WHERE machine_co
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
@@ -1237,7 +1233,7 @@ UPDATE ${db_name}.t_electmeter SET factory_name = &apos;1&apos; WHERE machine_co
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)移除属性" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="移除属性" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter DROP TAG workshop_name;
@@ -1251,7 +1247,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP ATTRIBUTE factory_name;</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
@@ -1267,7 +1263,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP ATTRIBUTE factory_name;</stringProp>
         </hashTree>
         <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="增删时序表字段" enabled="true"/>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 添加字段" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="添加字段" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter ADD test_add_col_1 int;
@@ -1294,7 +1290,7 @@ ALTER TABLE ${db_name}.t_electmeter ADD COLUMN IF NOT EXISTS test_add_col_4 time
             </ResponseAssertion>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0) 删除字段" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="删除字段" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">ALTER TABLE ${db_name}.t_electmeter DROP test_add_col_1;
@@ -1345,12 +1341,12 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环控制器" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)sp_act_speed" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="sp_act_speed" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -1361,7 +1357,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)sp_act_speed" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sp_act_speed" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__threadNum}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
@@ -1413,12 +1409,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环控制器" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)last_all" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last_all" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Prepared Select Statement</stringProp>
             <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &gt; now() - 1 minute and machine_code = ?;</stringProp>
@@ -1451,12 +1447,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)last curs with machine_code" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="last curs with machine_code" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -1476,7 +1472,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)last curs with machine_code" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last curs with machine_code" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 and machine_code = ? group by machine_code</stringProp>
@@ -1514,12 +1510,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)max min and avg in electmeters" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="max min and avg in electmeters" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -1530,7 +1526,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)max min and avg in electmeters" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="max min and avg in electmeters" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz group by machine_code order by machine_code asc;</stringProp>
@@ -1552,6 +1548,16 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
 vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
               </JSR223PreProcessor>
+              <hashTree/>
+              <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="JSR223 后置处理程序" enabled="true">
+                <stringProp name="cacheKey">true</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">log.info(vars.get(&quot;max1_1&quot;))
+log.info(vars.get(&quot;min1_1&quot;))
+log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PostProcessor>
               <hashTree/>
             </hashTree>
           </hashTree>
@@ -1579,12 +1585,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)in &amp;&amp; group by" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="in &amp;&amp; group by" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -1595,7 +1601,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)in &amp;&amp; group by" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="in &amp;&amp; group by" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz and abs(infre - 50) &gt;= 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
@@ -1644,12 +1650,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)querypage" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="querypage" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -1660,7 +1666,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)querypage" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="querypage" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
@@ -1685,7 +1691,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
               <hashTree/>
             </hashTree>
           </hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)sumpower" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="sumpower" enabled="false">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -1696,7 +1702,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)sumpower" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sumpower" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamptz and t.k_timestamp &lt; (${end_timestamp})::timestamptz;</stringProp>
@@ -1744,12 +1750,12 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="(2.0.0)last curs" enabled="true">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="last curs" enabled="true">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -1760,7 +1766,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
             </FloatProperty>
           </ThroughputController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)last curs" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last curs" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 group by machine_code</stringProp>
@@ -1798,12 +1804,12 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="(2.0.0)循环控制器" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)sum_all_energy_a_in_company" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sum_all_energy_a_in_company" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">select sum(allenergy_a) from
@@ -1844,7 +1850,7 @@ log.info(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 删除时序表和库" enabled="true">
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 断言和清理">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -1855,13 +1861,675 @@ log.info(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
         </elementProp>
       </PostThreadGroup>
       <hashTree>
+        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询正确性断言"/>
+        <hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="assert total count of t_electmeter" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Select Statement</stringProp>
+            <stringProp name="query">select count(*) from db_shig.t_electmeter where 1=1;</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames">electmeter_count_actual</stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">int electmeterCountActual = Integer.parseInt(vars.get(&quot;electmeter_count_actual_1&quot;))
+int electmeterCountExpect = Integer.parseInt(vars.get(&quot;electmeter_count_expect&quot;))
+int batchWriteLines = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+
+if ( electmeterCountActual % batchWriteLines == 0 ) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailureMessage(&quot;electmeterCountActual is not a multiple of 100&quot;)
+    AssertionResult.setFailure(true)
+}
+
+if ( electmeterCountActual &gt;= electmeterCountExpect * 0.95 ) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailureMessage(&quot;electmeterCountExpect: &quot; + electmeterCountExpect + &quot;,electmeterCountActual: &quot; + electmeterCountActual)
+    AssertionResult.setFailure(true)
+}</stringProp>
+            </JSR223Assertion>
+            <hashTree/>
+          </hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="assert total count of t_cnc" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Select Statement</stringProp>
+            <stringProp name="query">select count(*) from db_shig.t_cnc where 1=1;</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames">cnc_count_actual</stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">int cncCountActual = Integer.parseInt(vars.get(&quot;cnc_count_actual_1&quot;))
+int cncCountExpect = Integer.parseInt(vars.get(&quot;cnc_count_expect&quot;))
+int batchWriteLines = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+
+if ( cncCountActual % batchWriteLines == 0 ) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailureMessage(&quot;cncCountActual is not a multiple of 100&quot;)
+    AssertionResult.setFailure(true)
+}
+
+if ( cncCountActual &gt;= cncCountExpect * 0.95 ) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailureMessage(&quot;cncCountExpect: &quot; + cncCountExpect + &quot;,cncCountActual: &quot; + cncCountActual)
+    AssertionResult.setFailure(true)
+}</stringProp>
+            </JSR223Assertion>
+            <hashTree/>
+          </hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL1: assert_sp_act_speed" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Prepared Select Statement</stringProp>
+            <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__threadNum}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames">k_timestamp_sp_act_speed,sp_act_speed_actual</stringProp>
+            <stringProp name="resultVariable">sp_act_speed_result_list</stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">false</stringProp>
+              <stringProp name="script">def pageNo = Integer.parseInt(vars.getObject(&quot;page_no&quot;));
+def pageSize = Integer.parseInt(vars.getObject(&quot;page_size&quot;));
+vars.putObject(&quot;page_start&quot;, (pageNo - 1)*pageSize);
+vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-20M,,)})
+vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
+vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">import org.apache.jmeter.util.JMeterUtils;
+
+boolean isCycleContains(String expect, String actual) {
+    StringBuilder dupStringBuilder
+    if (expect.length() &gt; actual.length()) {
+        dupStringBuilder = new StringBuilder(expect)
+        dupStringBuilder.append(expect)
+        return dupStringBuilder.toString().contains(actual)
+    } else {
+        dupStringBuilder = new StringBuilder(actual)
+        dupStringBuilder.append(actual)
+        return dupStringBuilder.toString().contains(expect)
+    }
+}
+
+String spActSpeedExpect = JMeterUtils.getProperty(&quot;sp_act_speed_list_expect&quot;)
+
+List spActSpeedResultList = vars.getObject(&quot;sp_act_speed_result_list&quot;)
+StringBuilder spActSpeedBuilder = new StringBuilder()
+for (int resultIndex = spActSpeedResultList.size(); resultIndex &gt;= 1; resultIndex--) {
+    spActSpeedBuilder.append(vars.get(&quot;sp_act_speed_actual_&quot; + resultIndex))
+    if (resultIndex &gt; 1) {
+        spActSpeedBuilder.append(&quot;,&quot;)
+    }
+}
+String spActSpeedActual = spActSpeedBuilder.toString()
+
+
+if (isCycleContains(spActSpeedExpect, spActSpeedActual)) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailure(true)
+    pageStart = vars.get(&quot;page_start&quot;)
+    pageSize = vars.get(&quot;page_size&quot;)
+    beginTimestamp = vars.get(&quot;begin_timestamp&quot;)
+    endTimestamp = vars.get(&quot;end_timestamp&quot;)
+    machineCode = vars.get(&quot;machine_code&quot;)
+    AssertionResult.setFailureMessage(
+        &quot;page_start=&quot; + pageStart + 
+        &quot;,\npage_size=&quot; + pageSize + 
+        &quot;,\nbegin_timestamp=&quot; + beginTimestamp + 
+        &quot;,\nend_timestamp=&quot; + endTimestamp + 
+        &quot;,\nmachine_code=&quot; + machineCode + 
+        &quot;,\nspActSpeedExpect=&quot; + spActSpeedExpect + 
+        &quot;,\nspActSpeedActual=&quot; + spActSpeedActual)
+}</stringProp>
+            </JSR223Assertion>
+            <hashTree/>
+          </hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL2: last curs with machine_code" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Prepared Select Statement</stringProp>
+            <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &gt; now() - 1 minute and machine_code = ?;</stringProp>
+            <stringProp name="queryArguments">1_8</stringProp>
+            <stringProp name="queryArgumentsTypes">varchar</stringProp>
+            <stringProp name="variableNames">k_timestamp,cnc_sn,cnc_sw_mver,cnc_sw_sver,cnc_tol_mem,cnc_use_mem,cnc_unuse_mem,cnc_status,path_quantity,axis_quantity,axis_path,axis_type,axis_unit,axis_num,axis_name,sp_name,abs_pos,rel_pos,mach_pos,dist_pos,sp_override,sp_set_speed,sp_act_speed,sp_load,feed_set_speed,feed_act_speed,feed_override,servo_load,parts_count,cnc_cycletime,cnc_alivetime,cnc_cuttime,cnc_runtime,mprog_name,mprog_num,sprog_name,sprog_num,prog_seq_num,prog_seq_content,alarm_count,alarm_type,alarm_code,alarm_content,alarm_time,cur_tool_num,cur_tool_len_num,cur_tool_len,cur_tool_len_val,cur_tool_x_len,cur_tool_x_len_val,cur_tool_y_len,cur_tool_y_len_val,cur_tool_z_len,cur_tool_z_len_val,cur_tool_rad_num,cur_tool_rad,cur_tool_rad_val,device_state,value1,value2,value3,value4,value5,machine_code,op_group,workshop_id,number_of_molds</stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">import org.apache.jmeter.util.JMeterUtils;
+
+String lastCncExpect = JMeterUtils.getProperty(&quot;last_cnc_expect&quot;).replaceAll(&quot;&apos;&quot;, &quot;&quot;)
+
+List&lt;String&gt; fieldList = new ArrayList()
+fieldList.add(vars.get(&quot;k_timestamp_1&quot;))
+fieldList.add(vars.get(&quot;cnc_sn_1&quot;))
+fieldList.add(vars.get(&quot;cnc_sw_mver_1&quot;))
+fieldList.add(vars.get(&quot;cnc_sw_sver_1&quot;))
+fieldList.add(vars.get(&quot;cnc_tol_mem_1&quot;))
+fieldList.add(vars.get(&quot;cnc_use_mem_1&quot;))
+fieldList.add(vars.get(&quot;cnc_unuse_mem_1&quot;))
+fieldList.add(vars.get(&quot;cnc_status_1&quot;))
+fieldList.add(vars.get(&quot;path_quantity_1&quot;))
+fieldList.add(vars.get(&quot;axis_quantity_1&quot;))
+fieldList.add(vars.get(&quot;axis_path_1&quot;))
+fieldList.add(vars.get(&quot;axis_type_1&quot;))
+fieldList.add(vars.get(&quot;axis_unit_1&quot;))
+fieldList.add(vars.get(&quot;axis_num_1&quot;))
+fieldList.add(vars.get(&quot;axis_name_1&quot;))
+fieldList.add(vars.get(&quot;sp_name_1&quot;))
+fieldList.add(vars.get(&quot;abs_pos_1&quot;))
+fieldList.add(vars.get(&quot;rel_pos_1&quot;))
+fieldList.add(vars.get(&quot;mach_pos_1&quot;))
+fieldList.add(vars.get(&quot;dist_pos_1&quot;))
+fieldList.add(vars.get(&quot;sp_override_1&quot;))
+fieldList.add(vars.get(&quot;sp_set_speed_1&quot;))
+fieldList.add(vars.get(&quot;sp_act_speed_1&quot;))
+fieldList.add(vars.get(&quot;sp_load_1&quot;))
+fieldList.add(vars.get(&quot;feed_set_speed_1&quot;))
+fieldList.add(vars.get(&quot;feed_act_speed_1&quot;))
+fieldList.add(vars.get(&quot;feed_override_1&quot;))
+fieldList.add(vars.get(&quot;servo_load_1&quot;))
+fieldList.add(vars.get(&quot;parts_count_1&quot;))
+fieldList.add(vars.get(&quot;cnc_cycletime_1&quot;))
+fieldList.add(vars.get(&quot;cnc_alivetime_1&quot;))
+fieldList.add(vars.get(&quot;cnc_cuttime_1&quot;))
+fieldList.add(vars.get(&quot;cnc_runtime_1&quot;))
+fieldList.add(vars.get(&quot;mprog_name_1&quot;))
+fieldList.add(vars.get(&quot;mprog_num_1&quot;))
+fieldList.add(vars.get(&quot;sprog_name_1&quot;))
+fieldList.add(vars.get(&quot;sprog_num_1&quot;))
+fieldList.add(vars.get(&quot;prog_seq_num_1&quot;))
+fieldList.add(vars.get(&quot;prog_seq_content_1&quot;))
+fieldList.add(vars.get(&quot;alarm_count_1&quot;))
+fieldList.add(vars.get(&quot;alarm_type_1&quot;))
+fieldList.add(vars.get(&quot;alarm_code_1&quot;))
+fieldList.add(vars.get(&quot;alarm_content_1&quot;))
+fieldList.add(vars.get(&quot;alarm_time_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_num_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_len_num_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_len_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_len_val_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_x_len_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_x_len_val_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_y_len_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_y_len_val_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_z_len_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_z_len_val_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_rad_num_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_rad_1&quot;))
+fieldList.add(vars.get(&quot;cur_tool_rad_val_1&quot;))
+fieldList.add(vars.get(&quot;device_state_1&quot;))
+fieldList.add(vars.get(&quot;value1_1&quot;))
+fieldList.add(vars.get(&quot;value2_1&quot;))
+fieldList.add(vars.get(&quot;value3_1&quot;))
+fieldList.add(vars.get(&quot;value4_1&quot;))
+fieldList.add(vars.get(&quot;value5_1&quot;))
+fieldList.add(vars.get(&quot;machine_code_1&quot;))
+fieldList.add(vars.get(&quot;op_group_1&quot;))
+fieldList.add(vars.get(&quot;workshop_id_1&quot;))
+fieldList.add(vars.get(&quot;number_of_molds&quot;))
+
+String lastCncActual = String.join(&quot;,&quot;, fieldList)
+if ( lastCncActual.contains(lastCncExpect) ) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailureMessage(&quot;lastCncExpect: &quot; + lastCncExpect + &quot;lastCncActual: &quot; + lastCncActual)
+    AssertionResult.setFailure(true)
+}</stringProp>
+            </JSR223Assertion>
+            <hashTree/>
+          </hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL3: assert last curs with machine_code" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Prepared Select Statement</stringProp>
+            <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 and machine_code = ? group by machine_code</stringProp>
+            <stringProp name="queryArguments">1_8</stringProp>
+            <stringProp name="queryArgumentsTypes">varchar</stringProp>
+            <stringProp name="variableNames">k_timestamp,elect_name,vol_a,cur_a,powerf_a,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,vol_bc,vol_ca,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2,machine_code,op_group,workshop_id,cnc_number</stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">import org.apache.jmeter.util.JMeterUtils;
+
+String lastElectmeterExpect = JMeterUtils.getProperty(&quot;last_electmeter_expect&quot;).replaceAll(&quot;&apos;&quot;, &quot;&quot;)
+
+List&lt;String&gt; fieldList = new ArrayList()
+fieldList.add(vars.get(&quot;elect_name_1&quot;))
+fieldList.add(vars.get(&quot;vol_a_1&quot;))
+fieldList.add(vars.get(&quot;cur_a_1&quot;))
+fieldList.add(vars.get(&quot;powerf_a_1&quot;))
+fieldList.add(vars.get(&quot;allenergy_a_1&quot;))
+fieldList.add(vars.get(&quot;pallenergy_a_1&quot;))
+fieldList.add(vars.get(&quot;rallenergy_a_1&quot;))
+fieldList.add(vars.get(&quot;allrenergy1_a_1&quot;))
+fieldList.add(vars.get(&quot;allrenergy2_a_1&quot;))
+fieldList.add(vars.get(&quot;powera_a_1&quot;))
+fieldList.add(vars.get(&quot;powerr_a_1&quot;))
+fieldList.add(vars.get(&quot;powerl_a_1&quot;))
+fieldList.add(vars.get(&quot;vol_b_1&quot;))
+fieldList.add(vars.get(&quot;cur_b_1&quot;))
+fieldList.add(vars.get(&quot;powerf_b_1&quot;))
+fieldList.add(vars.get(&quot;allenergy_b_1&quot;))
+fieldList.add(vars.get(&quot;pallenergy_b_1&quot;))
+fieldList.add(vars.get(&quot;rallenergy_b_1&quot;))
+fieldList.add(vars.get(&quot;allrenergy1_b_1&quot;))
+fieldList.add(vars.get(&quot;allrenergy2_b_1&quot;))
+fieldList.add(vars.get(&quot;powera_b_1&quot;))
+fieldList.add(vars.get(&quot;powerr_b_1&quot;))
+fieldList.add(vars.get(&quot;powerl_b_1&quot;))
+fieldList.add(vars.get(&quot;vol_c_1&quot;))
+fieldList.add(vars.get(&quot;cur_c_1&quot;))
+fieldList.add(vars.get(&quot;powerf_c_1&quot;))
+fieldList.add(vars.get(&quot;allenergy_c_1&quot;))
+fieldList.add(vars.get(&quot;pallenergy_c_1&quot;))
+fieldList.add(vars.get(&quot;rallenergy_c_1&quot;))
+fieldList.add(vars.get(&quot;allrenergy1_c_1&quot;))
+fieldList.add(vars.get(&quot;allrenergy2_c_1&quot;))
+fieldList.add(vars.get(&quot;powera_c_1&quot;))
+fieldList.add(vars.get(&quot;powerr_c_1&quot;))
+fieldList.add(vars.get(&quot;powerl_c_1&quot;))
+fieldList.add(vars.get(&quot;vol_ab_1&quot;))
+fieldList.add(vars.get(&quot;vol_bc_1&quot;))
+fieldList.add(vars.get(&quot;vol_ca_1&quot;))
+fieldList.add(vars.get(&quot;infre_1&quot;))
+fieldList.add(vars.get(&quot;powerf_1&quot;))
+fieldList.add(vars.get(&quot;allpower_1&quot;))
+fieldList.add(vars.get(&quot;pallpower_1&quot;))
+fieldList.add(vars.get(&quot;rallpower_1&quot;))
+fieldList.add(vars.get(&quot;powerr_1&quot;))
+fieldList.add(vars.get(&quot;powerl_1&quot;))
+fieldList.add(vars.get(&quot;allrenergy1_1&quot;))
+fieldList.add(vars.get(&quot;allrenergy2_1&quot;))
+
+String lastElectmeterActual = String.join(&quot;,&quot;, fieldList)
+if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailureMessage(&quot;lastElectmeterExpect: &quot; + lastElectmeterExpect + &quot;lastElectmeterActual: &quot; + lastElectmeterActual)
+    AssertionResult.setFailure(true)
+}</stringProp>
+            </JSR223Assertion>
+            <hashTree/>
+          </hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL4: max min and avg in electmeters">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Prepared Select Statement</stringProp>
+            <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur, sum(cur_a) as sum_cur, count(cur_a) as count_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz group by machine_code order by machine_code asc;</stringProp>
+            <stringProp name="queryArguments">${machine_code},a004</stringProp>
+            <stringProp name="queryArgumentsTypes">varchar,varchar</stringProp>
+            <stringProp name="variableNames">machine_code,max_cur,min_cur,avg_cur,sum_cur,count_cur</stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">false</stringProp>
+              <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-121M,,)})
+vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">import org.apache.jmeter.util.JMeterUtils;
+
+String maxCurExpect = JMeterUtils.getProperty(&quot;max_cur_expect&quot;)
+String minCurExpect = JMeterUtils.getProperty(&quot;min_cur_expect&quot;)
+String avgCurExpect = JMeterUtils.getProperty(&quot;avg_cur_expect&quot;)
+
+String maxCurActual = vars.get(&quot;max_cur_1&quot;)
+String minCurActual = vars.get(&quot;min_cur_1&quot;)
+String avgCurActual = vars.get(&quot;avg_cur_1&quot;)
+String avgSumActual = vars.get(&quot;sum_cur_1&quot;)
+String avgCountActual = vars.get(&quot;count_cur_1&quot;)
+
+double delta = 1e-8
+
+if (Math.abs(Double.parseDouble(maxCurExpect) - Double.parseDouble(maxCurActual)) &lt; delta &amp;&amp; Math.abs(Double.parseDouble(minCurExpect) - Double.parseDouble(minCurActual)) &lt; delta &amp;&amp; Math.abs(Double.parseDouble(avgCurExpect) - Double.parseDouble(avgCurActual)) &lt; delta) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailure(true)
+    beginTimestamp = vars.get(&quot;begin_timestamp&quot;)
+    endTimestamp = vars.get(&quot;end_timestamp&quot;)
+    machineCode = vars.get(&quot;machine_code&quot;)
+    AssertionResult.setFailureMessage(
+        &quot;begin_timestamp=&quot; + beginTimestamp + 
+        &quot;,\nend_timestamp=&quot; + endTimestamp + 
+        &quot;,\nmachine_code=&quot; + machineCode + 
+        &quot;,\nmaxCurExpect=&quot; + maxCurExpect + 
+        &quot;,\nmaxCurActual=&quot; + maxCurActual + 
+        &quot;,\nminCurExpect=&quot; + minCurExpect + 
+        &quot;,\nminCurActual=&quot; + minCurActual + 
+        &quot;,\navgCurExpect=&quot; + avgCurExpect + 
+        &quot;,\navgCurActual=&quot; + avgCurActual + 
+        &quot;,\navgCountActual=&quot; + avgCountActual + 
+        &quot;,\navgSumActual=&quot; + avgSumActual)
+}</stringProp>
+            </JSR223Assertion>
+            <hashTree/>
+          </hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL6: querypage" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Prepared Select Statement</stringProp>
+            <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable">result_list</stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">false</stringProp>
+              <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-20M,,)})
+vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">import org.apache.jmeter.util.JMeterUtils;
+
+int pageSize = Integer.valueOf(vars.get(&quot;page_size&quot;))
+log.debug(pageSize + &quot;&quot;)
+
+List resultList = vars.getObject(&quot;result_list&quot;)
+log.debug(resultList.size() + &quot;&quot;)
+
+if (resultList.size() == pageSize) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailureMessage(&quot;pageSize: &quot; + pageSize + &quot;,resultList size: &quot; + resultList.size())
+    AssertionResult.setFailure(true)
+}</stringProp>
+            </JSR223Assertion>
+            <hashTree/>
+          </hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL7: sumpallpower" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Select Statement</stringProp>
+            <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamptz and t.k_timestamp &lt; (${end_timestamp})::timestamptz;</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames">sumpallpower,countall</stringProp>
+            <stringProp name="resultVariable">result_list</stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">false</stringProp>
+              <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-20M,,)})
+vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">import org.apache.jmeter.util.JMeterUtils;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+BigDecimal sumPallpowerInCsv = new BigDecimal(JMeterUtils.getProperty(&quot;sum_pallpower_in_csv&quot;).replaceAll(&quot;&apos;&quot;, &quot;&quot;))
+BigDecimal csvLineAmount = new BigDecimal(JMeterUtils.getProperty(&quot;csv_line_amount&quot;).replaceAll(&quot;&apos;&quot;, &quot;&quot;))
+
+BigDecimal sumPallpowerActual = new BigDecimal(vars.get(&quot;sumpallpower_1&quot;))
+BigDecimal countallActual = new BigDecimal(vars.get(&quot;countall_1&quot;))
+
+log.debug(&quot;sumPallpowerActual: &quot; + sumPallpowerActual.toString())
+log.debug(&quot;countallActual: &quot; + countallActual.toString())
+log.debug(&quot;sumPallpowerInCsv: &quot; + sumPallpowerInCsv.toString())
+log.debug(&quot;csvLineAmount: &quot; + csvLineAmount.toString())
+
+BigDecimal sumPallpowerExpect = sumPallpowerInCsv.multiply(countallActual).divide(csvLineAmount, RoundingMode.HALF_UP)
+log.debug(&quot;sumPallpowerExpect: &quot; + sumPallpowerExpect.toString())
+
+def differ = (sumPallpowerActual.subtract(sumPallpowerExpect)).divide(sumPallpowerExpect, RoundingMode.HALF_UP)
+
+if ( Math.abs(differ) &lt; 1E-8 ) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailureMessage(&quot;sumPallpowerExpect: &quot; + sumPallpowerExpect + &quot;,sumPallpowerActual: &quot; + sumPallpowerActual)
+    AssertionResult.setFailure(true)
+}</stringProp>
+            </JSR223Assertion>
+            <hashTree/>
+          </hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL8: assert last curs" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Select Statement</stringProp>
+            <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 group by machine_code</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames">k_timestamp,elect_name,vol_a,cur_a,powerf_a,allenergy_a,pallenergy_a,rallenergy_a,allrenergy1_a,allrenergy2_a,powera_a,powerr_a,powerl_a,vol_b,cur_b,powerf_b,allenergy_b,pallenergy_b,rallenergy_b,allrenergy1_b,allrenergy2_b,powera_b,powerr_b,powerl_b,vol_c,cur_c,powerf_c,allenergy_c,pallenergy_c,rallenergy_c,allrenergy1_c,allrenergy2_c,powera_c,powerr_c,powerl_c,vol_ab,vol_bc,vol_ca,infre,powerf,allpower,pallpower,rallpower,powerr,powerl,allrenergy1,allrenergy2,machine_code,op_group,workshop_id,cnc_number</stringProp>
+            <stringProp name="resultVariable">result_list</stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">import org.apache.jmeter.util.JMeterUtils;
+
+String lastElectmeterExpect = JMeterUtils.getProperty(&quot;last_electmeter_expect&quot;).replaceAll(&quot;&apos;&quot;, &quot;&quot;)
+
+List resultList = vars.getObject(&quot;result_list&quot;)
+
+for (int resultIndex = 1; resultIndex &lt;= resultList.size(); resultIndex++) {
+    List&lt;String&gt; fieldList = new ArrayList()
+
+    fieldList.add(vars.get(&quot;elect_name_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;vol_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;cur_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerf_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allenergy_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;pallenergy_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;rallenergy_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allrenergy1_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allrenergy2_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powera_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerr_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerl_a_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;vol_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;cur_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerf_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allenergy_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;pallenergy_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;rallenergy_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allrenergy1_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allrenergy2_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powera_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerr_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerl_b_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;vol_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;cur_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerf_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allenergy_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;pallenergy_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;rallenergy_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allrenergy1_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allrenergy2_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powera_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerr_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerl_c_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;vol_ab_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;vol_bc_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;vol_ca_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;infre_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerf_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allpower_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;pallpower_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;rallpower_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerr_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;powerl_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allrenergy1_&quot; + resultIndex))
+    fieldList.add(vars.get(&quot;allrenergy2_&quot; + resultIndex))
+    
+    String lastElectmeterActual = String.join(&quot;,&quot;, fieldList)
+    if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
+        AssertionResult.setFailure(false)
+    } else {
+        AssertionResult.setFailureMessage(&quot;result list row index:&quot; + resultIndex + &quot;,lastElectmeterExpect: &quot; + lastElectmeterExpect + &quot;,lastElectmeterActual: &quot; + lastElectmeterActual)
+        AssertionResult.setFailure(true)
+        break
+    }
+}</stringProp>
+            </JSR223Assertion>
+            <hashTree/>
+          </hashTree>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL9: sum_all_energy_a_in_company" enabled="true">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Select Statement</stringProp>
+            <stringProp name="query">select sum(allenergy_a), count(allenergy_a) from
+  (select we.machine_code as machine_code from db_shig_meta.factory f, db_shig_meta.workshop w, db_shig_meta.workshop_electmeter we
+           where we.workshop_id = w.id and f.id = w.factory_id and f.sub_comp_id = 1) m,
+  db_shig.t_electmeter e where e.machine_code = m.machine_code
+and k_timestamp &gt; &apos;${q_begin_ts}&apos; and k_timestamp &lt; &apos;${q_end_ts}&apos;</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames">sum_allenergy_a,count_allenergy_a</stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="获取当前时间的月初和月末时间" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">false</stringProp>
+              <stringProp name="script">import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
+
+DateTimeFormatter dtf = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;);
+LocalDateTime now = LocalDateTime.now();
+LocalDateTime monthBegin = LocalDateTime.of(now.getYear(), now.getMonth(), 1, 0, 0, 0);
+LocalDateTime monthEnd = LocalDateTime.of(now.getYear(), now.getMonth(), now.with(TemporalAdjusters.lastDayOfMonth()).getDayOfMonth(), 23, 59, 59);
+
+vars.put(&quot;q_begin_ts&quot;, dtf.format(monthBegin))
+vars.put(&quot;q_end_ts&quot;, dtf.format(monthEnd))
+
+log.info(&quot;q_begin_ts={}&quot;, vars.get(&quot;q_begin_ts&quot;))
+log.info(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">import org.apache.jmeter.util.JMeterUtils;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+BigDecimal sumAllenergyAInCsv = new BigDecimal(JMeterUtils.getProperty(&quot;sum_allenergy_a_in_csv&quot;).replaceAll(&quot;&apos;&quot;, &quot;&quot;))
+BigDecimal csvLineAmount = new BigDecimal(JMeterUtils.getProperty(&quot;csv_line_amount&quot;).replaceAll(&quot;&apos;&quot;, &quot;&quot;))
+BigDecimal sumAllenergyAActual = new BigDecimal(vars.get(&quot;sum_allenergy_a_1&quot;))
+BigDecimal countAllenergyA = new BigDecimal(vars.get(&quot;count_allenergy_a_1&quot;))
+
+log.debug(sumAllenergyAInCsv.toString())
+log.debug(csvLineAmount.toString())
+log.debug(sumAllenergyAActual.toString())
+log.debug(countAllenergyA.toString())
+
+BigDecimal sumAllenergyAExpect = sumAllenergyAInCsv.multiply(countAllenergyA).divide(csvLineAmount, RoundingMode.HALF_UP)
+
+def differ = (sumAllenergyAActual.subtract(sumAllenergyAExpect)).divide(sumAllenergyAExpect, RoundingMode.HALF_UP)
+
+if ( Math.abs(differ) &lt; 1E-8 ) {
+    AssertionResult.setFailure(false)
+} else {
+    AssertionResult.setFailureMessage(&quot;sumAllenergyAExpect: &quot; + sumAllenergyAExpect + &quot;,sumAllenergyAActual: &quot; + sumAllenergyAActual)
+    AssertionResult.setFailure(true)
+}</stringProp>
+            </JSR223Assertion>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
         <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Controller" enabled="true">
           <stringProp name="IfController.condition">${__groovy(&quot;${drop_db}&quot;==&quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)删除模板表:${db_name}.t_electmeter" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="删除模板表:${db_name}.t_electmeter" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">DROP TABLE ${db_name}.t_electmeter CASCADE;</stringProp>
@@ -1874,7 +2542,7 @@ log.info(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)删除时序库: ${db_name}" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="删除时序库: ${db_name}" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">DROP DATABASE ${db_name};</stringProp>
