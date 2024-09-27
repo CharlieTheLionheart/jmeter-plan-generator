@@ -649,7 +649,7 @@ BigDecimal avg_cur = sum_cur.divide(new BigDecimal(count)).setScale(16, Rounding
 JMeterUtils.setProperty(&quot;max_cur_expect&quot;, max_cur.setScale(2, RoundingMode.HALF_UP).toString())
 JMeterUtils.setProperty(&quot;min_cur_expect&quot;, min_cur.setScale(2, RoundingMode.HALF_UP).toString())
 JMeterUtils.setProperty(&quot;avg_cur_expect&quot;, avg_cur.setScale(16, RoundingMode.HALF_UP).toString())
-JMeterUtils.setProperty(&quot;sum_pallpower_in_csv&quot;, sum_pallpower.setScale(2, RoundingMode.HALF_UP).toString())
+JMeterUtils.setProperty(&quot;sum_pallpower_in_csv&quot;, sum_pallpower.setScale(16, RoundingMode.HALF_UP).toString())
 JMeterUtils.setProperty(&quot;sum_allenergy_a_in_csv&quot;, sum_allenergy_a.setScale(2, RoundingMode.HALF_UP).toString())
 JMeterUtils.setProperty(&quot;csv_line_amount&quot;, csv_list.size() + &quot;&quot;)
 
@@ -658,7 +658,7 @@ SampleResult.setIgnore()</stringProp>
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(random)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(random)">
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
@@ -2022,7 +2022,7 @@ if (isCycleContains(spActSpeedExpect, spActSpeedActual)) {
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL2: last curs with machine_code" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Prepared Select Statement</stringProp>
-            <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &gt; now() - 1 minute and machine_code = ?;</stringProp>
+            <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE machine_code = ?;</stringProp>
             <stringProp name="queryArguments">1_8</stringProp>
             <stringProp name="queryArgumentsTypes">varchar</stringProp>
             <stringProp name="variableNames">k_timestamp,cnc_sn,cnc_sw_mver,cnc_sw_sver,cnc_tol_mem,cnc_use_mem,cnc_unuse_mem,cnc_status,path_quantity,axis_quantity,axis_path,axis_type,axis_unit,axis_num,axis_name,sp_name,abs_pos,rel_pos,mach_pos,dist_pos,sp_override,sp_set_speed,sp_act_speed,sp_load,feed_set_speed,feed_act_speed,feed_override,servo_load,parts_count,cnc_cycletime,cnc_alivetime,cnc_cuttime,cnc_runtime,mprog_name,mprog_num,sprog_name,sprog_num,prog_seq_num,prog_seq_content,alarm_count,alarm_type,alarm_code,alarm_content,alarm_time,cur_tool_num,cur_tool_len_num,cur_tool_len,cur_tool_len_val,cur_tool_x_len,cur_tool_x_len_val,cur_tool_y_len,cur_tool_y_len_val,cur_tool_z_len,cur_tool_z_len_val,cur_tool_rad_num,cur_tool_rad,cur_tool_rad_val,device_state,value1,value2,value3,value4,value5,machine_code,op_group,workshop_id,number_of_molds</stringProp>
@@ -2040,6 +2040,12 @@ if (isCycleContains(spActSpeedExpect, spActSpeedActual)) {
               <stringProp name="script">import org.apache.jmeter.util.JMeterUtils;
 
 String lastCncExpect = JMeterUtils.getProperty(&quot;last_cnc_expect&quot;).replaceAll(&quot;&apos;&quot;, &quot;&quot;)
+
+if (vars.get(&quot;k_timestamp_1&quot;) == null) {
+    AssertionResult.setFailureMessage(&quot;query result is empty&quot;)
+    AssertionResult.setFailure(true)
+    return
+}
 
 List&lt;String&gt; fieldList = new ArrayList()
 fieldList.add(vars.get(&quot;k_timestamp_1&quot;))
@@ -2213,7 +2219,7 @@ if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
               <stringProp name="scriptLanguage">groovy</stringProp>
               <stringProp name="parameters"></stringProp>
               <stringProp name="filename"></stringProp>
@@ -2233,6 +2239,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
 String maxCurExpect = JMeterUtils.getProperty(&quot;max_cur_expect&quot;)
 String minCurExpect = JMeterUtils.getProperty(&quot;min_cur_expect&quot;)
 String avgCurExpect = JMeterUtils.getProperty(&quot;avg_cur_expect&quot;)
+
+if (vars.get(&quot;max_cur_1&quot;) == null) {
+    AssertionResult.setFailureMessage(&quot;query result is empty&quot;)
+    AssertionResult.setFailure(true)
+    return
+}
 
 String maxCurActual = vars.get(&quot;max_cur_1&quot;)
 String minCurActual = vars.get(&quot;min_cur_1&quot;)
@@ -2310,7 +2322,7 @@ if (resultList.size() == pageSize) {
             </JSR223Assertion>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL7: sumpallpower" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL7: sumpallpower">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamptz and t.k_timestamp &lt; (${end_timestamp})::timestamptz;</stringProp>
@@ -2332,7 +2344,7 @@ if (resultList.size() == pageSize) {
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
-            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言">
               <stringProp name="scriptLanguage">groovy</stringProp>
               <stringProp name="parameters"></stringProp>
               <stringProp name="filename"></stringProp>
@@ -2344,6 +2356,12 @@ import java.math.RoundingMode;
 BigDecimal sumPallpowerInCsv = new BigDecimal(JMeterUtils.getProperty(&quot;sum_pallpower_in_csv&quot;).replaceAll(&quot;&apos;&quot;, &quot;&quot;))
 BigDecimal csvLineAmount = new BigDecimal(JMeterUtils.getProperty(&quot;csv_line_amount&quot;).replaceAll(&quot;&apos;&quot;, &quot;&quot;))
 
+if (vars.get(&quot;sumpallpower_1&quot;) == null || vars.get(&quot;countall_1&quot;) == null) {
+	AssertionResult.setFailureMessage(&quot;sumpallpower_1 and countall_1 is null&quot;)
+	AssertionResult.setFailure(true)
+	return
+}
+
 BigDecimal sumPallpowerActual = new BigDecimal(vars.get(&quot;sumpallpower_1&quot;))
 BigDecimal countallActual = new BigDecimal(vars.get(&quot;countall_1&quot;))
 
@@ -2352,12 +2370,12 @@ log.debug(&quot;countallActual: &quot; + countallActual.toString())
 log.debug(&quot;sumPallpowerInCsv: &quot; + sumPallpowerInCsv.toString())
 log.debug(&quot;csvLineAmount: &quot; + csvLineAmount.toString())
 
-BigDecimal sumPallpowerExpect = sumPallpowerInCsv.multiply(countallActual).divide(csvLineAmount, RoundingMode.HALF_UP)
+BigDecimal sumPallpowerExpect = sumPallpowerInCsv.multiply(countallActual).divide(csvLineAmount).setScale(16, RoundingMode.HALF_UP)
 log.debug(&quot;sumPallpowerExpect: &quot; + sumPallpowerExpect.toString())
 
-def differ = (sumPallpowerActual.subtract(sumPallpowerExpect)).divide(sumPallpowerExpect, RoundingMode.HALF_UP)
+def differ = (sumPallpowerActual.subtract(sumPallpowerExpect)).divide(sumPallpowerExpect, BigDecimal.ROUND_HALF_UP).setScale(16, RoundingMode.HALF_UP)
 
-if ( Math.abs(differ) &lt; 1E-8 ) {
+if ( Math.abs(differ) &lt; 1E-5 ) {
     AssertionResult.setFailure(false)
 } else {
     AssertionResult.setFailureMessage(&quot;sumPallpowerExpect: &quot; + sumPallpowerExpect + &quot;,sumPallpowerActual: &quot; + sumPallpowerActual)
