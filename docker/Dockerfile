@@ -8,7 +8,7 @@ LABEL openjdk_ver=${OPENJDK_VER}
 
 ARG JMETER_VER
 RUN curl -o - -fsSL \
-  https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VER}.tgz | \
+  https://mirrors.tuna.tsinghua.edu.cn/apache/jmeter/binaries/apache-jmeter-${JMETER_VER}.tgz | \
   tar -C /usr/local/lib -zxf -
 LABEL jmeter_ver=${JMETER_VER}
 COPY log4j2.xml /usr/local/lib/apache-jmeter-${JMETER_VER}/bin

@@ -1,0 +1,6 @@
+ts timestamptz false false _ []
+data_write_time timestamp true false _ []
+type varchar(10) true false random_str [10,true,true,NULL,2]
+params varchar(1000) true false random_str [50,true,true,NULL,50]
+device varchar(64) false true serial_str [device,1,50]
+identifier nchar(64) false true serial_str [id,1,20]
