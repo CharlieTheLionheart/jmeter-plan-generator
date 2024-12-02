@@ -50,7 +50,7 @@
           </elementProp>
           <elementProp name="read_throughput" elementType="Argument">
             <stringProp name="Argument.name">read_throughput</stringProp>
-            <stringProp name="Argument.value">${__P(user.read.throughput,60)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.read.throughput,0.0333333)}</stringProp>
             <stringProp name="Argument.desc">查询吞吐量/min, default: 60</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
@@ -90,7 +90,7 @@
       <hashTree/>
       <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
         <stringProp name="dataSource">default_pool</stringProp>
-        <stringProp name="poolMax">0</stringProp>
+        <stringProp name="poolMax">10</stringProp>
         <stringProp name="timeout">10000</stringProp>
         <stringProp name="trimInterval">60000</stringProp>
         <boolProp name="autocommit">true</boolProp>
@@ -320,7 +320,7 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 写入数据">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 写入数据" enabled="true">
         <intProp name="ThreadGroup.num_threads">8</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
@@ -333,7 +333,7 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="调用sdk的BatchInsert API写入随机表数据">
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="调用sdk的BatchInsert API写入随机表数据" enabled="true">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="Write database name" elementType="Argument">
@@ -346,6 +346,150 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
           <stringProp name="classname">com.kaiwudb.svt.scene.digitalent.sampler.BatchInsertSampler</stringProp>
         </JavaSampler>
         <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query] 查询SQL1: stbl_raw">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
+          <intProp name="LoopController.loops">-1</intProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
+          <stringProp name="throughput">${read_throughput}</stringProp>
+          <intProp name="calcMode">0</intProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL1: stbl_raw">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Prepared Select Statement</stringProp>
+          <stringProp name="query">select * from ${db_name}.stbl_raw where ts &gt;= ? and ts &lt;= ? and data is not null AND iot_hub_name = ? limit ?;</stringProp>
+          <stringProp name="queryArguments">${q_ts_begin},${q_ts_end},${rand_iot_hub_name},${rand_limit}</stringProp>
+          <stringProp name="queryArgumentsTypes">timestamp,timestamp,varchar,integer</stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import java.util.concurrent.ThreadLocalRandom
+
+vars.putObject(&quot;q_ts_begin&quot;, &quot;${__timeShift(yyyy-MM-dd HH:mm:ss.SSS,,-PT1H,,)}&quot;)
+vars.putObject(&quot;q_ts_end&quot;, &quot;${__time(yyyy-MM-dd HH:mm:ss.SSS,)}&quot;)
+vars.putObject(&quot;rand_iot_hub_name&quot;, &quot;iot_hub_name&quot; + ThreadLocalRandom.current().nextInt(1, 21))
+def rand_limit_arr = [5, 15, 20, 25, 50, 100];
+vars.putObject(&quot;rand_limit&quot;, rand_limit_arr[ThreadLocalRandom.current().nextInt(0, 6)])</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query] 查询SQL2: stbl_event">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
+          <intProp name="LoopController.loops">-1</intProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
+          <stringProp name="throughput">${read_throughput}</stringProp>
+          <intProp name="calcMode">0</intProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL2: stbl_event">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Prepared Select Statement</stringProp>
+          <stringProp name="query">select ts as timestamp, * from ${db_name}.stbl_event where ts &gt;= ? and ts &lt;= ? and identifier = ? order by ts desc limit ? offset ?;</stringProp>
+          <stringProp name="queryArguments">${q_ts_begin},${q_ts_end},${rand_id},${rand_limit},${rand_offset}</stringProp>
+          <stringProp name="queryArgumentsTypes">timestamp,timestamp,varchar,integer,integer</stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import java.util.concurrent.ThreadLocalRandom
+
+vars.putObject(&quot;q_ts_begin&quot;, &quot;${__timeShift(yyyy-MM-dd HH:mm:ss.SSS,,-PT1H,,)}&quot;)
+vars.putObject(&quot;q_ts_end&quot;, &quot;${__time(yyyy-MM-dd HH:mm:ss.SSS,)}&quot;)
+vars.putObject(&quot;rand_id&quot;, &quot;id&quot; + ThreadLocalRandom.current().nextInt(1, 21))
+def rand_limit_arr = [5, 15, 20, 25, 50, 100]
+vars.putObject(&quot;rand_limit&quot;, rand_limit_arr[ThreadLocalRandom.current().nextInt(0, 6)])
+def rand_offset_arr = [1, 1000, 100000, 10000000]
+vars.putObject(&quot;rand_offset&quot;, rand_offset_arr[ThreadLocalRandom.current().nextInt(0, 4)])
+</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query] 查询SQL3: time_bucket of pt100_dm">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
+          <intProp name="LoopController.loops">-1</intProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
+          <stringProp name="throughput">${read_throughput}</stringProp>
+          <intProp name="calcMode">0</intProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL3: time_bucket of pt100_dm">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Prepared Select Statement</stringProp>
+          <stringProp name="query">select time_bucket(ts, &apos;10ms&apos;) as bucket_ts, avg(${rand_mp}) as avg_mp from ${db_name}.${rand_table_name} where ts &gt;= ? and ts &lt;= ? and device = ? group by bucket_ts;</stringProp>
+          <stringProp name="queryArguments">${q_ts_begin},${q_ts_end},${rand_device}</stringProp>
+          <stringProp name="queryArgumentsTypes">timestamp,timestamp,varchar</stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import java.util.concurrent.ThreadLocalRandom
+
+vars.put(&quot;rand_mp&quot;, &quot;mp&quot; + ThreadLocalRandom.current().nextInt(1, 34))
+vars.put(&quot;rand_table_name&quot;, &quot;pt100_dm_0&quot; + ThreadLocalRandom.current().nextInt(1, 6))
+vars.putObject(&quot;q_ts_begin&quot;, &quot;${__timeShift(yyyy-MM-dd HH:mm:ss.SSS,,-PT1H,,)}&quot;)
+vars.putObject(&quot;q_ts_end&quot;, &quot;${__time(yyyy-MM-dd HH:mm:ss.SSS,)}&quot;)
+vars.putObject(&quot;rand_device&quot;, &quot;device&quot; + ThreadLocalRandom.current().nextInt(1, 1001))</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
+        </hashTree>
       </hashTree>
       <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="结果树" enabled="true">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
