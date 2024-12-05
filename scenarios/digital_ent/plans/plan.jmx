@@ -100,7 +100,7 @@
       <hashTree/>
       <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
         <stringProp name="dataSource">default_pool</stringProp>
-        <stringProp name="poolMax">10</stringProp>
+        <stringProp name="poolMax">30</stringProp>
         <stringProp name="timeout">10000</stringProp>
         <stringProp name="trimInterval">60000</stringProp>
         <boolProp name="autocommit">true</boolProp>
@@ -177,8 +177,8 @@
                 <stringProp name="Argument.value">${db_user}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="Connection Amount" elementType="Argument">
-                <stringProp name="Argument.name">Connection Amount</stringProp>
+              <elementProp name="Statement Amount" elementType="Argument">
+                <stringProp name="Argument.name">Statement Amount</stringProp>
                 <stringProp name="Argument.value">${write_conn_amount}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -187,7 +187,7 @@
           <stringProp name="classname">com.kaiwudb.svt.scene.digitalent.sampler.CreateStatementSampler</stringProp>
         </JavaSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建时序库:${db_name}" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建时序库:${db_name}">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TS DATABASE ${db_name};</stringProp>
@@ -200,7 +200,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.stbl_event表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.stbl_event表">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">${stbl_event_ddl};</stringProp>
@@ -213,7 +213,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.stbl_raw表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.stbl_raw表">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">${stbl_raw_ddl};</stringProp>
@@ -226,7 +226,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="创建pt100_dm表" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="创建pt100_dm表">
           <stringProp name="LoopController.loops">${dup_table_amount}</stringProp>
         </LoopController>
         <hashTree>
@@ -261,7 +261,7 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)}表" enabled="true">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)}表">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
             <stringProp name="query">${__V(pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)})};</stringProp>
@@ -330,7 +330,7 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 写入数据">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 写入数据" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${write_conn_amount}</stringProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
@@ -346,6 +346,16 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
         <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="调用sdk的BatchInsert API写入随机表数据">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
             <collectionProp name="Arguments.arguments">
+              <elementProp name="Connection URL" elementType="Argument">
+                <stringProp name="Argument.name">Connection URL</stringProp>
+                <stringProp name="Argument.value">${db_url}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Database User" elementType="Argument">
+                <stringProp name="Argument.name">Database User</stringProp>
+                <stringProp name="Argument.value">${db_user}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
               <elementProp name="Write database name" elementType="Argument">
                 <stringProp name="Argument.name">Write database name</stringProp>
                 <stringProp name="Argument.value">${db_name}</stringProp>
@@ -357,7 +367,7 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query] 查询SQL1: stbl_raw" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query] 查询SQL1: stbl_raw">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -375,7 +385,7 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL1: stbl_raw" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL1: stbl_raw">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Prepared Select Statement</stringProp>
           <stringProp name="query">select * from ${db_name}.stbl_raw where ts &gt;= ? and ts &lt;= ? and data is not null AND iot_hub_name = ? limit ?;</stringProp>
