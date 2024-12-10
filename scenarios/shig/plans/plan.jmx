@@ -266,7 +266,7 @@
         <stringProp name="shareMode">shareMode.all</stringProp>
       </CSVDataSet>
       <hashTree/>
-      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="[Setup] 初始化">
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="[Setup] 初始化" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -558,9 +558,9 @@ vars.put(&quot;workshopElectmeterInsertSql&quot;, sqlBuilder.toString())</string
           </JSR223PreProcessor>
           <hashTree/>
         </hashTree>
-        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="特征值处理"/>
+        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="特征值处理" enabled="true"/>
         <hashTree>
-          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="特征值处理">
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="特征值处理" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="filename"></stringProp>
@@ -658,7 +658,7 @@ SampleResult.setIgnore()</stringProp>
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(random)">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(random)" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
@@ -1628,7 +1628,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(page_and_sum_15min)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(page_and_sum_15min)">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -1650,7 +1650,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
           <boolProp name="LoopController.continue_forever">true</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
@@ -1691,7 +1691,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
               <hashTree/>
             </hashTree>
           </hashTree>
-          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="sumpower" enabled="false">
+          <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="sumpower">
             <intProp name="ThroughputController.style">1</intProp>
             <boolProp name="ThroughputController.perThread">false</boolProp>
             <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -1850,7 +1850,7 @@ log.info(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 断言和清理">
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="[tearDown] 断言和清理" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -1861,7 +1861,7 @@ log.info(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
         </elementProp>
       </PostThreadGroup>
       <hashTree>
-        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询正确性断言"/>
+        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询正确性断言" enabled="true"/>
         <hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="assert total count of t_electmeter" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
@@ -2206,7 +2206,7 @@ if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
             </JSR223Assertion>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL4: max min and avg in electmeters">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL4: max min and avg in electmeters" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Prepared Select Statement</stringProp>
             <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur, sum(cur_a) as sum_cur, count(cur_a) as count_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz group by machine_code order by machine_code asc;</stringProp>
@@ -2229,7 +2229,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
 vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
-            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言">
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
               <stringProp name="scriptLanguage">groovy</stringProp>
               <stringProp name="parameters"></stringProp>
               <stringProp name="filename"></stringProp>
@@ -2322,7 +2322,7 @@ if (resultList.size() == pageSize) {
             </JSR223Assertion>
             <hashTree/>
           </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL7: sumpallpower">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL7: sumpallpower" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Select Statement</stringProp>
             <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamptz and t.k_timestamp &lt; (${end_timestamp})::timestamptz;</stringProp>
@@ -2344,7 +2344,7 @@ if (resultList.size() == pageSize) {
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
-            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言">
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
               <stringProp name="scriptLanguage">groovy</stringProp>
               <stringProp name="parameters"></stringProp>
               <stringProp name="filename"></stringProp>
