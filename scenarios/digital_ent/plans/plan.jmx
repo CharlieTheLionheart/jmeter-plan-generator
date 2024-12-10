@@ -6,8 +6,6 @@
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
         <collectionProp name="Arguments.arguments"/>
       </elementProp>
-      <boolProp name="TestPlan.functional_mode">false</boolProp>
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
       <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[ConfigDebug] 预定义配置">
@@ -60,24 +58,9 @@
             <stringProp name="Argument.desc">查询持续时间,单位秒,default: 60</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="stbl_event_ddl_csv" elementType="Argument">
-            <stringProp name="Argument.name">stbl_event_ddl_csv</stringProp>
-            <stringProp name="Argument.value">${__P(user.stbl_event_ddl_csv,/data/digital_ent/stbl_event_ddl.csv)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="stbl_raw_ddl_csv" elementType="Argument">
-            <stringProp name="Argument.name">stbl_raw_ddl_csv</stringProp>
-            <stringProp name="Argument.value">${__P(user.stbl_raw_ddl_csv,/data/digital_ent/stbl_raw_ddl.csv)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="pt100_dm_01_ddl_csv" elementType="Argument">
-            <stringProp name="Argument.name">pt100_dm_01_ddl_csv</stringProp>
-            <stringProp name="Argument.value">${__P(user.pt100_dm_01_ddl_csv,/data/digital_ent/pt100_dm_01_ddl.csv)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
           <elementProp name="seed_conf_path" elementType="Argument">
             <stringProp name="Argument.name">seed_conf_path</stringProp>
-            <stringProp name="Argument.value">${__P(user.seed_conf_path,/data/digital_ent/)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.seed_conf_path,/data/db_digital_ent/)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="write_conn_amount" elementType="Argument">
@@ -117,42 +100,6 @@
         <stringProp name="connectionProperties"></stringProp>
       </JDBCDataSource>
       <hashTree/>
-      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="stbl_event_ddl_csv" enabled="true">
-        <stringProp name="delimiter">;</stringProp>
-        <stringProp name="fileEncoding"></stringProp>
-        <stringProp name="filename">${stbl_event_ddl_csv}</stringProp>
-        <boolProp name="ignoreFirstLine">false</boolProp>
-        <boolProp name="quotedData">false</boolProp>
-        <boolProp name="recycle">true</boolProp>
-        <stringProp name="shareMode">shareMode.all</stringProp>
-        <boolProp name="stopThread">false</boolProp>
-        <stringProp name="variableNames">stbl_event_ddl</stringProp>
-      </CSVDataSet>
-      <hashTree/>
-      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="stbl_raw_ddl_csv" enabled="true">
-        <stringProp name="delimiter">;</stringProp>
-        <stringProp name="fileEncoding"></stringProp>
-        <stringProp name="filename">${stbl_raw_ddl_csv}</stringProp>
-        <boolProp name="ignoreFirstLine">false</boolProp>
-        <boolProp name="quotedData">false</boolProp>
-        <boolProp name="recycle">true</boolProp>
-        <stringProp name="shareMode">shareMode.all</stringProp>
-        <boolProp name="stopThread">false</boolProp>
-        <stringProp name="variableNames">stbl_raw_ddl</stringProp>
-      </CSVDataSet>
-      <hashTree/>
-      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="pt100_dm_01_ddl_csv" enabled="true">
-        <stringProp name="delimiter">;</stringProp>
-        <stringProp name="fileEncoding"></stringProp>
-        <stringProp name="filename">${pt100_dm_01_ddl_csv}</stringProp>
-        <boolProp name="ignoreFirstLine">false</boolProp>
-        <boolProp name="quotedData">false</boolProp>
-        <boolProp name="recycle">true</boolProp>
-        <stringProp name="shareMode">shareMode.all</stringProp>
-        <boolProp name="stopThread">false</boolProp>
-        <stringProp name="variableNames">pt100_dm_01_ddl</stringProp>
-      </CSVDataSet>
-      <hashTree/>
       <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="[Setup] 建库建表">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
@@ -164,7 +111,7 @@
         </elementProp>
       </SetupThreadGroup>
       <hashTree>
-        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="创建写入statement">
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="创建写入statement" enabled="true">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="Connection URL" elementType="Argument">
@@ -187,116 +134,17 @@
           <stringProp name="classname">com.kaiwudb.svt.scene.digitalent.sampler.CreateStatementSampler</stringProp>
         </JavaSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建时序库:${db_name}">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE TS DATABASE ${db_name};</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.stbl_event表">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">${stbl_event_ddl};</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.stbl_raw表">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">${stbl_raw_ddl};</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="创建pt100_dm表">
-          <stringProp name="LoopController.loops">${dup_table_amount}</stringProp>
-        </LoopController>
-        <hashTree>
-          <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="计数器" enabled="true">
-            <stringProp name="CounterConfig.start">1</stringProp>
-            <stringProp name="CounterConfig.end">${dup_table_amount}</stringProp>
-            <stringProp name="CounterConfig.incr">1</stringProp>
-            <stringProp name="CounterConfig.name">table_idx</stringProp>
-            <stringProp name="CounterConfig.format"></stringProp>
-            <boolProp name="CounterConfig.per_user">false</boolProp>
-          </CounterConfig>
-          <hashTree/>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${__V(pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)})}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="false">
-              <stringProp name="scriptLanguage">groovy</stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="script">def ddl_tmpl_str = vars.get(&quot;pt100_dm_01_ddl&quot;)
-def table_suffix = vars.get(&quot;table_idx&quot;); 
-if (Integer.parseInt(table_suffix) &lt; 10) {
-  table_suffix = &quot;0&quot; + table_suffix
-}
-vars.put(&quot;&quot;, table_suffix)
-def ddl_exec_str = ddl_tmpl_str.replace(&quot;pt100_dm_01&quot;, &quot;pt100_dm_&quot; + table_suffix)
-vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)}表">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">${__V(pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)})};</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout"></stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
-              <stringProp name="scriptLanguage">groovy</stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="script">def ddl_tmpl_str = vars.get(&quot;pt100_dm_01_ddl&quot;)
-def table_suffix = vars.get(&quot;table_idx&quot;); 
-if (Integer.parseInt(table_suffix) &lt; 10) {
-  table_suffix = &quot;0&quot; + table_suffix
-}
-vars.put(&quot;&quot;, table_suffix)
-def ddl_exec_str = ddl_tmpl_str.replace(&quot;pt100_dm_01&quot;, &quot;pt100_dm_&quot; + table_suffix)
-vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
-        </hashTree>
-        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="生成写入线程的种子数据">
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="生成写入线程的种子数据" enabled="true">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="Data seed config path" elementType="Argument">
                 <stringProp name="Argument.name">Data seed config path</stringProp>
                 <stringProp name="Argument.value">${seed_conf_path}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Database type(rdb/ts)" elementType="Argument">
+                <stringProp name="Argument.name">Database type(rdb/ts)</stringProp>
+                <stringProp name="Argument.value">ts</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="Data seed amount" elementType="Argument">
@@ -324,11 +172,97 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
                 <stringProp name="Argument.value">${sql_amount_per_conn}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
+              <elementProp name="Write database name" elementType="Argument">
+                <stringProp name="Argument.name">Write database name</stringProp>
+                <stringProp name="Argument.value">db_digital_ent</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
             </collectionProp>
           </elementProp>
           <stringProp name="classname">com.kaiwudb.svt.scene.digitalent.sampler.DataSeedGeneratorSampler</stringProp>
         </JavaSampler>
         <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建时序库:${db_name}" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">CREATE TS DATABASE ${db_name};</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.stbl_event表" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">${__P(stbl_event_ddl,)};</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.stbl_raw表" enabled="true">
+          <stringProp name="dataSource">default_pool</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">${__P(stbl_raw_ddl,)};</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="创建pt100_dm表">
+          <stringProp name="LoopController.loops">${dup_table_amount}</stringProp>
+        </LoopController>
+        <hashTree>
+          <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="计数器" enabled="true">
+            <stringProp name="CounterConfig.start">1</stringProp>
+            <stringProp name="CounterConfig.end">${dup_table_amount}</stringProp>
+            <stringProp name="CounterConfig.incr">1</stringProp>
+            <stringProp name="CounterConfig.name">table_idx</stringProp>
+            <stringProp name="CounterConfig.format"></stringProp>
+            <boolProp name="CounterConfig.per_user">false</boolProp>
+          </CounterConfig>
+          <hashTree/>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)}表">
+            <stringProp name="dataSource">default_pool</stringProp>
+            <stringProp name="queryType">Update Statement</stringProp>
+            <stringProp name="query">${__P(pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)},)};</stringProp>
+            <stringProp name="queryArguments"></stringProp>
+            <stringProp name="queryArgumentsTypes"></stringProp>
+            <stringProp name="variableNames"></stringProp>
+            <stringProp name="resultVariable"></stringProp>
+            <stringProp name="queryTimeout"></stringProp>
+            <stringProp name="resultSetMaxRows"></stringProp>
+            <stringProp name="resultSetHandler">Store as String</stringProp>
+          </JDBCSampler>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="生成复制表ddl" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">def ddl_tmpl_str = props.get(&quot;pt100_dm_01_ddl&quot;)
+def table_suffix = vars.get(&quot;table_idx&quot;);
+if (Integer.parseInt(table_suffix) &lt; 10) {
+  table_suffix = &quot;0&quot; + table_suffix
+}
+def ddl_exec_str = ddl_tmpl_str.replace(&quot;pt100_dm_01&quot;, &quot;pt100_dm_&quot; + table_suffix)
+props.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 写入数据" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${write_conn_amount}</stringProp>
@@ -343,7 +277,7 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="调用sdk的BatchInsert API写入随机表数据">
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="调用sdk的BatchInsert API写入随机表数据" enabled="true">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="Connection URL" elementType="Argument">
@@ -367,7 +301,7 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query] 查询SQL1: stbl_raw">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query] 查询SQL1: stbl_raw" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -385,7 +319,7 @@ vars.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL1: stbl_raw">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL1: stbl_raw" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Prepared Select Statement</stringProp>
           <stringProp name="query">select * from ${db_name}.stbl_raw where ts &gt;= ? and ts &lt;= ? and data is not null AND iot_hub_name = ? limit ?;</stringProp>
