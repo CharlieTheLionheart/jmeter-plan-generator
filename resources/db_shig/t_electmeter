@@ -1,5 +1,5 @@
 k_timestamp timestamptz false false _ []
-elect_name char(63) false false get_elect_name []
+elect_name char(63) false false quoted_random_str [4,false,true,NULL,34,a01234567890]
 vol_a double false false random_float [299.0,300.0,1,0]
 cur_a double false false random_float [0.0,0.33,2,0]
 powerf_a double true false random_float [0.01,1,2,0]

@@ -1,5 +1,5 @@
-ts timestamptz false false _ []
-data_write_time timestamptz true false _ []
+ts timestamptz false false follow_ts [db_digital_ent.pt100_dm_01,ts]
+data_write_time timestamptz true false follow_ts [db_digital_ent.pt100_dm_01,data_write_time]
 mp1 int4 true false random_int [0,100,0]
 mp2 float4 true false random_float [0,100,2,0]
 mp3 float4 true false random_float [0,100,2,0]

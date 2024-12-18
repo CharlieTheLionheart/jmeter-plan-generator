@@ -6,6 +6,8 @@
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
         <collectionProp name="Arguments.arguments"/>
       </elementProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
       <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[ConfigDebug] 预定义配置">
@@ -60,7 +62,7 @@
           </elementProp>
           <elementProp name="seed_conf_path" elementType="Argument">
             <stringProp name="Argument.name">seed_conf_path</stringProp>
-            <stringProp name="Argument.value">${__P(user.seed_conf_path,/data/db_digital_ent/)}</stringProp>
+            <stringProp name="Argument.value">${__P(user.seed_conf_path,/data)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="write_conn_amount" elementType="Argument">
@@ -111,7 +113,20 @@
         </elementProp>
       </SetupThreadGroup>
       <hashTree>
-        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="创建写入statement" enabled="true">
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="加载配置">
+          <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="Data seed config path" elementType="Argument">
+                <stringProp name="Argument.name">Data seed config path</stringProp>
+                <stringProp name="Argument.value">${seed_conf_path}/${db_name}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="classname">com.kaiwudb.svt.sampler.ConfigLoaderSampler</stringProp>
+        </JavaSampler>
+        <hashTree/>
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="创建写入statement">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="Connection URL" elementType="Argument">
@@ -131,58 +146,28 @@
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.kaiwudb.svt.scene.digitalent.sampler.CreateStatementSampler</stringProp>
+          <stringProp name="classname">com.kaiwudb.svt.sampler.CreateStatementSampler</stringProp>
         </JavaSampler>
         <hashTree/>
-        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="生成写入线程的种子数据" enabled="true">
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="[Setup] 生成建表DDL">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
             <collectionProp name="Arguments.arguments">
-              <elementProp name="Data seed config path" elementType="Argument">
-                <stringProp name="Argument.name">Data seed config path</stringProp>
-                <stringProp name="Argument.value">${seed_conf_path}</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
               <elementProp name="Database type(rdb/ts)" elementType="Argument">
                 <stringProp name="Argument.name">Database type(rdb/ts)</stringProp>
                 <stringProp name="Argument.value">ts</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="Data seed amount" elementType="Argument">
-                <stringProp name="Argument.name">Data seed amount</stringProp>
-                <stringProp name="Argument.value">100</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="Write thread amount" elementType="Argument">
-                <stringProp name="Argument.name">Write thread amount</stringProp>
-                <stringProp name="Argument.value">${write_conn_amount}</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="Duplicated table prefix" elementType="Argument">
-                <stringProp name="Argument.name">Duplicated table prefix</stringProp>
-                <stringProp name="Argument.value">pt100_dm_</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="Duplicated table amount" elementType="Argument">
-                <stringProp name="Argument.name">Duplicated table amount</stringProp>
-                <stringProp name="Argument.value">5</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="SQL amount per primary tag" elementType="Argument">
-                <stringProp name="Argument.name">SQL amount per primary tag</stringProp>
-                <stringProp name="Argument.value">${sql_amount_per_conn}</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
               <elementProp name="Write database name" elementType="Argument">
                 <stringProp name="Argument.name">Write database name</stringProp>
-                <stringProp name="Argument.value">db_digital_ent</stringProp>
+                <stringProp name="Argument.value">${db_name}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.kaiwudb.svt.scene.digitalent.sampler.DataSeedGeneratorSampler</stringProp>
+          <stringProp name="classname">com.kaiwudb.svt.sampler.TableSqlGeneratorSampler</stringProp>
         </JavaSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建时序库:${db_name}" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 创建时序库:${db_name}">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">CREATE TS DATABASE ${db_name};</stringProp>
@@ -195,7 +180,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.stbl_event表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 创建${db_name}.stbl_event表">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">${__P(stbl_event_ddl,)};</stringProp>
@@ -208,7 +193,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.stbl_raw表" enabled="true">
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 创建${db_name}.stbl_raw表">
           <stringProp name="dataSource">default_pool</stringProp>
           <stringProp name="queryType">Update Statement</stringProp>
           <stringProp name="query">${__P(stbl_raw_ddl,)};</stringProp>
@@ -221,7 +206,7 @@
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="创建pt100_dm表">
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="[Setup] 创建pt100_dm表">
           <stringProp name="LoopController.loops">${dup_table_amount}</stringProp>
         </LoopController>
         <hashTree>
@@ -234,10 +219,10 @@
             <boolProp name="CounterConfig.per_user">false</boolProp>
           </CounterConfig>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="创建${db_name}.pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)}表">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 创建${db_name}.pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)}表">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">${__P(pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)},)};</stringProp>
+            <stringProp name="query">${__P(pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)}_ddl,)};</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -246,25 +231,53 @@
             <stringProp name="resultSetMaxRows"></stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="生成复制表ddl" enabled="true">
-              <stringProp name="scriptLanguage">groovy</stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="script">def ddl_tmpl_str = props.get(&quot;pt100_dm_01_ddl&quot;)
-def table_suffix = vars.get(&quot;table_idx&quot;);
-if (Integer.parseInt(table_suffix) &lt; 10) {
-  table_suffix = &quot;0&quot; + table_suffix
-}
-def ddl_exec_str = ddl_tmpl_str.replace(&quot;pt100_dm_01&quot;, &quot;pt100_dm_&quot; + table_suffix)
-props.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
+          <hashTree/>
         </hashTree>
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="生成写入线程的种子数据">
+          <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="Write database name" elementType="Argument">
+                <stringProp name="Argument.name">Write database name</stringProp>
+                <stringProp name="Argument.value">${db_name}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Write thread amount" elementType="Argument">
+                <stringProp name="Argument.name">Write thread amount</stringProp>
+                <stringProp name="Argument.value">${write_conn_amount}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="SQL amount per primary tag" elementType="Argument">
+                <stringProp name="Argument.name">SQL amount per primary tag</stringProp>
+                <stringProp name="Argument.value">${sql_amount_per_conn}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Primary tag amount" elementType="Argument">
+                <stringProp name="Argument.name">Primary tag amount</stringProp>
+                <stringProp name="Argument.value">1000</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Data seed amount" elementType="Argument">
+                <stringProp name="Argument.name">Data seed amount</stringProp>
+                <stringProp name="Argument.value">100</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Required nullable column amount" elementType="Argument">
+                <stringProp name="Argument.name">Required nullable column amount</stringProp>
+                <stringProp name="Argument.value">3</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Max nullable column amount" elementType="Argument">
+                <stringProp name="Argument.name">Max nullable column amount</stringProp>
+                <stringProp name="Argument.value">10</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="classname">com.kaiwudb.svt.sampler.BatchInsertSeedGeneratorSampler</stringProp>
+        </JavaSampler>
+        <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 写入数据" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 写入数据">
         <stringProp name="ThreadGroup.num_threads">${write_conn_amount}</stringProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
@@ -277,7 +290,7 @@ props.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="调用sdk的BatchInsert API写入随机表数据" enabled="true">
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="调用sdk的BatchInsert API写入随机表数据">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="Connection URL" elementType="Argument">
@@ -297,7 +310,7 @@ props.put(&quot;pt100_dm_&quot; + table_suffix, ddl_exec_str)</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.kaiwudb.svt.scene.digitalent.sampler.BatchInsertSampler</stringProp>
+          <stringProp name="classname">com.kaiwudb.svt.sampler.BatchInsertSampler</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>

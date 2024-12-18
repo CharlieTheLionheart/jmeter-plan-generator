@@ -1,4 +1,4 @@
-ts timestamptz false false _ []
+ts timestamptz false false follow_ts [db_digital_ent.stbl_raw,ts]
 data varchar(16374) true false random_str [20,true,true,NULL,50]
 type varchar(10) true false random_str [10,true,true,NULL,2]
 parse varchar(10) true false random_str [10,true,true,NULL,2]
