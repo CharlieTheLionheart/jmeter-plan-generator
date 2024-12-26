@@ -1,2 +1,0 @@
-machine_code varchar(64) false false _ []
-workshop_id int2 false false _ []
