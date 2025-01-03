@@ -149,80 +149,51 @@
           <stringProp name="classname">com.kaiwudb.svt.sampler.CreateStatementSampler</stringProp>
         </JavaSampler>
         <hashTree/>
-        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="[Setup] 生成建表DDL">
-          <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
-            <collectionProp name="Arguments.arguments">
-              <elementProp name="Database type(rdb/ts)" elementType="Argument">
-                <stringProp name="Argument.name">Database type(rdb/ts)</stringProp>
-                <stringProp name="Argument.value">ts</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="Write database name" elementType="Argument">
-                <stringProp name="Argument.name">Write database name</stringProp>
-                <stringProp name="Argument.value">${db_name}</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-            </collectionProp>
-          </elementProp>
-          <stringProp name="classname">com.kaiwudb.svt.sampler.TableSqlGeneratorSampler</stringProp>
-        </JavaSampler>
-        <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 创建时序库:${db_name}">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE TS DATABASE ${db_name};</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 创建${db_name}.stbl_event表">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">${__P(stbl_event_ddl,)};</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 创建${db_name}.stbl_raw表">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">${__P(stbl_raw_ddl,)};</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout"></stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="[Setup] 创建pt100_dm表">
-          <stringProp name="LoopController.loops">${dup_table_amount}</stringProp>
+        <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="[Setup] 加载建库建表语句">
+          <boolProp name="displayJMeterProperties">false</boolProp>
+          <boolProp name="displayJMeterVariables">true</boolProp>
+          <boolProp name="displaySystemProperties">false</boolProp>
+        </DebugSampler>
+        <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="[Setup] JSR223 预处理程序">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">def sql_file=&quot;${seed_conf_path}/${db_name}/create.sql&quot;
+
+def sql_reader = new RandomAccessFile(sql_file, &quot;r&quot;)
+def create_sql_list = new ArrayList();
+def sql_amount = 0;
+do {
+  line = sql_reader.readLine();
+  if (line != null) {
+    sql_amount++;
+    vars.put(&quot;create_sql_&quot;+sql_amount, line)
+  }
+} while (line != null);
+
+vars.put(&quot;sql_amount&quot;, sql_amount+&quot;&quot;);</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
+        </hashTree>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="[Setup] 建库建表">
+          <stringProp name="LoopController.loops">${sql_amount}</stringProp>
         </LoopController>
         <hashTree>
-          <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="计数器" enabled="true">
+          <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="[Setup] 计数器">
             <stringProp name="CounterConfig.start">1</stringProp>
-            <stringProp name="CounterConfig.end">${dup_table_amount}</stringProp>
+            <stringProp name="CounterConfig.end">${sql_amount}</stringProp>
             <stringProp name="CounterConfig.incr">1</stringProp>
-            <stringProp name="CounterConfig.name">table_idx</stringProp>
+            <stringProp name="CounterConfig.name">sql_idx</stringProp>
             <stringProp name="CounterConfig.format"></stringProp>
             <boolProp name="CounterConfig.per_user">false</boolProp>
           </CounterConfig>
           <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 创建${db_name}.pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)}表">
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 执行建库/建表语句">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">${__P(pt100_dm_${__groovy(def number = vars.get(&quot;table_idx&quot;).toInteger(); return number &lt; 10 ? &quot;0&quot; + number : number.toString(),)}_ddl,)};</stringProp>
+            <stringProp name="query">${__V(create_sql_${sql_idx},)}</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -290,6 +261,11 @@
         </elementProp>
       </ThreadGroup>
       <hashTree>
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器">
+          <stringProp name="throughput">${write_throughput}</stringProp>
+          <intProp name="calcMode">0</intProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
         <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="调用sdk的BatchInsert API写入随机表数据">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
             <collectionProp name="Arguments.arguments">
