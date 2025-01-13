@@ -15,6 +15,6 @@ eval "$cmd"
 echo "CREATE DATABASE db_shig_meta;";\
 bash "${script_dir}"/../gen_sql.sh -t db_shig/t_electmeter -m db_shig/t_electmeter.meta;\
 bash "${script_dir}"/../gen_sql.sh -t db_shig/t_cnc -m db_shig/t_cnc.meta;\
-bash "${script_dir}"/../gen_sql.sh -t db_shig_meta/sub_company -m db_shig_meta/meta -r;\
-bash "${script_dir}"/../gen_sql.sh -t db_shig_meta/factory -m db_shig_meta/meta -r;\
-bash "${script_dir}"/../gen_sql.sh -t db_shig_meta/workshop -m db_shig_meta/meta -r; } >> "${script_dir}"/create.sql
+bash "${script_dir}"/../gen_sql.sh -t db_shig_meta/sub_company -m db_shig_meta/common.meta -r;\
+bash "${script_dir}"/../gen_sql.sh -t db_shig_meta/factory -m db_shig_meta/common.meta -r;\
+bash "${script_dir}"/../gen_sql.sh -t db_shig_meta/workshop -m db_shig_meta/common.meta -r; } >> "${script_dir}"/create.sql

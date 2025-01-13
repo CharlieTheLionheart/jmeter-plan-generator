@@ -12,8 +12,8 @@ show_help() {
     echo "  -n, --num          Specify amount of devices"
 }
 
-SHORT_OPTIONS=hf:n:d:
-LONG_OPTIONS=help,from:,num:,digits:
+SHORT_OPTIONS=hf:n:d::
+LONG_OPTIONS=help,from:,num:,digits::
 
 PARSED=$(getopt --options $SHORT_OPTIONS --longoptions $LONG_OPTIONS --name "$0" -- "$@")
 if [[ $? -ne 0 ]]; then
