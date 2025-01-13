@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 show_help() {
     echo "Duplicate svt data config file from assigned template files"

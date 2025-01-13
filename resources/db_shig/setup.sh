@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 script_dir=$(dirname "$(realpath "$0")")
 cmd="bash ${script_dir}/split_device.sh"

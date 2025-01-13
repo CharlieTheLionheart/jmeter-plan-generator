@@ -75,9 +75,14 @@
             <stringProp name="Argument.value">${__P(user.write.sql_amount_per_conn,8)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="dup_table_amount" elementType="Argument">
-            <stringProp name="Argument.name">dup_table_amount</stringProp>
-            <stringProp name="Argument.value">5</stringProp>
+          <elementProp name="dup_table_suffix_digits" elementType="Argument">
+            <stringProp name="Argument.name">dup_table_suffix_digits</stringProp>
+            <stringProp name="Argument.value">${__P(dup_table_suffix_digits,2)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="dup_table_total_amount" elementType="Argument">
+            <stringProp name="Argument.name">dup_table_total_amount</stringProp>
+            <stringProp name="Argument.value">${__P(dup_table_total_amount,5)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -426,7 +431,15 @@ vars.putObject(&quot;rand_offset&quot;, rand_offset_arr[ThreadLocalRandom.curren
             <stringProp name="script">import java.util.concurrent.ThreadLocalRandom
 
 vars.put(&quot;rand_mp&quot;, &quot;mp&quot; + ThreadLocalRandom.current().nextInt(1, 34))
-vars.put(&quot;rand_table_name&quot;, &quot;pt100_dm_0&quot; + ThreadLocalRandom.current().nextInt(1, 6))
+int dupTableTotalAmount = Integer.parseInt(vars.getObject(&quot;dup_table_total_amount&quot;))
+String randTableNameSuffixVal = ThreadLocalRandom.current().nextInt(1, dupTableTotalAmount + 1) + &quot;&quot;
+StringBuilder suffixBuilder = new StringBuilder(randTableNameSuffixVal)
+int dupTableSuffixDigits = Integer.parseInt(vars.get(&quot;dup_table_suffix_digits&quot;))
+int zerosToPad = dupTableSuffixDigits - randTableNameSuffixVal.length();
+for (int i = 0; i &lt; zerosToPad; i++) {
+  suffixBuilder.insert(0, &quot;0&quot;)
+}
+vars.put(&quot;rand_table_name&quot;, &quot;pt100_dm_&quot; + suffixBuilder)
 vars.putObject(&quot;q_ts_begin&quot;, &quot;${__timeShift(yyyy-MM-dd HH:mm:ss.SSS,,-PT1H,,)}&quot;)
 vars.putObject(&quot;q_ts_end&quot;, &quot;${__time(yyyy-MM-dd HH:mm:ss.SSS,)}&quot;)
 vars.putObject(&quot;rand_device&quot;, &quot;device&quot; + ThreadLocalRandom.current().nextInt(1, 1001))</stringProp>

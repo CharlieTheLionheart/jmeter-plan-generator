@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 show_help() {
     echo "Generate svt create table sql file from assigned template files"

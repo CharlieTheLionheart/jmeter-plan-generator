@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 show_help() {
     echo "Split svt shig device from assigned from index and amount"

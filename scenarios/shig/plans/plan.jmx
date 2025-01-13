@@ -529,6 +529,7 @@ if (electmeter_list == null || electmeter_list.isEmpty()) {
 }
 
 String elect_name_expect = ((CommaSplitTextData) electmeter_list.get(0)).getDataLine().split(&quot;,&quot;)[0]
+log.warn(&quot;elect_name_expect=&quot; + elect_name_expect)
 JMeterUtils.setProperty(&quot;elect_name_expect&quot;, elect_name_expect)
 
 for (RowData elect_line : electmeter_list) {
