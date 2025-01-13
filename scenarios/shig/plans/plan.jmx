@@ -185,6 +185,11 @@
             <stringProp name="Argument.value">${__P(user.seed_conf_path,/data)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="kafka_socket" elementType="Argument">
+            <stringProp name="Argument.name">kafka_socket</stringProp>
+            <stringProp name="Argument.value">${__P(kafka_socket,)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -279,7 +284,6 @@ set enable_multimodel=true;</stringProp>
             <stringProp name="script">def sql_file=&quot;${seed_conf_path}/${db_name}/create.sql&quot;
 
 def sql_reader = new RandomAccessFile(sql_file, &quot;r&quot;)
-def create_sql_list = new ArrayList();
 def sql_amount = 0;
 do {
   line = sql_reader.readLine();
@@ -319,6 +323,68 @@ vars.put(&quot;sql_amount&quot;, sql_amount+&quot;&quot;);</stringProp>
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree/>
+        </hashTree>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] kafka socket不为空">
+          <stringProp name="IfController.condition">${__groovy(!&quot;${kafka_socket}&quot;.isEmpty())}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="[Setup] 加载创建实时订阅pipe语句">
+            <boolProp name="displayJMeterProperties">false</boolProp>
+            <boolProp name="displayJMeterVariables">true</boolProp>
+            <boolProp name="displaySystemProperties">false</boolProp>
+          </DebugSampler>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="[Setup] JSR223 预处理程序">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">def pipe_sql_file=&quot;${seed_conf_path}/${db_name}/create_pipe.sql&quot;
+
+def pipe_sql_reader = new RandomAccessFile(pipe_sql_file, &quot;r&quot;)
+def pipe_sql_amount = 0;
+def kafka_socket_pattern = &quot;KAFKA_SOCKET&quot;;
+do {
+  line = pipe_sql_reader.readLine();
+  if (line != null) {
+    pipe_sql_amount++;
+    vars.put(&quot;pipe_sql_&quot;+pipe_sql_amount, line.replaceAll(kafka_socket_pattern, &quot;${kafka_socket}&quot;))
+  }
+} while (line != null);
+
+vars.put(&quot;pipe_sql_amount&quot;, pipe_sql_amount+&quot;&quot;);</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+          </hashTree>
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="[Setup] 创建实时订阅pipe">
+            <stringProp name="LoopController.loops">${pipe_sql_amount}</stringProp>
+          </LoopController>
+          <hashTree>
+            <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="[Setup] 计数器">
+              <stringProp name="CounterConfig.start">1</stringProp>
+              <stringProp name="CounterConfig.end">${pipe_sql_amount}</stringProp>
+              <stringProp name="CounterConfig.incr">1</stringProp>
+              <stringProp name="CounterConfig.name">pipe_sql_idx</stringProp>
+              <stringProp name="CounterConfig.format"></stringProp>
+              <boolProp name="CounterConfig.per_user">false</boolProp>
+            </CounterConfig>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 执行建库/建表语句">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">${__V(pipe_sql_${pipe_sql_idx},)}</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+          </hashTree>
         </hashTree>
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 写入分公司元数据" enabled="true">
           <stringProp name="dataSource">default_pool</stringProp>
@@ -2374,7 +2440,10 @@ if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
               <stringProp name="cacheKey">false</stringProp>
               <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-121M,,)})
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
-vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+def query_machine_code = &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;
+vars.putObject(&quot;machine_code&quot;, query_machine_code)
+log.warn(&quot;query_machine_code=&quot; + query_machine_code)
+log.warn(&quot;elect_name_expect=${__P(elect_name_expect,)}&quot;)</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
             <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
@@ -2653,7 +2722,7 @@ for (int resultIndex = 1; resultIndex &lt;= resultList.size(); resultIndex++) {
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="结果树">
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="结果树" enabled="true">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
