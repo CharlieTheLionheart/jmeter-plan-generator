@@ -190,6 +190,11 @@
             <stringProp name="Argument.value">${__P(kafka_socket,)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="autocommit" elementType="Argument">
+            <stringProp name="Argument.name">autocommit</stringProp>
+            <stringProp name="Argument.value">${__P(autocommit,true)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -198,7 +203,7 @@
         <stringProp name="poolMax">0</stringProp>
         <stringProp name="timeout">10000</stringProp>
         <stringProp name="trimInterval">60000</stringProp>
-        <boolProp name="autocommit">true</boolProp>
+        <stringProp name="autocommit">${autocommit}</stringProp>
         <stringProp name="transactionIsolation">DEFAULT</stringProp>
         <boolProp name="preinit">true</boolProp>
         <stringProp name="initQuery">set cluster setting ts.parallel_degree=8;
@@ -683,47 +688,54 @@ SampleResult.setIgnore()</stringProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入">
-            <boolProp name="LoopController.continue_forever">true</boolProp>
-            <intProp name="LoopController.loops">-1</intProp>
-          </LoopController>
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == false">
+            <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
+            <boolProp name="IfController.evaluateAll">false</boolProp>
+            <boolProp name="IfController.useExpression">true</boolProp>
+          </IfController>
           <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
-              <stringProp name="maximumValue">${device_rand_end}</stringProp>
-              <stringProp name="minimumValue">${device_rand_start}</stringProp>
-              <stringProp name="outputFormat"></stringProp>
-              <boolProp name="perThread">false</boolProp>
-              <stringProp name="randomSeed"></stringProp>
-              <stringProp name="variableName">device_num</stringProp>
-            </RandomVariableConfig>
-            <hashTree/>
-            <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
-              <stringProp name="CounterConfig.start">1</stringProp>
-              <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
-              <stringProp name="CounterConfig.incr">1</stringProp>
-              <stringProp name="CounterConfig.name">batch_idx</stringProp>
-              <stringProp name="CounterConfig.format"></stringProp>
-              <boolProp name="CounterConfig.per_user">false</boolProp>
-            </CounterConfig>
-            <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}">
-              <stringProp name="dataSource">default_pool</stringProp>
-              <stringProp name="queryType">Update Statement</stringProp>
-              <stringProp name="query">${builder}</stringProp>
-              <stringProp name="queryArguments"></stringProp>
-              <stringProp name="queryArgumentsTypes"></stringProp>
-              <stringProp name="variableNames"></stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout">60</stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCSampler>
+            <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入">
+              <boolProp name="LoopController.continue_forever">true</boolProp>
+              <intProp name="LoopController.loops">-1</intProp>
+            </LoopController>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}">
-                <stringProp name="cacheKey">true</stringProp>
-                <stringProp name="filename"></stringProp>
-                <stringProp name="parameters"></stringProp>
-                <stringProp name="script">import java.sql.*
+              <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
+                <stringProp name="maximumValue">${device_rand_end}</stringProp>
+                <stringProp name="minimumValue">${device_rand_start}</stringProp>
+                <stringProp name="outputFormat"></stringProp>
+                <boolProp name="perThread">false</boolProp>
+                <stringProp name="randomSeed"></stringProp>
+                <stringProp name="variableName">device_num</stringProp>
+              </RandomVariableConfig>
+              <hashTree/>
+              <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器">
+                <stringProp name="CounterConfig.start">1</stringProp>
+                <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
+                <stringProp name="CounterConfig.incr">1</stringProp>
+                <stringProp name="CounterConfig.name">batch_idx</stringProp>
+                <stringProp name="CounterConfig.format"></stringProp>
+                <boolProp name="CounterConfig.per_user">false</boolProp>
+              </CounterConfig>
+              <hashTree/>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Callable Statement</stringProp>
+                <stringProp name="query">${builder};
+commit;</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout">60</stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree>
+                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+                  <stringProp name="cacheKey">true</stringProp>
+                  <stringProp name="filename"></stringProp>
+                  <stringProp name="parameters"></stringProp>
+                  <stringProp name="script">import java.sql.*
 import java.io.*
 import java.util.List
 import java.util.ArrayList
@@ -763,36 +775,37 @@ void generateBatchInsertSQL() {
 }
 
 generateBatchInsertSQL()</stringProp>
-                <stringProp name="scriptLanguage">groovy</stringProp>
-              </JSR223PreProcessor>
-              <hashTree/>
-              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
-                <collectionProp name="Asserion.test_strings"/>
-                <stringProp name="Assertion.custom_message"></stringProp>
-                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-                <boolProp name="Assertion.assume_success">false</boolProp>
-                <intProp name="Assertion.test_type">16</intProp>
-              </ResponseAssertion>
-              <hashTree/>
-            </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}">
-              <stringProp name="dataSource">default_pool</stringProp>
-              <stringProp name="queryType">Update Statement</stringProp>
-              <stringProp name="query">${cnc_builder}</stringProp>
-              <stringProp name="queryArguments"></stringProp>
-              <stringProp name="queryArgumentsTypes"></stringProp>
-              <stringProp name="variableNames"></stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout">60</stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCSampler>
-            <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}">
-                <stringProp name="cacheKey">true</stringProp>
-                <stringProp name="filename"></stringProp>
-                <stringProp name="parameters"></stringProp>
-                <stringProp name="script">import java.sql.*
+                  <stringProp name="scriptLanguage">groovy</stringProp>
+                </JSR223PreProcessor>
+                <hashTree/>
+                <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                  <collectionProp name="Asserion.test_strings"/>
+                  <stringProp name="Assertion.custom_message"></stringProp>
+                  <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                  <boolProp name="Assertion.assume_success">false</boolProp>
+                  <intProp name="Assertion.test_type">16</intProp>
+                </ResponseAssertion>
+                <hashTree/>
+              </hashTree>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Callable Statement</stringProp>
+                <stringProp name="query">${cnc_builder};
+commit;</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout">60</stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree>
+                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+                  <stringProp name="cacheKey">true</stringProp>
+                  <stringProp name="filename"></stringProp>
+                  <stringProp name="parameters"></stringProp>
+                  <stringProp name="script">import java.sql.*
 import java.io.*
 import java.util.List
 import java.util.ArrayList
@@ -836,17 +849,191 @@ void generateBatchInsertSQL() {
 }
 
 generateBatchInsertSQL()</stringProp>
-                <stringProp name="scriptLanguage">groovy</stringProp>
-              </JSR223PreProcessor>
+                  <stringProp name="scriptLanguage">groovy</stringProp>
+                </JSR223PreProcessor>
+                <hashTree/>
+                <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                  <collectionProp name="Asserion.test_strings"/>
+                  <stringProp name="Assertion.custom_message"></stringProp>
+                  <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                  <boolProp name="Assertion.assume_success">false</boolProp>
+                  <intProp name="Assertion.test_type">16</intProp>
+                </ResponseAssertion>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+          </hashTree>
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == true">
+            <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
+            <boolProp name="IfController.evaluateAll">false</boolProp>
+            <boolProp name="IfController.useExpression">true</boolProp>
+          </IfController>
+          <hashTree>
+            <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入">
+              <boolProp name="LoopController.continue_forever">true</boolProp>
+              <intProp name="LoopController.loops">-1</intProp>
+            </LoopController>
+            <hashTree>
+              <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量">
+                <stringProp name="maximumValue">${device_rand_end}</stringProp>
+                <stringProp name="minimumValue">${device_rand_start}</stringProp>
+                <stringProp name="outputFormat"></stringProp>
+                <boolProp name="perThread">false</boolProp>
+                <stringProp name="randomSeed"></stringProp>
+                <stringProp name="variableName">device_num</stringProp>
+              </RandomVariableConfig>
               <hashTree/>
-              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
-                <collectionProp name="Asserion.test_strings"/>
-                <stringProp name="Assertion.custom_message"></stringProp>
-                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-                <boolProp name="Assertion.assume_success">false</boolProp>
-                <intProp name="Assertion.test_type">16</intProp>
-              </ResponseAssertion>
+              <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器">
+                <stringProp name="CounterConfig.start">1</stringProp>
+                <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
+                <stringProp name="CounterConfig.incr">1</stringProp>
+                <stringProp name="CounterConfig.name">batch_idx</stringProp>
+                <stringProp name="CounterConfig.format"></stringProp>
+                <boolProp name="CounterConfig.per_user">false</boolProp>
+              </CounterConfig>
               <hashTree/>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Update Statement</stringProp>
+                <stringProp name="query">${builder}</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout">60</stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree>
+                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}">
+                  <stringProp name="cacheKey">true</stringProp>
+                  <stringProp name="filename"></stringProp>
+                  <stringProp name="parameters"></stringProp>
+                  <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
+
+List generateTimestampList() {
+  def nextTs = vars.getObject(&quot;last_ts&quot;)
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  vars.putObject(&quot;last_ts&quot;, nextTs)
+  return tsList
+}
+
+void generateBatchInsertSQL() {
+  def electmeter_list = DataSeedCtx.getRowDataList(&quot;${db_name}.t_electmeter&quot;)
+  def builder = new StringBuilder()
+  int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
+  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_electmeter (k_timestamp, elect_name,vol_a,cur_a, powerf_a, allenergy_a, pallenergy_a, rallenergy_a, allrenergy1_a, allrenergy2_a, powera_a, powerr_a, powerl_a, vol_b, cur_b, powerf_b, allenergy_b, pallenergy_b, rallenergy_b, allrenergy1_b, allrenergy2_b, powera_b, powerr_b, powerl_b, vol_c, cur_c, powerf_c, allenergy_c, pallenergy_c, rallenergy_c, allrenergy1_c, allrenergy2_c, powera_c, powerr_c, powerl_c, vol_ab, vol_bc, vol_ca, infre, powerf, allpower, pallpower, rallpower, powerr, powerl, allrenergy1, allrenergy2, machine_code, op_group, workshop_id, cnc_number) values &quot;)
+  def timestampedList = generateTimestampList()
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
+  	def nextLine = ((CommaSplitTextData) electmeter_list.get(lineIdx)).getDataLine()
+	  builder.append(&quot;(${timestampedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	  builder.append(workshop_id)
+	  builder.append(&quot;,${__Random(1,20,)}),&quot;)
+  }
+  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+  log.debug(&quot;builder={}&quot;, builder.toString())
+  vars.put(&quot;builder&quot;, builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+                  <stringProp name="scriptLanguage">groovy</stringProp>
+                </JSR223PreProcessor>
+                <hashTree/>
+                <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                  <collectionProp name="Asserion.test_strings"/>
+                  <stringProp name="Assertion.custom_message"></stringProp>
+                  <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                  <boolProp name="Assertion.assume_success">false</boolProp>
+                  <intProp name="Assertion.test_type">16</intProp>
+                </ResponseAssertion>
+                <hashTree/>
+              </hashTree>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Update Statement</stringProp>
+                <stringProp name="query">${cnc_builder}</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout">60</stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree>
+                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}">
+                  <stringProp name="cacheKey">true</stringProp>
+                  <stringProp name="filename"></stringProp>
+                  <stringProp name="parameters"></stringProp>
+                  <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
+
+List generateTimestampList() {
+  def nextTs = vars.getObject(&quot;last_ts&quot;)
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  vars.putObject(&quot;last_ts&quot;, nextTs)
+  return tsList
+}
+
+void generateBatchInsertSQL() {
+  def cnc_list = DataSeedCtx.getRowDataList(&quot;${db_name}.t_cnc&quot;)
+  def cnc_builder = new StringBuilder()
+  int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
+  int factory_id = (workshop_id + 4) / 5
+  int sub_company_id = (factory_id + 4) / 5
+  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc (k_timestamp, cnc_sn, cnc_sw_mver, cnc_sw_sver, cnc_tol_mem, cnc_use_mem, cnc_unuse_mem, cnc_status, path_quantity, axis_quantity, axis_path, axis_type, axis_unit, axis_num, axis_name, sp_name, abs_pos, rel_pos, mach_pos, dist_pos, sp_override, sp_set_speed, sp_act_speed, sp_load, feed_set_speed, feed_act_speed, feed_override, servo_load, parts_count, cnc_cycletime, cnc_alivetime, cnc_cuttime, cnc_runtime, mprog_name, mprog_num, sprog_name, sprog_num, prog_seq_num, prog_seq_content, alarm_count, alarm_type, alarm_code, alarm_content, alarm_time, cur_tool_num, cur_tool_len_num, cur_tool_len, cur_tool_len_val, cur_tool_x_len, cur_tool_x_len_val, cur_tool_y_len, cur_tool_y_len_val, cur_tool_z_len, cur_tool_z_len_val, cur_tool_rad_num, cur_tool_rad, cur_tool_rad_val, device_state, value1, value2, value3, value4, value5, machine_code, op_group, sub_company_id, factory_id, workshop_id, number_of_molds) values &quot;)
+  def timestampedList = generateTimestampList()
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
+  	def nextLine = ((CommaSplitTextData) cnc_list.get(lineIdx)).getDataLine()
+	  cnc_builder.append(&quot;(${timestampedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	  	  cnc_builder.append(sub_company_id + &quot;,&quot;)
+	  cnc_builder.append(factory_id + &quot;,&quot;)
+	  cnc_builder.append(workshop_id + &quot;,&quot;)
+	  cnc_builder.append(&quot;${__Random(1,20,)}),&quot;)
+  }
+  cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
+
+  vars.put(&quot;cnc_builder&quot;, cnc_builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+                  <stringProp name="scriptLanguage">groovy</stringProp>
+                </JSR223PreProcessor>
+                <hashTree/>
+                <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                  <collectionProp name="Asserion.test_strings"/>
+                  <stringProp name="Assertion.custom_message"></stringProp>
+                  <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                  <boolProp name="Assertion.assume_success">false</boolProp>
+                  <intProp name="Assertion.test_type">16</intProp>
+                </ResponseAssertion>
+                <hashTree/>
+              </hashTree>
             </hashTree>
           </hashTree>
         </hashTree>
@@ -856,47 +1043,54 @@ generateBatchInsertSQL()</stringProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入">
-            <boolProp name="LoopController.continue_forever">true</boolProp>
-            <intProp name="LoopController.loops">-1</intProp>
-          </LoopController>
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == false">
+            <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
+            <boolProp name="IfController.evaluateAll">false</boolProp>
+            <boolProp name="IfController.useExpression">true</boolProp>
+          </IfController>
           <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
-              <stringProp name="maximumValue">${device_rand_end}</stringProp>
-              <stringProp name="minimumValue">${device_rand_start}</stringProp>
-              <stringProp name="outputFormat"></stringProp>
-              <boolProp name="perThread">false</boolProp>
-              <stringProp name="randomSeed"></stringProp>
-              <stringProp name="variableName">device_num</stringProp>
-            </RandomVariableConfig>
-            <hashTree/>
-            <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
-              <stringProp name="CounterConfig.start">1</stringProp>
-              <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
-              <stringProp name="CounterConfig.incr">1</stringProp>
-              <stringProp name="CounterConfig.name">batch_idx</stringProp>
-              <stringProp name="CounterConfig.format"></stringProp>
-              <boolProp name="CounterConfig.per_user">false</boolProp>
-            </CounterConfig>
-            <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}">
-              <stringProp name="dataSource">default_pool</stringProp>
-              <stringProp name="queryType">Update Statement</stringProp>
-              <stringProp name="query">${builder}</stringProp>
-              <stringProp name="queryArguments"></stringProp>
-              <stringProp name="queryArgumentsTypes"></stringProp>
-              <stringProp name="variableNames"></stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout">60</stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCSampler>
+            <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入">
+              <boolProp name="LoopController.continue_forever">true</boolProp>
+              <intProp name="LoopController.loops">-1</intProp>
+            </LoopController>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}">
-                <stringProp name="cacheKey">true</stringProp>
-                <stringProp name="filename"></stringProp>
-                <stringProp name="parameters"></stringProp>
-                <stringProp name="script">import java.sql.*
+              <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
+                <stringProp name="maximumValue">${device_rand_end}</stringProp>
+                <stringProp name="minimumValue">${device_rand_start}</stringProp>
+                <stringProp name="outputFormat"></stringProp>
+                <boolProp name="perThread">false</boolProp>
+                <stringProp name="randomSeed"></stringProp>
+                <stringProp name="variableName">device_num</stringProp>
+              </RandomVariableConfig>
+              <hashTree/>
+              <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
+                <stringProp name="CounterConfig.start">1</stringProp>
+                <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
+                <stringProp name="CounterConfig.incr">1</stringProp>
+                <stringProp name="CounterConfig.name">batch_idx</stringProp>
+                <stringProp name="CounterConfig.format"></stringProp>
+                <boolProp name="CounterConfig.per_user">false</boolProp>
+              </CounterConfig>
+              <hashTree/>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Callable Statement</stringProp>
+                <stringProp name="query">${builder};
+commit;</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout">60</stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree>
+                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+                  <stringProp name="cacheKey">true</stringProp>
+                  <stringProp name="filename"></stringProp>
+                  <stringProp name="parameters"></stringProp>
+                  <stringProp name="script">import java.sql.*
 import java.io.*
 import java.util.List
 import java.util.ArrayList
@@ -936,36 +1130,37 @@ void generateBatchInsertSQL() {
 }
 
 generateBatchInsertSQL()</stringProp>
-                <stringProp name="scriptLanguage">groovy</stringProp>
-              </JSR223PreProcessor>
-              <hashTree/>
-              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
-                <collectionProp name="Asserion.test_strings"/>
-                <stringProp name="Assertion.custom_message"></stringProp>
-                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-                <boolProp name="Assertion.assume_success">false</boolProp>
-                <intProp name="Assertion.test_type">16</intProp>
-              </ResponseAssertion>
-              <hashTree/>
-            </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}">
-              <stringProp name="dataSource">default_pool</stringProp>
-              <stringProp name="queryType">Update Statement</stringProp>
-              <stringProp name="query">${cnc_builder}</stringProp>
-              <stringProp name="queryArguments"></stringProp>
-              <stringProp name="queryArgumentsTypes"></stringProp>
-              <stringProp name="variableNames"></stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout">60</stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCSampler>
-            <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}">
-                <stringProp name="cacheKey">true</stringProp>
-                <stringProp name="filename"></stringProp>
-                <stringProp name="parameters"></stringProp>
-                <stringProp name="script">import java.sql.*
+                  <stringProp name="scriptLanguage">groovy</stringProp>
+                </JSR223PreProcessor>
+                <hashTree/>
+                <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                  <collectionProp name="Asserion.test_strings"/>
+                  <stringProp name="Assertion.custom_message"></stringProp>
+                  <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                  <boolProp name="Assertion.assume_success">false</boolProp>
+                  <intProp name="Assertion.test_type">16</intProp>
+                </ResponseAssertion>
+                <hashTree/>
+              </hashTree>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Callable Statement</stringProp>
+                <stringProp name="query">${cnc_builder};
+commit;</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout">60</stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree>
+                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+                  <stringProp name="cacheKey">true</stringProp>
+                  <stringProp name="filename"></stringProp>
+                  <stringProp name="parameters"></stringProp>
+                  <stringProp name="script">import java.sql.*
 import java.io.*
 import java.util.List
 import java.util.ArrayList
@@ -1009,17 +1204,191 @@ void generateBatchInsertSQL() {
 }
 
 generateBatchInsertSQL()</stringProp>
-                <stringProp name="scriptLanguage">groovy</stringProp>
-              </JSR223PreProcessor>
+                  <stringProp name="scriptLanguage">groovy</stringProp>
+                </JSR223PreProcessor>
+                <hashTree/>
+                <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                  <collectionProp name="Asserion.test_strings"/>
+                  <stringProp name="Assertion.custom_message"></stringProp>
+                  <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                  <boolProp name="Assertion.assume_success">false</boolProp>
+                  <intProp name="Assertion.test_type">16</intProp>
+                </ResponseAssertion>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+          </hashTree>
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == true">
+            <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
+            <boolProp name="IfController.evaluateAll">false</boolProp>
+            <boolProp name="IfController.useExpression">true</boolProp>
+          </IfController>
+          <hashTree>
+            <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
+              <boolProp name="LoopController.continue_forever">true</boolProp>
+              <intProp name="LoopController.loops">-1</intProp>
+            </LoopController>
+            <hashTree>
+              <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
+                <stringProp name="maximumValue">${device_rand_end}</stringProp>
+                <stringProp name="minimumValue">${device_rand_start}</stringProp>
+                <stringProp name="outputFormat"></stringProp>
+                <boolProp name="perThread">false</boolProp>
+                <stringProp name="randomSeed"></stringProp>
+                <stringProp name="variableName">device_num</stringProp>
+              </RandomVariableConfig>
               <hashTree/>
-              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
-                <collectionProp name="Asserion.test_strings"/>
-                <stringProp name="Assertion.custom_message"></stringProp>
-                <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-                <boolProp name="Assertion.assume_success">false</boolProp>
-                <intProp name="Assertion.test_type">16</intProp>
-              </ResponseAssertion>
+              <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
+                <stringProp name="CounterConfig.start">1</stringProp>
+                <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
+                <stringProp name="CounterConfig.incr">1</stringProp>
+                <stringProp name="CounterConfig.name">batch_idx</stringProp>
+                <stringProp name="CounterConfig.format"></stringProp>
+                <boolProp name="CounterConfig.per_user">false</boolProp>
+              </CounterConfig>
               <hashTree/>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Update Statement</stringProp>
+                <stringProp name="query">${builder}</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout">60</stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree>
+                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+                  <stringProp name="cacheKey">true</stringProp>
+                  <stringProp name="filename"></stringProp>
+                  <stringProp name="parameters"></stringProp>
+                  <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
+
+List generateTimestampList() {
+  def nextTs = System.currentTimeMillis()
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  return tsList
+}
+
+void generateBatchInsertSQL() {
+  def electmeter_list = DataSeedCtx.getRowDataList(&quot;${db_name}.t_electmeter&quot;)
+  def builder = new StringBuilder()
+  int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
+  builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_electmeter (k_timestamp, elect_name,vol_a,cur_a, powerf_a, allenergy_a, pallenergy_a, rallenergy_a, allrenergy1_a, allrenergy2_a, powera_a, powerr_a, powerl_a, vol_b, cur_b, powerf_b, allenergy_b, pallenergy_b, rallenergy_b, allrenergy1_b, allrenergy2_b, powera_b, powerr_b, powerl_b, vol_c, cur_c, powerf_c, allenergy_c, pallenergy_c, rallenergy_c, allrenergy1_c, allrenergy2_c, powera_c, powerr_c, powerl_c, vol_ab, vol_bc, vol_ca, infre, powerf, allpower, pallpower, rallpower, powerr, powerl, allrenergy1, allrenergy2, machine_code, op_group, workshop_id, cnc_number) values &quot;)
+
+  def timestampedList = generateTimestampList()
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
+  	def nextLine = ((CommaSplitTextData) electmeter_list.get(lineIdx)).getDataLine()
+	builder.append(&quot;(${timestampedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	builder.append(workshop_id)
+	builder.append(&quot;,${__Random(1,20,)}),&quot;)
+  }
+  builder.setCharAt(builder.length() - 1, &apos;;&apos; as char)
+  log.debug(&quot;builder={}&quot;, builder.toString())
+  vars.put(&quot;builder&quot;, builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+                  <stringProp name="scriptLanguage">groovy</stringProp>
+                </JSR223PreProcessor>
+                <hashTree/>
+                <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                  <collectionProp name="Asserion.test_strings"/>
+                  <stringProp name="Assertion.custom_message"></stringProp>
+                  <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                  <boolProp name="Assertion.assume_success">false</boolProp>
+                  <intProp name="Assertion.test_type">16</intProp>
+                </ResponseAssertion>
+                <hashTree/>
+              </hashTree>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Update Statement</stringProp>
+                <stringProp name="query">${cnc_builder}</stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout">60</stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree>
+                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.cnc_${__threadNum}" enabled="true">
+                  <stringProp name="cacheKey">true</stringProp>
+                  <stringProp name="filename"></stringProp>
+                  <stringProp name="parameters"></stringProp>
+                  <stringProp name="script">import java.sql.*
+import java.io.*
+import java.util.List
+import java.util.ArrayList
+import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
+
+List generateTimestampList() {
+  def nextTs = System.currentTimeMillis()
+  int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+  def tsList = new ArrayList()
+  for(int lineNumIdx = 0; lineNumIdx &lt; lineNum; lineNumIdx++){
+    tsList.add(nextTs)
+    nextTs += dataTsStep
+  }
+  return tsList
+}
+
+void generateBatchInsertSQL() {
+  def cnc_list = DataSeedCtx.getRowDataList(&quot;${db_name}.t_cnc&quot;)
+  def cnc_builder = new StringBuilder()
+  int workshop_id = (Integer.parseInt(&quot;${__threadNum}&quot;) - 1) * 5 + (Integer.parseInt(vars.get(&quot;device_num&quot;)) - 1) % 5 + 1
+  int factory_id = (workshop_id + 4) / 5
+  int sub_company_id = (factory_id + 4) / 5
+  cnc_builder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_cnc (k_timestamp, cnc_sn, cnc_sw_mver, cnc_sw_sver, cnc_tol_mem, cnc_use_mem, cnc_unuse_mem, cnc_status, path_quantity, axis_quantity, axis_path, axis_type, axis_unit, axis_num, axis_name, sp_name, abs_pos, rel_pos, mach_pos, dist_pos, sp_override, sp_set_speed, sp_act_speed, sp_load, feed_set_speed, feed_act_speed, feed_override, servo_load, parts_count, cnc_cycletime, cnc_alivetime, cnc_cuttime, cnc_runtime, mprog_name, mprog_num, sprog_name, sprog_num, prog_seq_num, prog_seq_content, alarm_count, alarm_type, alarm_code, alarm_content, alarm_time, cur_tool_num, cur_tool_len_num, cur_tool_len, cur_tool_len_val, cur_tool_x_len, cur_tool_x_len_val, cur_tool_y_len, cur_tool_y_len_val, cur_tool_z_len, cur_tool_z_len_val, cur_tool_rad_num, cur_tool_rad, cur_tool_rad_val, device_state, value1, value2, value3, value4, value5, machine_code, op_group, sub_company_id, factory_id, workshop_id, number_of_molds) values &quot;)
+
+  def timestampedList = generateTimestampList()
+  def maxCount = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+  for(int lineIdx = 0; lineIdx &lt; maxCount; lineIdx++) {
+  	def nextLine = ((CommaSplitTextData) cnc_list.get(lineIdx)).getDataLine()
+	  cnc_builder.append(&quot;(${timestampedList.get(lineIdx)},${nextLine},&apos;${__threadNum}_${vars.get(&quot;device_num&quot;)}&apos;,&apos;op_group_${__threadNum}&apos;,&quot;)
+	  cnc_builder.append(sub_company_id + &quot;,&quot;)
+	  cnc_builder.append(factory_id + &quot;,&quot;)
+	  cnc_builder.append(workshop_id + &quot;,&quot;)
+	  cnc_builder.append(&quot;${__Random(1,20,)}),&quot;)
+  }
+  cnc_builder.setCharAt(cnc_builder.length() - 1, &apos;;&apos; as char)
+
+  vars.put(&quot;cnc_builder&quot;, cnc_builder.toString())
+}
+
+generateBatchInsertSQL()</stringProp>
+                  <stringProp name="scriptLanguage">groovy</stringProp>
+                </JSR223PreProcessor>
+                <hashTree/>
+                <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="响应断言" enabled="true">
+                  <collectionProp name="Asserion.test_strings"/>
+                  <stringProp name="Assertion.custom_message"></stringProp>
+                  <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+                  <boolProp name="Assertion.assume_success">false</boolProp>
+                  <intProp name="Assertion.test_type">16</intProp>
+                </ResponseAssertion>
+                <hashTree/>
+              </hashTree>
             </hashTree>
           </hashTree>
         </hashTree>
