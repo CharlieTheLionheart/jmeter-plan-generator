@@ -1,18 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.5">
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
-    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan" enabled="true">
-      <boolProp name="TestPlan.functional_mode">false</boolProp>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan">
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
-      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
         <collectionProp name="Arguments.arguments"/>
       </elementProp>
-      <stringProp name="TestPlan.comments"></stringProp>
-      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[ConfigDebug] 预定义配置" enabled="true">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[ConfigDebug] 预定义配置">
         <collectionProp name="Arguments.arguments">
           <elementProp name="db_url" elementType="Argument">
             <stringProp name="Argument.name">db_url</stringProp>
@@ -44,28 +42,16 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">生成数据时间戳间隔ms, default: 1000</stringProp>
           </elementProp>
-          <elementProp name="point_sn_data_dir" elementType="Argument">
-            <stringProp name="Argument.name">point_sn_data_dir</stringProp>
-            <stringProp name="Argument.value">${__P(user.write.sample_data_dir,kwjdbc-svt/scenarios/pipec/resources/pipec_data_files/)}</stringProp>
+          <elementProp name="seed_conf_path" elementType="Argument">
+            <stringProp name="Argument.name">seed_conf_path</stringProp>
+            <stringProp name="Argument.value">${__P(user.seed_conf_path,/data)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">插入样本数据文件路径(点号), default: kwjdbc-svt/scenarios/pipec/resources/pipec_data_files/</stringProp>
+            <stringProp name="Argument.desc">生成数据种子配置文件路径</stringProp>
           </elementProp>
           <elementProp name="order_by" elementType="Argument">
             <stringProp name="Argument.name">order_by</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.value">${__P(user.read.order_by,k_timestamp)}</stringProp>
-          </elementProp>
-          <elementProp name="create_user" elementType="Argument">
-            <stringProp name="Argument.name">create_user</stringProp>
-            <stringProp name="Argument.value">${__P(user.create.user,kaiwudb)}</stringProp>
-            <stringProp name="Argument.desc">创建用户用户名, default: kaiwudb</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="create_password" elementType="Argument">
-            <stringProp name="Argument.name">create_password</stringProp>
-            <stringProp name="Argument.value">${__P(user.create.password,)}</stringProp>
-            <stringProp name="Argument.desc">创建用户用户密码</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="write_throughput" elementType="Argument">
             <stringProp name="Argument.name">write_throughput</stringProp>
@@ -94,9 +80,9 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池" enabled="true">
+      <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="[JDBC] 创建数据库连接池">
         <stringProp name="dataSource">default_pool</stringProp>
-        <stringProp name="poolMax">0</stringProp>
+        <stringProp name="poolMax">3200</stringProp>
         <stringProp name="timeout">10000</stringProp>
         <stringProp name="trimInterval">60000</stringProp>
         <boolProp name="autocommit">true</boolProp>
@@ -113,60 +99,128 @@
         <stringProp name="connectionProperties"></stringProp>
       </JDBCDataSource>
       <hashTree/>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[User] 配置" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">5</stringProp>
-        <stringProp name="ThreadGroup.delay">0</stringProp>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Setup] 初始化">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <longProp name="ThreadGroup.duration">5</longProp>
+        <longProp name="ThreadGroup.delay">0</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建adminUI用户" enabled="true">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE USER root1 WITH PASSWORD &apos;123456&apos;;
-GRANT admin TO root1;</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout">600</stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="加载时序库配置文件" enabled="true">
+          <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="Data seed config path" elementType="Argument">
+                <stringProp name="Argument.name">Data seed config path</stringProp>
+                <stringProp name="Argument.value">${seed_conf_path}/${db_name}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="classname">com.kaiwudb.svt.sampler.ConfigLoaderSampler</stringProp>
+        </JavaSampler>
         <hashTree/>
-      </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[User] 创建用户" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">5</stringProp>
-        <stringProp name="ThreadGroup.delay">0</stringProp>
-        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
-      </ThreadGroup>
-      <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)设置了密码" enabled="true">
-          <boolProp name="IfController.evaluateAll">false</boolProp>
-          <boolProp name="IfController.useExpression">true</boolProp>
-          <stringProp name="IfController.condition">${__groovy(vars.get(&quot;create_password&quot;) != &quot;&quot;)}</stringProp>
-        </IfController>
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="生成列种子数据" enabled="true">
+          <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="Data seed amount" elementType="Argument">
+                <stringProp name="Argument.name">Data seed amount</stringProp>
+                <stringProp name="Argument.value">100</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Write database name" elementType="Argument">
+                <stringProp name="Argument.name">Write database name</stringProp>
+                <stringProp name="Argument.value">${db_name}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="classname">com.kaiwudb.svt.sampler.CommaSplitColSeedGeneratorSampler</stringProp>
+        </JavaSampler>
+        <hashTree/>
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="生成tag种子数据" enabled="true">
+          <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="Write database name" elementType="Argument">
+                <stringProp name="Argument.name">Write database name</stringProp>
+                <stringProp name="Argument.value">${db_name}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Tag hierarchy string" elementType="Argument">
+                <stringProp name="Argument.name">Tag hierarchy string</stringProp>
+                <stringProp name="Argument.value">point_sn,work_area_sn,work_area_sn,sub_com_sn</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Tag sequence string" elementType="Argument">
+                <stringProp name="Argument.name">Tag sequence string</stringProp>
+                <stringProp name="Argument.value">point_sn,sub_com_sn,work_area_sn,station_sn,pipeline_sn,measure_type,measure_location</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Execution tag by thread group" elementType="Argument">
+                <stringProp name="Argument.name">Execution tag by thread group</stringProp>
+                <stringProp name="Argument.value">measure_type</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="Write thread amount" elementType="Argument">
+                <stringProp name="Argument.name">Write thread amount</stringProp>
+                <stringProp name="Argument.value">${write_thread_count}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="classname">com.kaiwudb.svt.sampler.HierarchicalTagGeneratorSampler</stringProp>
+        </JavaSampler>
+        <hashTree/>
+        <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="[Setup] 加载建库建表语句" enabled="true">
+          <boolProp name="displayJMeterProperties">false</boolProp>
+          <boolProp name="displayJMeterVariables">true</boolProp>
+          <boolProp name="displaySystemProperties">false</boolProp>
+        </DebugSampler>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建用户: ${create_user};密码: ${create_password}" enabled="true">
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="[Setup] JSR223 预处理程序" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">def sql_file=&quot;${seed_conf_path}/${db_name}/create.sql&quot;
+
+def sql_reader = new RandomAccessFile(sql_file, &quot;r&quot;)
+def sql_amount = 0;
+do {
+  line = sql_reader.readLine();
+  if (line != null) {
+    sql_amount++;
+    vars.put(&quot;create_sql_&quot;+sql_amount, line)
+  }
+} while (line != null);
+
+vars.put(&quot;sql_amount&quot;, sql_amount+&quot;&quot;);</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
+        </hashTree>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="[Setup] 建库建表" enabled="true">
+          <stringProp name="LoopController.loops">${sql_amount}</stringProp>
+        </LoopController>
+        <hashTree>
+          <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="[Setup] 计数器" enabled="true">
+            <stringProp name="CounterConfig.start">1</stringProp>
+            <stringProp name="CounterConfig.end">${sql_amount}</stringProp>
+            <stringProp name="CounterConfig.incr">1</stringProp>
+            <stringProp name="CounterConfig.name">sql_idx</stringProp>
+            <stringProp name="CounterConfig.format"></stringProp>
+            <boolProp name="CounterConfig.per_user">false</boolProp>
+          </CounterConfig>
+          <hashTree/>
+          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="[Setup] 执行建库/建表语句" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">CREATE USER ${create_user} WITH PASSWORD &apos;${create_password}&apos;;
-GRANT admin TO ${create_user};</stringProp>
+            <stringProp name="query">${__V(create_sql_${sql_idx},)}</stringProp>
             <stringProp name="queryArguments"></stringProp>
             <stringProp name="queryArgumentsTypes"></stringProp>
             <stringProp name="variableNames"></stringProp>
@@ -177,106 +231,19 @@ GRANT admin TO ${create_user};</stringProp>
           </JDBCSampler>
           <hashTree/>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="(2.0.0)没有设置密码" enabled="true">
-          <boolProp name="IfController.evaluateAll">false</boolProp>
-          <boolProp name="IfController.useExpression">true</boolProp>
-          <stringProp name="IfController.condition">${__groovy(vars.get(&quot;create_password&quot;) == &quot;&quot;)}</stringProp>
-        </IfController>
-        <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建用户: ${create_user}" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">CREATE USER ${create_user};
-GRANT admin TO ${create_user};</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout"></stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-        </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建数据库" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">5</stringProp>
-        <stringProp name="ThreadGroup.delay">6</stringProp>
-        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
-      </ThreadGroup>
-      <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建时序库: ${db_name}" enabled="true">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE TS DATABASE ${db_name};</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout">600</stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-      </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Prepare] 创建表" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">10</stringProp>
-        <stringProp name="ThreadGroup.delay">10</stringProp>
-        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
-      </ThreadGroup>
-      <hashTree>
-        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)创建管网测点表: ${db_name}.t_point" enabled="true">
-          <stringProp name="dataSource">default_pool</stringProp>
-          <stringProp name="queryType">Update Statement</stringProp>
-          <stringProp name="query">CREATE TABLE ${db_name}.t_point (
-  k_timestamp timestamp NOT NULL,
-  measure_value double
- ) ATTRIBUTES (
-  point_sn varchar(64) NOT NULL,
-  work_area_sn varchar(16),
-  sub_com_sn varchar(32),
-  station_sn varchar(16),
-  pipeline_sn varchar(16),
-  measure_type smallint)
-  PRIMARY TAGS(point_sn) activetime 3h;</stringProp>
-          <stringProp name="queryArguments"></stringProp>
-          <stringProp name="queryArgumentsTypes"></stringProp>
-          <stringProp name="variableNames"></stringProp>
-          <stringProp name="resultVariable"></stringProp>
-          <stringProp name="queryTimeout">600</stringProp>
-          <stringProp name="resultSetMaxRows"></stringProp>
-          <stringProp name="resultSetHandler">Store as String</stringProp>
-        </JDBCSampler>
-        <hashTree/>
-      </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type0" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type0">
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -285,21 +252,8 @@ GRANT admin TO ${create_user};</stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;0_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;0_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
@@ -312,51 +266,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)</stringProp>
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type0" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -370,15 +279,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_0_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;0&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -387,70 +300,44 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
-            <hashTree/>
-            <ResultCollector guiclass="SimpleDataWriter" testclass="ResultCollector" testname="Simple Data Writer" enabled="false">
-              <boolProp name="ResultCollector.error_logging">false</boolProp>
-              <objProp>
-                <name>saveConfig</name>
-                <value class="SampleSaveConfiguration">
-                  <time>true</time>
-                  <latency>false</latency>
-                  <timestamp>true</timestamp>
-                  <success>true</success>
-                  <label>true</label>
-                  <code>false</code>
-                  <message>false</message>
-                  <threadName>true</threadName>
-                  <dataType>false</dataType>
-                  <encoding>false</encoding>
-                  <assertions>false</assertions>
-                  <subresults>false</subresults>
-                  <responseData>true</responseData>
-                  <samplerData>true</samplerData>
-                  <xml>true</xml>
-                  <fieldNames>false</fieldNames>
-                  <responseHeaders>false</responseHeaders>
-                  <requestHeaders>false</requestHeaders>
-                  <responseDataOnError>false</responseDataOnError>
-                  <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
-                  <assertionsResultsToSave>0</assertionsResultsToSave>
-                </value>
-              </objProp>
-              <stringProp name="filename">/result/type0.xml</stringProp>
-            </ResultCollector>
             <hashTree/>
           </hashTree>
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type1" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -459,26 +346,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;1_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;1_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -487,51 +360,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type1" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -545,15 +373,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_1_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;1&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -562,21 +394,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -584,17 +421,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type2" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -603,26 +440,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;2_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;2_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -631,51 +454,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type2" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -689,15 +467,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_2_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;2&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -706,21 +488,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -728,17 +515,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type3" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -747,26 +534,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;3_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;3_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -775,51 +548,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type3" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -833,15 +561,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_3_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;3&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -850,21 +582,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -872,17 +609,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type4" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -891,26 +628,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;4_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;4_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -919,51 +642,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type4" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -977,15 +655,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_4_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;4&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -994,21 +676,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -1016,17 +703,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type5" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -1035,26 +722,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;5_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;5_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -1063,51 +736,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type5" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -1121,15 +749,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_5_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;5&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -1138,21 +770,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -1160,17 +797,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type6" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -1179,26 +816,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;6_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;6_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -1207,51 +830,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type6" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -1265,15 +843,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_6_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;6&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -1282,21 +864,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -1304,17 +891,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type7" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -1323,26 +910,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;7_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;7_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -1351,51 +924,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type7" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -1409,15 +937,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_7_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;7&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -1426,21 +958,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -1448,17 +985,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type8" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -1467,26 +1004,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;8_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;8_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -1495,51 +1018,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type8" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -1553,15 +1031,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_8_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;8&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -1570,21 +1052,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -1592,17 +1079,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type9" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -1611,26 +1098,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;9_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;9_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -1639,51 +1112,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type9" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -1697,15 +1125,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_9_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;9&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -1714,21 +1146,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -1736,17 +1173,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type10" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -1755,26 +1192,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;10_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;10_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -1783,51 +1206,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type10" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -1841,15 +1219,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_10_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;10&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -1858,21 +1240,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -1880,17 +1267,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type11" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -1899,26 +1286,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;11_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;11_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -1927,51 +1300,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type11" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -1985,15 +1313,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_11_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;11&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -2002,21 +1334,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -2024,17 +1361,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type12" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -2043,26 +1380,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;12_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;12_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -2071,51 +1394,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type12" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -2129,15 +1407,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_12_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;12&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -2146,21 +1428,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -2168,17 +1455,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type13" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -2187,26 +1474,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;13_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;13_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}</stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -2215,51 +1488,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type13" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -2273,15 +1501,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_13_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;13&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -2290,21 +1522,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -2312,17 +1549,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type14" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -2331,22 +1568,8 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;14_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;14_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
@@ -2359,51 +1582,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type14" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -2417,15 +1595,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_14_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;14&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -2434,21 +1616,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -2456,17 +1643,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type15" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -2475,22 +1662,8 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;15_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;15_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
@@ -2503,51 +1676,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type15" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -2561,15 +1689,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_15_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;15&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -2578,21 +1710,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -2600,17 +1737,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type16" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -2619,22 +1756,8 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;16_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;16_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
@@ -2647,51 +1770,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type16" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -2705,15 +1783,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_16_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;16&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -2722,21 +1804,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
@@ -2744,17 +1831,17 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入type17" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
-        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <intProp name="ThreadGroup.ramp_time">300</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
-        <stringProp name="ThreadGroup.delay">20</stringProp>
+        <longProp name="ThreadGroup.delay">20</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
       </ThreadGroup>
       <hashTree>
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="(2.0.0)线程对象初始化" enabled="true">
@@ -2763,26 +1850,12 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">vars.putObject(&quot;last_ts&quot;, System.currentTimeMillis())
-SampleResult.setIgnore()
-
-log.debug(vars.get(&quot;point_sn_data_dir&quot;) + &quot;17_&quot; + &quot;${__threadNum}.csv&quot;)
-def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;17_&quot; + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
-</stringProp>
+vars.put(&quot;last_from_idx&quot;, &quot;0&quot;)
+SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)}  </stringProp>
+          <stringProp name="throughput">${__BeanShell(${write_throughput}  / ${insert_batch_size},)} </stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -2791,51 +1864,6 @@ vars.putObject(&quot;vars_pointSnList&quot;, pointSnList)
           <intProp name="LoopController.loops">-1</intProp>
         </LoopController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="${pointSnSql}" enabled="false">
-            <boolProp name="displayJMeterProperties">false</boolProp>
-            <boolProp name="displayJMeterVariables">true</boolProp>
-            <boolProp name="displaySystemProperties">false</boolProp>
-          </DebugSampler>
-          <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
-              <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="filename"></stringProp>
-              <stringProp name="parameters"></stringProp>
-              <stringProp name="script">def point_sn_reader = new RandomAccessFile(vars.get(&quot;point_sn_data_dir&quot;) + &quot;${__threadNum}.csv&quot;, &quot;r&quot;)
-String line;
-List pointSnList = new ArrayList();
-do {
-    line = point_sn_reader.readLine();
-    if (line != null) {
-        pointSnList.add(line);
-    }
-} while (line != null);
-
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
-long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
-long nextTs = 0;
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  nextTs = vars.getObject(&quot;last_ts&quot;);
-} else {
-  nextTs = System.currentTimeMillis();
-}
-
-for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-  pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  nextTs += dataTsStep;
-}
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
-
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
-if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
-  vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
-              <stringProp name="scriptLanguage">groovy</stringProp>
-            </JSR223PreProcessor>
-            <hashTree/>
-          </hashTree>
           <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="(2.0.0)写入数据type17" enabled="true">
             <stringProp name="dataSource">default_pool</stringProp>
             <stringProp name="queryType">Update Statement</stringProp>
@@ -2849,15 +1877,19 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
             <stringProp name="resultSetHandler">Store as String</stringProp>
           </JDBCSampler>
           <hashTree>
-            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.t_work_area_${__threadNum}" enabled="true">
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: type_17_thread_${__threadNum}" enabled="true">
               <stringProp name="cacheKey">true</stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="parameters"></stringProp>
-              <stringProp name="script">List pointSnList = new ArrayList();
-pointSnList = vars.getObject(&quot;vars_pointSnList&quot;);
+              <stringProp name="script">import com.kaiwudb.svt.utils.ctx.DataSeedCtx
+import com.kaiwudb.svt.model.RowData
+import com.kaiwudb.svt.model.CommaSplitTextData
 
-StringBuilder pointSnBuilder = new StringBuilder();
-pointSnBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
+List&lt;RowData&gt; pointList = DataSeedCtx.getRowDataList(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;)
+List&lt;RowData&gt; tagList = DataSeedCtx.getExecByGroupTag(&quot;${vars.get(&quot;db_name&quot;)}.t_point&quot;, &quot;17&quot;, &quot;${__threadNum}&quot;)
+
+StringBuilder pointBuilder = new StringBuilder();
+pointBuilder.append(&quot;insert into ${vars.get(&quot;db_name&quot;)}.t_point values &quot;)
 long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;));
 long nextTs = 0;
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
@@ -2866,21 +1898,26 @@ if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   nextTs = System.currentTimeMillis();
 }
 
-def insertBatchSize = Long.parseLong(vars.get(&quot;insert_batch_size&quot;))
-for(int i = 0; i &lt; insertBatchSize; i++) {
-  for(int pointSnListIdx = 1; pointSnListIdx &lt; pointSnList.size();pointSnListIdx++) {
-    pointSnBuilder.append(&quot;(${nextTs}, ${pointSnList.get(pointSnListIdx)}),&quot;);
-  }
-  nextTs += dataTsStep
+int insertBatchSize = Integer.parseInt(vars.get(&quot;insert_batch_size&quot;))
+//log.info(&quot;insertBatchSize=&quot;+insertBatchSize)
+
+int lastFromIdx = Integer.parseInt(vars.get(&quot;last_from_idx&quot;))
+int toIdx = lastFromIdx + insertBatchSize
+for(int i = lastFromIdx; i &lt; toIdx; i++) {
+    String colVal = ((CommaSplitTextData) pointList.get(i % pointList.size())).getDataLine()
+    String tags = ((CommaSplitTextData) tagList.get(i % tagList.size())).getDataLine()
+    pointBuilder.append(&quot;(${nextTs},&quot;).append(colVal).append(&quot;,&quot;).append(tags).append(&quot;),&quot;);
+    nextTs += dataTsStep
 }
 
-pointSnBuilder.setCharAt(pointSnBuilder.length() - 1, &apos;;&apos; as char)
-//log.info(pointSnBuilder.toString());
+pointBuilder.setCharAt(pointBuilder.length() - 1, &apos;;&apos; as char)
+//log.warn(pointBuilder.toString());
 
-vars.put(&quot;pointSnSql&quot;, pointSnBuilder.toString());
+vars.put(&quot;pointSnSql&quot;, pointBuilder.toString());
 if (Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5) {
   vars.putObject(&quot;last_ts&quot;, nextTs);
-}</stringProp>
+}
+vars.put(&quot;last_from_idx&quot;, toIdx + &quot;&quot;);</stringProp>
               <stringProp name="scriptLanguage">groovy</stringProp>
             </JSR223PreProcessor>
             <hashTree/>
