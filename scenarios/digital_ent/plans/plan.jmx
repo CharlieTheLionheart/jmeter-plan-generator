@@ -85,6 +85,11 @@
             <stringProp name="Argument.value">${__P(dup_table_total_amount,5)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="ptag_amount_per_table" elementType="Argument">
+            <stringProp name="Argument.name">ptag_amount_per_table</stringProp>
+            <stringProp name="Argument.value">${__P(ptag_amount_per_table,1)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -229,7 +234,7 @@ vars.put(&quot;sql_amount&quot;, sql_amount+&quot;&quot;);</stringProp>
               </elementProp>
               <elementProp name="Primary tag amount" elementType="Argument">
                 <stringProp name="Argument.name">Primary tag amount</stringProp>
-                <stringProp name="Argument.value">1000</stringProp>
+                <stringProp name="Argument.value">${ptag_amount_per_table}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="Data seed amount" elementType="Argument">
