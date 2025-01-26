@@ -1221,7 +1221,7 @@ generateBatchInsertSQL()</stringProp>
             </hashTree>
           </hashTree>
           <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == true">
-            <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
+            <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
             <boolProp name="IfController.evaluateAll">false</boolProp>
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
