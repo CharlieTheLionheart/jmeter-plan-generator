@@ -602,8 +602,9 @@ if (electmeter_list == null || electmeter_list.isEmpty()) {
 }
 
 String elect_name_expect = ((CommaSplitTextData) electmeter_list.get(0)).getDataLine().split(&quot;,&quot;)[0]
-log.warn(&quot;elect_name_expect=&quot; + elect_name_expect)
-JMeterUtils.setProperty(&quot;elect_name_expect&quot;, elect_name_expect)
+String elect_name_expect_trim = elect_name_expect.substring(1, elect_name_expect.length() - 1)
+log.warn(&quot;elect_name_expect=&quot; + elect_name_expect_trim)
+JMeterUtils.setProperty(&quot;elect_name_expect&quot;, elect_name_expect_trim)
 
 for (RowData elect_line : electmeter_list) {
     elect_col_arr = ((CommaSplitTextData) elect_line).getDataLine().split(&quot;,&quot;)
