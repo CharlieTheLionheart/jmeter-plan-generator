@@ -662,7 +662,7 @@ SampleResult.setIgnore()</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -671,12 +671,7 @@ SampleResult.setIgnore()</stringProp>
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-          <stringProp name="throughput">${write_throughput}</stringProp>
-          <intProp name="calcMode">0</intProp>
-        </ConstantThroughputTimer>
-        <hashTree/>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF data_ts_step &gt; 5(virtual time)">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF data_ts_step &gt; 5(virtual time)" enabled="true">
           <stringProp name="IfController.condition">${__groovy(Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -688,6 +683,11 @@ SampleResult.setIgnore()</stringProp>
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
           <hashTree>
+            <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制 * 2">
+              <stringProp name="throughput">${__BeanShell(${write_throughput} * 2,)}</stringProp>
+              <intProp name="calcMode">0</intProp>
+            </ConstantThroughputTimer>
+            <hashTree/>
             <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入">
               <boolProp name="LoopController.continue_forever">true</boolProp>
               <intProp name="LoopController.loops">-1</intProp>
@@ -714,8 +714,7 @@ SampleResult.setIgnore()</stringProp>
               <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Callable Statement</stringProp>
-                <stringProp name="query">${builder};
-commit;</stringProp>
+                <stringProp name="query">${builder};</stringProp>
                 <stringProp name="queryArguments"></stringProp>
                 <stringProp name="queryArgumentsTypes"></stringProp>
                 <stringProp name="variableNames"></stringProp>
@@ -781,11 +780,23 @@ generateBatchInsertSQL()</stringProp>
                 </ResponseAssertion>
                 <hashTree/>
               </hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(write t_electmeter)">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Commit</stringProp>
+                <stringProp name="query"></stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout"></stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree/>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Callable Statement</stringProp>
-                <stringProp name="query">${cnc_builder};
-commit;</stringProp>
+                <stringProp name="query">${cnc_builder};</stringProp>
                 <stringProp name="queryArguments"></stringProp>
                 <stringProp name="queryArgumentsTypes"></stringProp>
                 <stringProp name="variableNames"></stringProp>
@@ -855,15 +866,33 @@ generateBatchInsertSQL()</stringProp>
                 </ResponseAssertion>
                 <hashTree/>
               </hashTree>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(write t_cnc)">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Commit</stringProp>
+                <stringProp name="query"></stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout"></stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree/>
             </hashTree>
           </hashTree>
-          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == true" enabled="true">
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == true">
             <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
             <boolProp name="IfController.evaluateAll">false</boolProp>
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
           <hashTree>
-            <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
+            <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制">
+              <stringProp name="throughput">${write_throughput}</stringProp>
+              <intProp name="calcMode">0</intProp>
+            </ConstantThroughputTimer>
+            <hashTree/>
+            <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入">
               <boolProp name="LoopController.continue_forever">true</boolProp>
               <intProp name="LoopController.loops">-1</intProp>
             </LoopController>
@@ -1043,6 +1072,11 @@ generateBatchInsertSQL()</stringProp>
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
           <hashTree>
+            <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制 * 2">
+              <stringProp name="throughput">${__BeanShell(${write_throughput} * 2,)}</stringProp>
+              <intProp name="calcMode">0</intProp>
+            </ConstantThroughputTimer>
+            <hashTree/>
             <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入">
               <boolProp name="LoopController.continue_forever">true</boolProp>
               <intProp name="LoopController.loops">-1</intProp>
@@ -1057,7 +1091,7 @@ generateBatchInsertSQL()</stringProp>
                 <stringProp name="variableName">device_num</stringProp>
               </RandomVariableConfig>
               <hashTree/>
-              <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器">
+              <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="batch计数器" enabled="true">
                 <stringProp name="CounterConfig.start">1</stringProp>
                 <stringProp name="CounterConfig.end">${write_magnification}</stringProp>
                 <stringProp name="CounterConfig.incr">1</stringProp>
@@ -1069,8 +1103,7 @@ generateBatchInsertSQL()</stringProp>
               <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Callable Statement</stringProp>
-                <stringProp name="query">${builder};
-commit;</stringProp>
+                <stringProp name="query">${builder};</stringProp>
                 <stringProp name="queryArguments"></stringProp>
                 <stringProp name="queryArgumentsTypes"></stringProp>
                 <stringProp name="variableNames"></stringProp>
@@ -1080,7 +1113,7 @@ commit;</stringProp>
                 <stringProp name="resultSetHandler">Store as String</stringProp>
               </JDBCSampler>
               <hashTree>
-                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}">
+                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
                   <stringProp name="cacheKey">true</stringProp>
                   <stringProp name="filename"></stringProp>
                   <stringProp name="parameters"></stringProp>
@@ -1136,11 +1169,23 @@ generateBatchInsertSQL()</stringProp>
                 </ResponseAssertion>
                 <hashTree/>
               </hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(write t_electmeter)">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Commit</stringProp>
+                <stringProp name="query"></stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout"></stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree/>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_cnc: ${__threadNum}">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Callable Statement</stringProp>
-                <stringProp name="query">${cnc_builder};
-commit;</stringProp>
+                <stringProp name="query">${cnc_builder};</stringProp>
                 <stringProp name="queryArguments"></stringProp>
                 <stringProp name="queryArgumentsTypes"></stringProp>
                 <stringProp name="variableNames"></stringProp>
@@ -1210,15 +1255,33 @@ generateBatchInsertSQL()</stringProp>
                 </ResponseAssertion>
                 <hashTree/>
               </hashTree>
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(write t_cnc)">
+                <stringProp name="dataSource">default_pool</stringProp>
+                <stringProp name="queryType">Commit</stringProp>
+                <stringProp name="query"></stringProp>
+                <stringProp name="queryArguments"></stringProp>
+                <stringProp name="queryArgumentsTypes"></stringProp>
+                <stringProp name="variableNames"></stringProp>
+                <stringProp name="resultVariable"></stringProp>
+                <stringProp name="queryTimeout"></stringProp>
+                <stringProp name="resultSetMaxRows"></stringProp>
+                <stringProp name="resultSetHandler">Store as String</stringProp>
+              </JDBCSampler>
+              <hashTree/>
             </hashTree>
           </hashTree>
-          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == true" enabled="true">
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == true">
             <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
             <boolProp name="IfController.evaluateAll">false</boolProp>
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
           <hashTree>
-            <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
+            <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制">
+              <stringProp name="throughput">${write_throughput}</stringProp>
+              <intProp name="calcMode">0</intProp>
+            </ConstantThroughputTimer>
+            <hashTree/>
+            <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入">
               <boolProp name="LoopController.continue_forever">true</boolProp>
               <intProp name="LoopController.loops">-1</intProp>
             </LoopController>
@@ -1401,112 +1464,334 @@ generateBatchInsertSQL()</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询数据库对象" enabled="true"/>
+        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询数据库对象"/>
         <hashTree>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW DATABASES;" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Select Statement</stringProp>
-            <stringProp name="query">SHOW DATABASES;</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="USE ${db_name};" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Update Statement</stringProp>
-            <stringProp name="query">USE ${db_name};</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TABLES;" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Select Statement</stringProp>
-            <stringProp name="query">SHOW TABLES;</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TEMPLATE TABLES;" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Select Statement</stringProp>
-            <stringProp name="query">SHOW TEMPLATE TABLES;</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW CREATE TABLE ${db_name}.t_electmeter;" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Select Statement</stringProp>
-            <stringProp name="query">SHOW CREATE TABLE ${db_name}.t_electmeter;</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW COLUMNS FROM ${db_name}.t_electmeter;" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Select Statement</stringProp>
-            <stringProp name="query">SHOW COLUMNS FROM ${db_name}.t_electmeter;</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Select Statement</stringProp>
-            <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
-          <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TAGS FROM ${db_name}.t_electmeter;" enabled="true">
-            <stringProp name="dataSource">default_pool</stringProp>
-            <stringProp name="queryType">Select Statement</stringProp>
-            <stringProp name="query">SHOW TAGS FROM ${db_name}.t_electmeter;</stringProp>
-            <stringProp name="queryArguments"></stringProp>
-            <stringProp name="queryArgumentsTypes"></stringProp>
-            <stringProp name="variableNames"></stringProp>
-            <stringProp name="resultVariable"></stringProp>
-            <stringProp name="queryTimeout">600</stringProp>
-            <stringProp name="resultSetMaxRows"></stringProp>
-            <stringProp name="resultSetHandler">Store as String</stringProp>
-          </JDBCSampler>
-          <hashTree/>
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == false">
+            <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
+            <boolProp name="IfController.evaluateAll">false</boolProp>
+            <boolProp name="IfController.useExpression">true</boolProp>
+          </IfController>
+          <hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW DATABASES;">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW DATABASES;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(SHOW DATABASES)">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Commit</stringProp>
+              <stringProp name="query"></stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="USE ${db_name};">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">USE ${db_name};</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(USE ${db_name})">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Commit</stringProp>
+              <stringProp name="query"></stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TABLES;">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW TABLES;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(SHOW TABLES)">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Commit</stringProp>
+              <stringProp name="query"></stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TEMPLATE TABLES;">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW TEMPLATE TABLES;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(SHOW TEMPLATE TABLES)">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Commit</stringProp>
+              <stringProp name="query"></stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW CREATE TABLE ${db_name}.t_electmeter;">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW CREATE TABLE ${db_name}.t_electmeter;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(SHOW CREATE TABLE ${db_name}.t_electmeter)">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Commit</stringProp>
+              <stringProp name="query"></stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW COLUMNS FROM ${db_name}.t_electmeter;">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW COLUMNS FROM ${db_name}.t_electmeter;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(SHOW COLUMNS FROM ${db_name}.t_electmeter)">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Commit</stringProp>
+              <stringProp name="query"></stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(SHOW ATTRIBUTES FROM ${db_name}.t_electmeter)">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Commit</stringProp>
+              <stringProp name="query"></stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TAGS FROM ${db_name}.t_electmeter;">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW TAGS FROM ${db_name}.t_electmeter;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(SHOW TAGS FROM ${db_name}.t_electmeter)">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Commit</stringProp>
+              <stringProp name="query"></stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+          </hashTree>
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == true">
+            <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
+            <boolProp name="IfController.evaluateAll">false</boolProp>
+            <boolProp name="IfController.useExpression">true</boolProp>
+          </IfController>
+          <hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW DATABASES;" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW DATABASES;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="USE ${db_name};" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Update Statement</stringProp>
+              <stringProp name="query">USE ${db_name};</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TABLES;" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW TABLES;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TEMPLATE TABLES;" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW TEMPLATE TABLES;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW CREATE TABLE ${db_name}.t_electmeter;" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW CREATE TABLE ${db_name}.t_electmeter;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW COLUMNS FROM ${db_name}.t_electmeter;" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW COLUMNS FROM ${db_name}.t_electmeter;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW ATTRIBUTES FROM ${db_name}.t_electmeter;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SHOW TAGS FROM ${db_name}.t_electmeter;" enabled="true">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">SHOW TAGS FROM ${db_name}.t_electmeter;</stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout">600</stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+          </hashTree>
         </hashTree>
         <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="维护模板表/实例表属性" enabled="false"/>
         <hashTree>
@@ -1667,13 +1952,13 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器">
             <doubleProp>
               <name>throughput</name>
               <value>240.0</value>
@@ -1682,12 +1967,12 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sp_act_speed" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sp_act_speed">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__threadNum}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
@@ -1714,7 +1999,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(sp_act_speed)" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(sp_act_speed)">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -1779,7 +2064,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床最新数据" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床最新数据">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -1792,13 +2077,13 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器">
             <doubleProp>
               <name>throughput</name>
               <value>120.0</value>
@@ -1807,12 +2092,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last_all" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last_all">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &gt; now() - 1 minute and machine_code = ?;</stringProp>
@@ -1825,7 +2110,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last_all)" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last_all)">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -1840,13 +2125,13 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器">
             <doubleProp>
               <name>throughput</name>
               <value>60.0</value>
@@ -1855,7 +2140,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -1876,7 +2161,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(machine_code last_1s)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(machine_code last_1s)">
         <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -1889,7 +2174,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -1904,7 +2189,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -1918,7 +2203,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last curs with machine_code" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last curs with machine_code">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 and machine_code = ? group by machine_code</stringProp>
@@ -1931,7 +2216,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last curs with machine_code)" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last curs with machine_code)">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -1946,7 +2231,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -1961,7 +2246,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -1991,7 +2276,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter聚合数据(子表max_min_avg_1min)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter聚合数据(子表max_min_avg_1min)">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2004,7 +2289,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2019,12 +2304,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="max min and avg in electmeters" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="max min and avg in electmeters">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz group by machine_code order by machine_code asc;</stringProp>
@@ -2058,7 +2343,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
               </JSR223PostProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(max min and avg in electmeters)" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(max min and avg in electmeters)">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -2073,7 +2358,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2088,7 +2373,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -2130,7 +2415,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]计算一段时间某个电表的采集计数(子表in &amp;&amp; group by_1min)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]计算一段时间某个电表的采集计数(子表in &amp;&amp; group by_1min)">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2143,7 +2428,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2158,12 +2443,12 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="in &amp;&amp; group by" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="in &amp;&amp; group by">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz and abs(infre - 50) &gt;= 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
@@ -2187,7 +2472,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(in &amp;&amp; group by)" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(in &amp;&amp; group by)">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -2202,7 +2487,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2217,7 +2502,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -2249,7 +2534,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(page_and_sum_15min)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(page_and_sum_15min)">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2262,7 +2547,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2277,12 +2562,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="querypage" enabled="true">
+            <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="querypage">
               <intProp name="ThroughputController.style">1</intProp>
               <boolProp name="ThroughputController.perThread">false</boolProp>
               <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -2293,7 +2578,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
               </FloatProperty>
             </ThroughputController>
             <hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="querypage" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="querypage">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Prepared Select Statement</stringProp>
                 <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
@@ -2317,7 +2602,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
                 </JSR223PreProcessor>
                 <hashTree/>
               </hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(querypage)" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(querypage)">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Commit</stringProp>
                 <stringProp name="query"></stringProp>
@@ -2331,7 +2616,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
               </JDBCSampler>
               <hashTree/>
             </hashTree>
-            <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="sumpower" enabled="true">
+            <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="sumpower">
               <intProp name="ThroughputController.style">1</intProp>
               <boolProp name="ThroughputController.perThread">false</boolProp>
               <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -2342,7 +2627,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
               </FloatProperty>
             </ThroughputController>
             <hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sumpower" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sumpower">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Prepared Select Statement</stringProp>
                 <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamptz and t.k_timestamp &lt; (${end_timestamp})::timestamptz;</stringProp>
@@ -2365,7 +2650,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
                 </JSR223PreProcessor>
                 <hashTree/>
               </hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(sumpower)" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(sumpower)">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Commit</stringProp>
                 <stringProp name="query"></stringProp>
@@ -2381,7 +2666,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
             </hashTree>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2396,7 +2681,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -2475,7 +2760,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(last_15min)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(last_15min)">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2488,7 +2773,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2503,12 +2788,12 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last curs" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last curs">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 group by machine_code</stringProp>
@@ -2521,7 +2806,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last curs)" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last curs)">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -2536,7 +2821,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2584,7 +2869,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]跨模: 统计北方大区下电表的max vol_a/min cur_a/avg powerf_a/sum allenergy_a" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]跨模: 统计北方大区下电表的max vol_a/min cur_a/avg powerf_a/sum allenergy_a">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2597,7 +2882,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2607,6 +2892,91 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
             <doubleProp>
               <name>throughput</name>
               <value>0.333333333</value>
+              <savedValue>0.0</savedValue>
+            </doubleProp>
+            <intProp name="calcMode">0</intProp>
+          </ConstantThroughputTimer>
+          <hashTree/>
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
+            <boolProp name="LoopController.continue_forever">true</boolProp>
+            <intProp name="LoopController.loops">-1</intProp>
+          </LoopController>
+          <hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="agg metrics of electmeter in north region">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Select Statement</stringProp>
+              <stringProp name="query">select max(vol_a), 
+       min(cur_a), 
+       avg(powerf_a), 
+       sum(allenergy_a) 
+  from 
+  (select w.id as workshop_id 
+     from db_shig_meta.sub_company s, 
+          db_shig_meta.factory f, 
+          db_shig_meta.workshop w 
+    where f.id = w.factory_id 
+      and f.sub_comp_id = s.id
+      and s.region = &apos;北方大区&apos;) m, 
+  db_shig.t_electmeter e 
+ where e.workshop_id = m.workshop_id 
+   and e.k_timestamp &gt; &apos;${q_begin_ts}&apos; 
+   and e.k_timestamp &lt; &apos;${q_end_ts}&apos;</stringProp>
+              <stringProp name="queryArguments">${machine_code}</stringProp>
+              <stringProp name="queryArgumentsTypes">varchar</stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="获取当前时间的月初和月末时间" enabled="true">
+                <stringProp name="scriptLanguage">groovy</stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="cacheKey">false</stringProp>
+                <stringProp name="script">import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
+
+DateTimeFormatter dtf = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;);
+LocalDateTime now = LocalDateTime.now();
+LocalDateTime monthBegin = LocalDateTime.of(now.getYear(), now.getMonth(), 1, 0, 0, 0);
+LocalDateTime monthEnd = LocalDateTime.of(now.getYear(), now.getMonth(), now.with(TemporalAdjusters.lastDayOfMonth()).getDayOfMonth(), 23, 59, 59);
+
+vars.put(&quot;q_begin_ts&quot;, dtf.format(monthBegin))
+vars.put(&quot;q_end_ts&quot;, dtf.format(monthEnd))
+
+log.debug(&quot;q_begin_ts={}&quot;, vars.get(&quot;q_begin_ts&quot;))
+log.debug(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(agg metrics of electmeter in north region)">
+              <stringProp name="dataSource">default_pool</stringProp>
+              <stringProp name="queryType">Commit</stringProp>
+              <stringProp name="query"></stringProp>
+              <stringProp name="queryArguments"></stringProp>
+              <stringProp name="queryArgumentsTypes"></stringProp>
+              <stringProp name="variableNames"></stringProp>
+              <stringProp name="resultVariable"></stringProp>
+              <stringProp name="queryTimeout"></stringProp>
+              <stringProp name="resultSetMaxRows"></stringProp>
+              <stringProp name="resultSetHandler">Store as String</stringProp>
+            </JDBCSampler>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
+          <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
+            <doubleProp>
+              <name>throughput</name>
+              <value>0.016666667</value>
               <savedValue>0.0</savedValue>
             </doubleProp>
             <intProp name="calcMode">0</intProp>
@@ -2667,95 +3037,10 @@ log.debug(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(agg metrics of electmeter in north region)" enabled="true">
-              <stringProp name="dataSource">default_pool</stringProp>
-              <stringProp name="queryType">Commit</stringProp>
-              <stringProp name="query"></stringProp>
-              <stringProp name="queryArguments"></stringProp>
-              <stringProp name="queryArgumentsTypes"></stringProp>
-              <stringProp name="variableNames"></stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout"></stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCSampler>
-            <hashTree/>
-          </hashTree>
-        </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
-          <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
-          <boolProp name="IfController.evaluateAll">false</boolProp>
-          <boolProp name="IfController.useExpression">true</boolProp>
-        </IfController>
-        <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
-            <doubleProp>
-              <name>throughput</name>
-              <value>0.016666667</value>
-              <savedValue>0.0</savedValue>
-            </doubleProp>
-            <intProp name="calcMode">0</intProp>
-          </ConstantThroughputTimer>
-          <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
-            <boolProp name="LoopController.continue_forever">true</boolProp>
-            <intProp name="LoopController.loops">-1</intProp>
-          </LoopController>
-          <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="agg metrics of electmeter in north region" enabled="true">
-              <stringProp name="dataSource">default_pool</stringProp>
-              <stringProp name="queryType">Select Statement</stringProp>
-              <stringProp name="query">select max(vol_a), 
-       min(cur_a), 
-       avg(powerf_a), 
-       sum(allenergy_a) 
-  from 
-  (select w.id as workshop_id 
-     from db_shig_meta.sub_company s, 
-          db_shig_meta.factory f, 
-          db_shig_meta.workshop w 
-    where f.id = w.factory_id 
-      and f.sub_comp_id = s.id
-      and s.region = &apos;北方大区&apos;) m, 
-  db_shig.t_electmeter e 
- where e.workshop_id = m.workshop_id 
-   and e.k_timestamp &gt; &apos;${q_begin_ts}&apos; 
-   and e.k_timestamp &lt; &apos;${q_end_ts}&apos;</stringProp>
-              <stringProp name="queryArguments">${machine_code}</stringProp>
-              <stringProp name="queryArgumentsTypes">varchar</stringProp>
-              <stringProp name="variableNames"></stringProp>
-              <stringProp name="resultVariable"></stringProp>
-              <stringProp name="queryTimeout"></stringProp>
-              <stringProp name="resultSetMaxRows"></stringProp>
-              <stringProp name="resultSetHandler">Store as String</stringProp>
-            </JDBCSampler>
-            <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="获取当前时间的月初和月末时间" enabled="true">
-                <stringProp name="scriptLanguage">groovy</stringProp>
-                <stringProp name="parameters"></stringProp>
-                <stringProp name="filename"></stringProp>
-                <stringProp name="cacheKey">false</stringProp>
-                <stringProp name="script">import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAdjusters;
-
-DateTimeFormatter dtf = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;);
-LocalDateTime now = LocalDateTime.now();
-LocalDateTime monthBegin = LocalDateTime.of(now.getYear(), now.getMonth(), 1, 0, 0, 0);
-LocalDateTime monthEnd = LocalDateTime.of(now.getYear(), now.getMonth(), now.with(TemporalAdjusters.lastDayOfMonth()).getDayOfMonth(), 23, 59, 59);
-
-vars.put(&quot;q_begin_ts&quot;, dtf.format(monthBegin))
-vars.put(&quot;q_end_ts&quot;, dtf.format(monthEnd))
-
-log.debug(&quot;q_begin_ts={}&quot;, vars.get(&quot;q_begin_ts&quot;))
-log.debug(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
-              </JSR223PreProcessor>
-              <hashTree/>
-            </hashTree>
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]跨模: 监控南方大区下电表的最新读数" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]跨模: 监控南方大区下电表的最新读数">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2768,7 +3053,7 @@ log.debug(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2783,12 +3068,12 @@ log.debug(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last all of electmeter in south region by page" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last all of electmeter in south region by page">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Select Statement</stringProp>
               <stringProp name="query">select m.sub_company_name,
@@ -2837,7 +3122,7 @@ vars.putObject(&quot;page_start&quot;, (pageNo - 1)*pageSize);</stringProp>
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last all of electmeter in south region by page)" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last all of electmeter in south region by page)">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -2924,7 +3209,7 @@ vars.putObject(&quot;page_start&quot;, (pageNo - 1)*pageSize);</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]跨模: 统计南方大区下机床的max/min/avg/sum powerf_a" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]跨模: 统计南方大区下机床的max/min/avg/sum powerf_a">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2937,7 +3222,7 @@ vars.putObject(&quot;page_start&quot;, (pageNo - 1)*pageSize);</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2952,12 +3237,12 @@ vars.putObject(&quot;page_start&quot;, (pageNo - 1)*pageSize);</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="agg metrics of cnc in south region" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="agg metrics of cnc in south region">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Select Statement</stringProp>
               <stringProp name="query">select max(sp_override), 
@@ -3002,7 +3287,7 @@ log.debug(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(agg metrics of cnc in south region)" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(agg metrics of cnc in south region)">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -3085,7 +3370,7 @@ log.debug(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]跨模: 监控北方大区下机床的最新读数" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]跨模: 监控北方大区下机床的最新读数">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -3098,7 +3383,7 @@ log.debug(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -3113,12 +3398,12 @@ log.debug(&quot;q_end_ts={}&quot;, vars.get(&quot;q_end_ts&quot;))</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last all of cnc in north region by page" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last all of cnc in north region by page">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Select Statement</stringProp>
               <stringProp name="query">select s.name as sub_company_name,
@@ -3168,7 +3453,7 @@ vars.putObject(&quot;page_start&quot;, (pageNo - 1)*pageSize);</stringProp>
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last all of cnc in north region by page)" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last all of cnc in north region by page)">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -3198,7 +3483,7 @@ vars.putObject(&quot;page_start&quot;, (pageNo - 1)*pageSize);</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
@@ -3267,13 +3552,13 @@ vars.putObject(&quot;page_start&quot;, (pageNo - 1)*pageSize);</stringProp>
         </elementProp>
       </PostThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询正确性断言" enabled="true"/>
+          <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询正确性断言"/>
           <hashTree>
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="assert total count of t_electmeter" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
@@ -4063,15 +4348,15 @@ for (int resultIndex = 1; resultIndex &lt;= resultList.size(); resultIndex++) {
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询正确性断言"/>
+          <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询正确性断言" enabled="true"/>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="assert total count of t_electmeter">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="assert total count of t_electmeter" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Select Statement</stringProp>
               <stringProp name="query">select count(*) from db_shig.t_electmeter where 1=1;</stringProp>
@@ -4147,7 +4432,7 @@ if ( cncCountActual &gt;= cncCountExpect * 0.95 ) {
               </JSR223Assertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL1: assert_sp_act_speed">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL1: assert_sp_act_speed" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__threadNum}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
@@ -4160,7 +4445,7 @@ if ( cncCountActual &gt;= cncCountExpect * 0.95 ) {
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
                 <stringProp name="scriptLanguage">groovy</stringProp>
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
@@ -4235,7 +4520,7 @@ if (isCycleContains(spActSpeedExpect, spActSpeedActual)) {
               </JSR223Assertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL2: last curs with machine_code">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL2: last curs with machine_code" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE machine_code = ?;</stringProp>
@@ -4422,7 +4707,7 @@ if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
               </JSR223Assertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL4: max min and avg in electmeters">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL4: max min and avg in electmeters" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur, sum(cur_a) as sum_cur, count(cur_a) as count_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz group by machine_code order by machine_code asc;</stringProp>
@@ -4435,7 +4720,7 @@ if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
                 <stringProp name="scriptLanguage">groovy</stringProp>
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
@@ -4445,7 +4730,7 @@ log.warn(&quot;beginTimestamp=&quot;+beginTimestamp)
 vars.putObject(&quot;begin_timestamp&quot;, beginTimestamp)
 long endTimestamp = ${__timeShift(,,PT-10M,,)}
 log.warn(&quot;endTimestamp=&quot;+endTimestamp)
-vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
+vars.putObject(&quot;end_timestamp&quot;, endTimestamp)
 def query_machine_code = &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;
 log.warn(&quot;SQL4:query_machine_code=&quot; + query_machine_code)
 vars.putObject(&quot;machine_code&quot;, query_machine_code)
@@ -4500,7 +4785,7 @@ if (Math.abs(Double.parseDouble(maxCurExpect) - Double.parseDouble(maxCurActual)
               </JSR223Assertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL6: querypage">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL6: querypage" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
@@ -4513,7 +4798,7 @@ if (Math.abs(Double.parseDouble(maxCurExpect) - Double.parseDouble(maxCurActual)
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
                 <stringProp name="scriptLanguage">groovy</stringProp>
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
@@ -4551,7 +4836,7 @@ if (resultList.size() == pageSize) {
               </JSR223Assertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL7: sumpallpower">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL7: sumpallpower" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Select Statement</stringProp>
               <stringProp name="query">select sum(pallpower) as sumpallpower, count(1) as countall from db_shig.t_electmeter t where 1=1 and t.k_timestamp &gt; (${begin_timestamp})::timestamptz and t.k_timestamp &lt; (${end_timestamp})::timestamptz;</stringProp>
@@ -4564,7 +4849,7 @@ if (resultList.size() == pageSize) {
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
                 <stringProp name="scriptLanguage">groovy</stringProp>
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
@@ -4617,7 +4902,7 @@ if ( Math.abs(differ) &lt; 1E-5 ) {
               </JSR223Assertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL8: assert last curs">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL8: assert last curs" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 group by machine_code</stringProp>
@@ -4630,7 +4915,7 @@ if ( Math.abs(differ) &lt; 1E-5 ) {
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
-              <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言">
+              <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
                 <stringProp name="scriptLanguage">groovy</stringProp>
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
@@ -4704,7 +4989,7 @@ for (int resultIndex = 1; resultIndex &lt;= resultList.size(); resultIndex++) {
               <hashTree/>
             </hashTree>
           </hashTree>
-          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Controller">
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Controller" enabled="true">
             <stringProp name="IfController.condition">${__groovy(&quot;${drop_db}&quot;==&quot;true&quot;)}</stringProp>
             <boolProp name="IfController.evaluateAll">false</boolProp>
             <boolProp name="IfController.useExpression">true</boolProp>
