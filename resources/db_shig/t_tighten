@@ -1,28 +1,28 @@
-k_timestamp timestamptz false false _ []
-cell_id int false false random_int [0,0,93]
-channel_id int false false random_int [1,1,93]
-torque_controller_name char(256) false false quoted_random_str [7,false,true,NULL,93,BigLine]
-vin_number int false false random_int [0,0,100]
-job_id int false false random_int [0,0,93]
-parameter_set_id int false false random_int [10,10,93]
-batch_size int false false random_int [0,0,93]
-batch_counter int false false random_int [0,0,93]
-tightening_status char(256) false false quoted_random_str [3,true,true,NULL,22,NOK]
-torque_status char(256) false false quoted_random_str [3,false,true,NULL,93,LowOK]
-angle_status char(256) false false quoted_random_str [3,false,true,NULL,93,LowOK]
-torque_min_limit double false false random_int [3266,3266,93]
-torque_max_limit double false false random_int [3394,3394,93]
-torque_final_target double false false random_int [3334,3334,93]
-torque double false false quoted_random_str [10,true,true,NULL,22,0.123456789]
-angle_min double false false random_int [0,0,93]
-angle_max double false false random_int [240,240,93]
-final_angle_target double false false random_int [0,0,93]
-angle double false false quoted_random_str [4,true,true,NULL,22,0123456789]
-datetime_last_change timestamp false false quoted_random_str [13,false,true,NULL,93,012345689]
-batch_status char(256) false false quoted_random_str [10,true,true,NULL,93,NotUsed410]
-tightening_id char(256) false false quoted_random_str [10,false,true,NULL,94,0123456]
-alarm_content char(200) false false random_int [0,0,100]
-number int false false random_int [0,0,100]
-plc_state int false false random_int [0,0,100]
-device_state int false false get_device_state [1,false,false,,0,00001]
-machine_code varchar(64) false true _ []
+k_timestamp timestamptz false false _ [] true
+cell_id int false false random_int [0,0,93] false
+channel_id int false false random_int [1,1,93] false
+torque_controller_name char(256) false false quoted_random_str [7,false,true,NULL,93,BigLine] false
+vin_number int false false random_int [0,0,100] false
+job_id int false false random_int [0,0,93] false
+parameter_set_id int false false random_int [10,10,93] false
+batch_size int false false random_int [0,0,93] false
+batch_counter int false false random_int [0,0,93] false
+tightening_status char(256) false false quoted_random_str [3,true,true,NULL,22,NOK] false
+torque_status char(256) false false quoted_random_str [3,false,true,NULL,93,LowOK] false
+angle_status char(256) false false quoted_random_str [3,false,true,NULL,93,LowOK] false
+torque_min_limit double false false random_int [3266,3266,93] false
+torque_max_limit double false false random_int [3394,3394,93] false
+torque_final_target double false false random_int [3334,3334,93] false
+torque double false false quoted_random_str [10,true,true,NULL,22,0.123456789] false
+angle_min double false false random_int [0,0,93] false
+angle_max double false false random_int [240,240,93] false
+final_angle_target double false false random_int [0,0,93] false
+angle double false false quoted_random_str [4,true,true,NULL,22,0123456789] false
+datetime_last_change timestamp false false quoted_random_str [13,false,true,NULL,93,012345689] false
+batch_status char(256) false false quoted_random_str [10,true,true,NULL,93,NotUsed410] false
+tightening_id char(256) false false quoted_random_str [10,false,true,NULL,94,0123456] false
+alarm_content char(200) false false random_int [0,0,100] false
+number int false false random_int [0,0,100] false
+plc_state int false false random_int [0,0,100] false
+device_state int false false get_device_state [1,false,false,,0,00001] false
+machine_code varchar(64) false true _ [] false

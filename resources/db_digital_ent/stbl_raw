@@ -1,6 +1,6 @@
-ts timestamptz false false follow_ts [db_digital_ent.stbl_raw,ts]
-data varchar(16374) true false random_str [20,true,true,NULL,50]
-type varchar(10) true false random_str [10,true,true,NULL,2]
-parse varchar(10) true false random_str [10,true,true,NULL,2]
-device varchar(64) false true serial_str [device,1,50]
-iot_hub_name nchar(64) false true serial_str [iot_hub_name,1,20]
+ts timestamptz false false follow_ts [db_digital_ent.stbl_raw,ts] true
+data varchar(16374) true false random_str [20,true,true,NULL,50] false
+type varchar(10) true false random_str [10,true,true,NULL,2] false
+parse varchar(10) true false random_str [10,true,true,NULL,2] false
+device varchar(64) false true serial_str [device,1,50] true
+iot_hub_name nchar(64) false true serial_str [iot_hub_name,1,20] false

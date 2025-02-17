@@ -1,6 +1,6 @@
-ts timestamptz false false follow_ts [db_digital_ent.stbl_event,ts]
-data_write_time timestamp true false follow_ts [db_digital_ent.stbl_event,data_write_time]
-type varchar(10) true false random_str [10,true,true,NULL,2]
-params varchar(1000) true false random_str [50,true,true,NULL,50]
-device varchar(64) false true serial_str [device,1,50]
-identifier nchar(64) false true serial_str [id,1,20]
+ts timestamptz false false follow_ts [db_digital_ent.stbl_event,ts] true
+data_write_time timestamp true false follow_ts [db_digital_ent.stbl_event,data_write_time] false
+type varchar(10) true false random_str [10,true,true,NULL,2] false
+params varchar(1000) true false random_str [50,true,true,NULL,50] false
+device varchar(64) false true serial_str [device,1,50] true
+identifier nchar(64) false true serial_str [id,1,20] false

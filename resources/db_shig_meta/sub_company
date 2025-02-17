@@ -1,3 +1,3 @@
-id int2 false false _ []
-name varchar(32) false false _ []
-region varchar(16) false false _ []
+id int2 false false _ [] true
+name varchar(32) false false _ [] false
+region varchar(16) false false _ [] false

@@ -22,7 +22,7 @@
         <dependency>
             <groupId>com.kaiwudb</groupId>
             <artifactId>kaiwudb-svt-sampler</artifactId>
-            <version>1.0.3-SNAPSHOT</version>
+            <version>1.1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

@@ -1,69 +1,69 @@
-k_timestamp timestamp false false _ []
-cnc_sn varchar(200) true false quoted_random_str [0,false,true,,0]
-cnc_sw_mver char(30) true false quoted_random_str [0,false,true,,0]
-cnc_sw_sver char(30) true false quoted_random_str [0,false,true,,0]
-cnc_tol_mem char(10) true false quoted_random_str [0,false,true,,0]
-cnc_use_mem char(10) true false quoted_random_str [0,false,true,,0]
-cnc_unuse_mem char(10) true false quoted_random_str [0,false,true,,0]
-cnc_status char(2) true false quoted_random_str [1,false,false,,,13]
-path_quantity char(30) true false quoted_random_str [1,false,false,,,1]
-axis_quantity char(30) true false quoted_random_str [1,false,false,,,6]
-axis_path varchar(100) true false quoted_random_str [11,false,false,,,1|1|1|1|1|1]
-axis_type varchar(100) true false quoted_random_str [11,false,false,,,0|3|3|3|3|3]
-axis_unit varchar(100) true false quoted_random_str [18,false,false,,,mm|mm|mm|mm|mm|rpm]
-axis_num varchar(100) true false quoted_random_str [11,false,false,,,1|2|3|4|5|6]
-axis_name varchar(100) true false quoted_random_str [15,false,false,,,|XM|YM|ZM|WG|XA]
-sp_name varchar(100) true false quoted_random_str [5,false,false,,,|]
-abs_pos varchar(200) true false quoted_random_str [5,false,false,,,|]
-rel_pos varchar(200) true false quoted_random_str [42,true,false,,,-.|1234567890]
-mach_pos varchar(200) true false quoted_random_str [43,true,false,,,-.|1234567890]
-dist_pos varchar(200) true false quoted_random_str [5,false,false,,,|]
-sp_override double true false random_float [95,120,5,0]
-sp_set_speed char(30) true false quoted_random_str [0,false,true,,0]
-sp_act_speed char(30) true false quoted_random_str [10,true,false,,,-.1234567890]
-sp_load varchar(300) true false quoted_random_str [11,true,false,,,.1234567890]
-feed_set_speed char(30) true false quoted_random_str [1,false,false,,1,0]
-feed_act_speed char(30) true false quoted_random_str [9,true,false,,,.1234567890]
-feed_override char(30) true false quoted_random_str [9,true,false,,,.12456]
-servo_load varchar(300) true false quoted_random_str [9,true,false,,,.1234567890]
-parts_count char(30) true false quoted_random_str [0,false,true,,0]
-cnc_cycletime char(30) true false quoted_random_str [0,false,true,,0]
-cnc_alivetime char(30) true false quoted_random_str [0,false,true,,0]
-cnc_cuttime char(30) true false quoted_random_str [0,false,true,,0]
-cnc_runtime char(30) true false quoted_random_str [0,false,true,,0]
-mprog_name varchar(500) true false quoted_random_str [34,true,false,,,_NOSTREYx4H31F0MP,true]
-mprog_num char(30) true false quoted_random_str [0,false,true,,0]
-sprog_name varchar(500) true false quoted_random_str [0,false,true,,0]
-sprog_num char(30) true false quoted_random_str [0,false,true,,0]
-prog_seq_num char(30) true false quoted_random_str [2,true,false,,,-01]
-prog_seq_content varchar(1000) true false quoted_random_str [0,false,true,,0]
-alarm_count char(10) true false quoted_random_str [1,false,false,,,045]
-alarm_type varchar(100) true false quoted_random_str [19,true,true,,11,plc|]
-alarm_code varchar(100) true false quoted_random_str [34,true,true,,11,012345678|]
-alarm_content varchar(2000) true false quoted_random_str [34,true,true,,11,C松开放W手轮1闲置中却系统外冷箱水位低|刀库参考点丢失主轴速度不在设定范围，通道内的各进给保持处于夹紧状态运动被禁止执行M2释机床当前:,true]
-alarm_time varchar(200) true false quoted_random_str [99,true,true,,11,|01234567890:,true]
-cur_tool_num char(20) true false quoted_random_str [1,false,false,,0,2]
-cur_tool_len_num char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_len char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_len_val char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_x_len char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_x_len_val char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_y_len char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_y_len_val char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_z_len char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_z_len_val char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_rad_num char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_rad char(20) true false quoted_random_str [0,false,true,,0]
-cur_tool_rad_val char(20) true false quoted_random_str [0,false,true,,0]
-device_state int true false random_int [0,0,0]
-value1 char(10) true false quoted_random_str [0,false,true,,0]
-value2 char(10) true false quoted_random_str [0,false,true,,0]
-value3 char(10) true false quoted_random_str [0,false,true,,0]
-value4 char(10) true false quoted_random_str [0,false,true,,0]
-value5 char(10) true false quoted_random_str [0,false,true,,0]
-machine_code varchar(64) false true _ []
-op_group varchar(64) false true _ []
-sub_company_id smallint false true _ []
-factory_id smallint false true _ []
-workshop_id smallint false true _ []
-number_of_molds int true true _ []
+k_timestamp timestamp false false _ [] true
+cnc_sn varchar(200) true false quoted_random_str [0,false,true,,0] false
+cnc_sw_mver char(30) true false quoted_random_str [0,false,true,,0] false
+cnc_sw_sver char(30) true false quoted_random_str [0,false,true,,0] false
+cnc_tol_mem char(10) true false quoted_random_str [0,false,true,,0] false
+cnc_use_mem char(10) true false quoted_random_str [0,false,true,,0] false
+cnc_unuse_mem char(10) true false quoted_random_str [0,false,true,,0] false
+cnc_status char(2) true false quoted_random_str [1,false,false,,,13] false
+path_quantity char(30) true false quoted_random_str [1,false,false,,,1] false
+axis_quantity char(30) true false quoted_random_str [1,false,false,,,6] false
+axis_path varchar(100) true false quoted_random_str [11,false,false,,,1|1|1|1|1|1] false
+axis_type varchar(100) true false quoted_random_str [11,false,false,,,0|3|3|3|3|3] false
+axis_unit varchar(100) true false quoted_random_str [18,false,false,,,mm|mm|mm|mm|mm|rpm] false
+axis_num varchar(100) true false quoted_random_str [11,false,false,,,1|2|3|4|5|6] false
+axis_name varchar(100) true false quoted_random_str [15,false,false,,,|XM|YM|ZM|WG|XA] false
+sp_name varchar(100) true false quoted_random_str [5,false,false,,,|] false
+abs_pos varchar(200) true false quoted_random_str [5,false,false,,,|] false
+rel_pos varchar(200) true false quoted_random_str [42,true,false,,,-.|1234567890] false
+mach_pos varchar(200) true false quoted_random_str [43,true,false,,,-.|1234567890] false
+dist_pos varchar(200) true false quoted_random_str [5,false,false,,,|] false
+sp_override double true false random_float [95,120,5,0] false
+sp_set_speed char(30) true false quoted_random_str [0,false,true,,0] false
+sp_act_speed char(30) true false quoted_random_str [10,true,false,,,-.1234567890] false
+sp_load varchar(300) true false quoted_random_str [11,true,false,,,.1234567890] false
+feed_set_speed char(30) true false quoted_random_str [1,false,false,,1,0] false
+feed_act_speed char(30) true false quoted_random_str [9,true,false,,,.1234567890] false
+feed_override char(30) true false quoted_random_str [9,true,false,,,.12456] false
+servo_load varchar(300) true false quoted_random_str [9,true,false,,,.1234567890] false
+parts_count char(30) true false quoted_random_str [0,false,true,,0] false
+cnc_cycletime char(30) true false quoted_random_str [0,false,true,,0] false
+cnc_alivetime char(30) true false quoted_random_str [0,false,true,,0] false
+cnc_cuttime char(30) true false quoted_random_str [0,false,true,,0] false
+cnc_runtime char(30) true false quoted_random_str [0,false,true,,0] false
+mprog_name varchar(500) true false quoted_random_str [34,true,false,,,_NOSTREYx4H31F0MP,true] false
+mprog_num char(30) true false quoted_random_str [0,false,true,,0] false
+sprog_name varchar(500) true false quoted_random_str [0,false,true,,0] false
+sprog_num char(30) true false quoted_random_str [0,false,true,,0] false
+prog_seq_num char(30) true false quoted_random_str [2,true,false,,,-01] false
+prog_seq_content varchar(1000) true false quoted_random_str [0,false,true,,0] false
+alarm_count char(10) true false quoted_random_str [1,false,false,,,045] false
+alarm_type varchar(100) true false quoted_random_str [19,true,true,,11,plc|] false
+alarm_code varchar(100) true false quoted_random_str [34,true,true,,11,012345678|] false
+alarm_content varchar(2000) true false quoted_random_str [34,true,true,,11,C松开放W手轮1闲置中却系统外冷箱水位低|刀库参考点丢失主轴速度不在设定范围，通道内的各进给保持处于夹紧状态运动被禁止执行M2释机床当前:,true] false
+alarm_time varchar(200) true false quoted_random_str [99,true,true,,11,|01234567890:,true] false
+cur_tool_num char(20) true false quoted_random_str [1,false,false,,0,2] false
+cur_tool_len_num char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_len char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_len_val char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_x_len char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_x_len_val char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_y_len char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_y_len_val char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_z_len char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_z_len_val char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_rad_num char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_rad char(20) true false quoted_random_str [0,false,true,,0] false
+cur_tool_rad_val char(20) true false quoted_random_str [0,false,true,,0] false
+device_state int true false random_int [0,0,0] false
+value1 char(10) true false quoted_random_str [0,false,true,,0] false
+value2 char(10) true false quoted_random_str [0,false,true,,0] false
+value3 char(10) true false quoted_random_str [0,false,true,,0] false
+value4 char(10) true false quoted_random_str [0,false,true,,0] false
+value5 char(10) true false quoted_random_str [0,false,true,,0] false
+machine_code varchar(64) false true _ [] true
+op_group varchar(64) false true _ [] true
+sub_company_id smallint false true _ [] false
+factory_id smallint false true _ [] false
+workshop_id smallint false true _ [] false
+number_of_molds int true true _ [] false
