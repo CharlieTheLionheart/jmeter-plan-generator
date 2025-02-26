@@ -6,6 +6,8 @@
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
         <collectionProp name="Arguments.arguments"/>
       </elementProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
       <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="[ConfigDebug] 预定义配置">
@@ -644,7 +646,7 @@ SampleResult.setIgnore()</stringProp>
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(random)">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(random)" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
@@ -657,7 +659,7 @@ SampleResult.setIgnore()</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="线程对象初始化" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -666,19 +668,19 @@ SampleResult.setIgnore()</stringProp>
 SampleResult.setIgnore()</stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF data_ts_step &gt; 5(virtual time)">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="IF data_ts_step &gt; 5(virtual time)" enabled="true">
           <stringProp name="IfController.condition">${__groovy(Integer.valueOf(&quot;${data_ts_step}&quot;)&gt;5)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == false">
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == false" enabled="true">
             <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
             <boolProp name="IfController.evaluateAll">false</boolProp>
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
           <hashTree>
-            <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制 * 2">
+            <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制 * 2" enabled="true">
               <stringProp name="throughput">${__BeanShell(${write_throughput} * 2,)}</stringProp>
               <intProp name="calcMode">0</intProp>
             </ConstantThroughputTimer>
@@ -1445,7 +1447,7 @@ generateBatchInsertSQL()</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 模拟tag和列的DDL并发操作">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 模拟tag和列的DDL并发操作" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <longProp name="ThreadGroup.duration">300</longProp>
@@ -1459,7 +1461,7 @@ generateBatchInsertSQL()</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询数据库对象"/>
+        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="查询数据库对象" enabled="true"/>
         <hashTree>
           <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == false" enabled="true">
             <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
@@ -1934,7 +1936,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床实际主轴转速">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床实际主轴转速" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -1947,13 +1949,13 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
             <doubleProp>
               <name>throughput</name>
               <value>240.0</value>
@@ -1962,15 +1964,15 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sp_act_speed" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sp_act_speed">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__threadNum}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
+              <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__Random(1,${write_thread_count},)}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames">k_timestamp1,sp_act_speed1</stringProp>
@@ -1980,7 +1982,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
                 <stringProp name="scriptLanguage">groovy</stringProp>
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
@@ -2029,10 +2031,10 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sp_act_speed" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sp_act_speed">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__threadNum}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
+              <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__Random(1,${write_thread_count},)}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames">k_timestamp1,sp_act_speed1</stringProp>
@@ -2042,7 +2044,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
                 <stringProp name="scriptLanguage">groovy</stringProp>
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
@@ -2059,7 +2061,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床最新数据">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床最新数据" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2156,7 +2158,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(machine_code last_1s)">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(machine_code last_1s)" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2169,13 +2171,13 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
             <stringProp name="throughput">${__BeanShell(${read_throughput} * 2,)}</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
@@ -2222,13 +2224,13 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
             <stringProp name="throughput">${read_throughput}</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
@@ -2263,7 +2265,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter聚合数据(子表max_min_avg_1min)">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter聚合数据(子表max_min_avg_1min)" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2276,7 +2278,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2402,7 +2404,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]计算一段时间某个电表的采集计数(子表in &amp;&amp; group by_1min)">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]计算一段时间某个电表的采集计数(子表in &amp;&amp; group by_1min)" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2415,13 +2417,13 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
             <doubleProp>
               <name>throughput</name>
               <value>2.0</value>
@@ -2474,13 +2476,13 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
             <doubleProp>
               <name>throughput</name>
               <value>1.0</value>
