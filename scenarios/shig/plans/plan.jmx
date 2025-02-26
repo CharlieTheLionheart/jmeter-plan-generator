@@ -84,12 +84,6 @@
             <stringProp name="Argument.desc">单次单表插入数据行数: default:100</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="write_thread_count" elementType="Argument">
-            <stringProp name="Argument.name">write_thread_count</stringProp>
-            <stringProp name="Argument.value">${__P(user.write.thread_count,20)}</stringProp>
-            <stringProp name="Argument.desc">写线程数量,default: 20</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
           <elementProp name="trace_log" elementType="Argument">
             <stringProp name="Argument.name">trace_log</stringProp>
             <stringProp name="Argument.value">${__P(trace_log,)}</stringProp>
@@ -642,7 +636,7 @@ SampleResult.setIgnore()</stringProp>
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Write] 执行数据写入(random)" enabled="true">
-        <stringProp name="ThreadGroup.num_threads">${write_thread_count}</stringProp>
+        <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${write_duration}</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -2031,7 +2025,7 @@ vars.putObject(&quot;machine_code&quot;, opGroup+&quot;_${__Random(1,${device_ra
             <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sp_act_speed" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
-              <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__Random(1,${write_thread_count},)}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
+              <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${__Random(1,${conn_pool_size},)}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
               <stringProp name="queryArguments"></stringProp>
               <stringProp name="queryArgumentsTypes"></stringProp>
               <stringProp name="variableNames">k_timestamp1,sp_act_speed1</stringProp>
@@ -2369,7 +2363,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
                 <stringProp name="cacheKey">false</stringProp>
                 <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-121M,,)})
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
-vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
               </JSR223PreProcessor>
               <hashTree/>
               <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="JSR223 后置处理程序" enabled="true">
@@ -2456,7 +2450,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
                 <stringProp name="cacheKey">false</stringProp>
                 <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-121M,,)})
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
-vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
               </JSR223PreProcessor>
               <hashTree/>
               <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="JSR223 后置处理程序" enabled="true">
@@ -2544,7 +2538,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
                 <stringProp name="cacheKey">false</stringProp>
                 <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-20M,,)})
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
-vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
@@ -2621,7 +2615,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
                 <stringProp name="cacheKey">false</stringProp>
                 <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-20M,,)})
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
-vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
@@ -2692,7 +2686,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count
                   <stringProp name="cacheKey">false</stringProp>
                   <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-20M,,)})
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
-vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
                 </JSR223PreProcessor>
                 <hashTree/>
               </hashTree>
@@ -2811,7 +2805,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
                   <stringProp name="cacheKey">false</stringProp>
                   <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-20M,,)})
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
-vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
                 </JSR223PreProcessor>
                 <hashTree/>
               </hashTree>
@@ -3410,7 +3404,7 @@ if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
                 <stringProp name="cacheKey">false</stringProp>
                 <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-121M,,)})
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
-def query_machine_code = &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;
+def query_machine_code = &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;
 vars.putObject(&quot;machine_code&quot;, query_machine_code)
 log.warn(&quot;query_machine_code=&quot; + query_machine_code)
 log.warn(&quot;elect_name_expect=${__P(elect_name_expect,)}&quot;)</stringProp>
@@ -3497,7 +3491,7 @@ if (Math.abs(Double.parseDouble(maxCurExpect) - Double.parseDouble(maxCurActual)
                 <stringProp name="cacheKey">false</stringProp>
                 <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-20M,,)})
 vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
-vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
+vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;)</stringProp>
               </JSR223PreProcessor>
               <hashTree/>
               <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 断言" enabled="true">
@@ -4153,7 +4147,7 @@ vars.putObject(&quot;begin_timestamp&quot;, beginTimestamp)
 long endTimestamp = ${__timeShift(,,PT-10M,,)}
 log.warn(&quot;endTimestamp=&quot;+endTimestamp)
 vars.putObject(&quot;end_timestamp&quot;, endTimestamp)
-def query_machine_code = &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;
+def query_machine_code = &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;
 log.warn(&quot;SQL4:query_machine_code=&quot; + query_machine_code)
 vars.putObject(&quot;machine_code&quot;, query_machine_code)
 log.warn(&quot;elect_name_expect=${__P(elect_name_expect,)}&quot;)</stringProp>
@@ -4231,7 +4225,7 @@ vars.putObject(&quot;begin_timestamp&quot;, beginTimestamp)
 long endTimestamp = ${__timeShift(,,PT-10M,,)}
 log.warn(&quot;endTimestamp=&quot;+endTimestamp)
 vars.putObject(&quot;end_timestamp&quot;, endTimestamp)
-def query_machine_code = &quot;${__Random(1,${write_thread_count},)}_${__Random(1,${device_rand_end},)}&quot;
+def query_machine_code = &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;
 log.warn(&quot;SQL6:query_machine_code=&quot; + query_machine_code)
 vars.putObject(&quot;machine_code&quot;, query_machine_code)</stringProp>
               </JSR223PreProcessor>
