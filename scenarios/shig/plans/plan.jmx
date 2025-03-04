@@ -663,23 +663,23 @@ SampleResult.setIgnore()</stringProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == false">
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="[Setup] autocommit == false" enabled="true">
             <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
             <boolProp name="IfController.evaluateAll">false</boolProp>
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
           <hashTree>
-            <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制 * 2">
+            <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制 * 2" enabled="true">
               <stringProp name="throughput">${__BeanShell(${write_throughput} * 2,)}</stringProp>
               <intProp name="calcMode">0</intProp>
             </ConstantThroughputTimer>
             <hashTree/>
-            <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入">
+            <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环写入" enabled="true">
               <boolProp name="LoopController.continue_forever">true</boolProp>
               <intProp name="LoopController.loops">-1</intProp>
             </LoopController>
             <hashTree>
-              <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量">
+              <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
                 <stringProp name="maximumValue">${device_rand_end}</stringProp>
                 <stringProp name="minimumValue">${device_rand_start}</stringProp>
                 <stringProp name="outputFormat"></stringProp>
@@ -697,7 +697,7 @@ SampleResult.setIgnore()</stringProp>
                 <boolProp name="CounterConfig.per_user">false</boolProp>
               </CounterConfig>
               <hashTree/>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}" enabled="true">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="写入数据: ${db_name}.t_electmeter: ${__threadNum}">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Callable Statement</stringProp>
                 <stringProp name="query">${builder};</stringProp>
@@ -710,7 +710,7 @@ SampleResult.setIgnore()</stringProp>
                 <stringProp name="resultSetHandler">Store as String</stringProp>
               </JDBCSampler>
               <hashTree>
-                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}" enabled="true">
+                <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="预处理数据: ${db_name}.electmeter_${__threadNum}">
                   <stringProp name="cacheKey">true</stringProp>
                   <stringProp name="filename"></stringProp>
                   <stringProp name="parameters"></stringProp>
@@ -1938,13 +1938,13 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
             <doubleProp>
               <name>throughput</name>
               <value>240.0</value>
@@ -1953,12 +1953,12 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sp_act_speed">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="sp_act_speed" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select k_timestamp, sp_act_speed from db_shig.t_cnc where op_group  = &apos;op_group_${opGroup}&apos; and machine_code  = &apos;${machine_code}&apos; and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc limit ${page_size} offset ${page_start}</stringProp>
@@ -1971,7 +1971,7 @@ ALTER TABLE ${db_name}.t_electmeter DROP COLUMN test_add_col_4;</stringProp>
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
                 <stringProp name="scriptLanguage">groovy</stringProp>
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
@@ -1987,7 +1987,7 @@ vars.putObject(&quot;machine_code&quot;, opGroup+&quot;_${__Random(1,${device_ra
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(sp_act_speed)">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(sp_act_speed)" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -2052,7 +2052,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床最新数据">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取机床最新数据" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2065,13 +2065,13 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
             <doubleProp>
               <name>throughput</name>
               <value>120.0</value>
@@ -2080,12 +2080,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num" enabled="true">
               <stringProp name="variableName">group_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2094,7 +2094,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num" enabled="true">
               <stringProp name="variableName">device_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2103,7 +2103,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last_all">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last_all" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &gt; now() - 1 minute and machine_code = ?;</stringProp>
@@ -2116,7 +2116,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last_all)">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(last_all)" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -2131,13 +2131,13 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="常数吞吐量定时器" enabled="true">
             <doubleProp>
               <name>throughput</name>
               <value>60.0</value>
@@ -2146,12 +2146,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num" enabled="true">
               <stringProp name="variableName">group_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2160,7 +2160,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num" enabled="true">
               <stringProp name="variableName">device_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2169,7 +2169,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last_all">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last_all" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_cnc WHERE k_timestamp &gt; now() - 1 minute and machine_code = ?;</stringProp>
@@ -2185,7 +2185,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(machine_code last_1s)">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(machine_code last_1s)" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${conn_pool_size}</stringProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2251,23 +2251,23 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
             <stringProp name="throughput">${read_throughput}</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="随机变量" enabled="true">
               <stringProp name="variableName">device_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2276,7 +2276,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last curs with machine_code">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last curs with machine_code" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 and machine_code = ? group by machine_code</stringProp>
@@ -2292,7 +2292,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter聚合数据(子表max_min_avg_1min)">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter聚合数据(子表max_min_avg_1min)" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2305,7 +2305,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2320,12 +2320,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num" enabled="true">
               <stringProp name="variableName">group_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2334,7 +2334,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num" enabled="true">
               <stringProp name="variableName">device_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2343,7 +2343,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;1_${__Random(1,${device_rand_end}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="max min and avg in electmeters">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="max min and avg in electmeters" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz group by machine_code order by machine_code asc;</stringProp>
@@ -2392,7 +2392,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2407,12 +2407,12 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num" enabled="true">
               <stringProp name="variableName">group_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2421,7 +2421,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num" enabled="true">
               <stringProp name="variableName">device_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2430,7 +2430,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="max min and avg in electmeters">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="max min and avg in electmeters" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz group by machine_code order by machine_code asc;</stringProp>
@@ -2467,7 +2467,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]计算一段时间某个电表的采集计数(子表in &amp;&amp; group by_1min)">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]计算一段时间某个电表的采集计数(子表in &amp;&amp; group by_1min)" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2480,7 +2480,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2495,12 +2495,12 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num" enabled="true">
               <stringProp name="variableName">group_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2509,7 +2509,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num" enabled="true">
               <stringProp name="variableName">device_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2518,7 +2518,7 @@ log.info(vars.get(&quot;avg1_1&quot;))</stringProp>
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="in &amp;&amp; group by">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="in &amp;&amp; group by" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz and abs(infre - 50) &gt;= 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
@@ -2542,7 +2542,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}
               </JSR223PreProcessor>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(in &amp;&amp; group by)">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="commit(in &amp;&amp; group by)" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Commit</stringProp>
               <stringProp name="query"></stringProp>
@@ -2557,7 +2557,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2572,12 +2572,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random group_num" enabled="true">
               <stringProp name="variableName">group_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2586,7 +2586,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num">
+            <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="random device_num" enabled="true">
               <stringProp name="variableName">device_num</stringProp>
               <stringProp name="outputFormat"></stringProp>
               <stringProp name="minimumValue">1</stringProp>
@@ -2595,7 +2595,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}
               <boolProp name="perThread">false</boolProp>
             </RandomVariableConfig>
             <hashTree/>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="in &amp;&amp; group by">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="in &amp;&amp; group by" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">select a.elect_name, a.cnt res from (select elect_name, count(*) as cnt FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name in (&apos;NULL&apos;, &apos;a023&apos;, &apos;a011&apos;) and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz and abs(infre - 50) &gt;= 0.2 group by elect_name) a order by a.elect_name asc;</stringProp>
@@ -2622,7 +2622,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(page_and_sum_15min)">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(page_and_sum_15min)" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2635,13 +2635,13 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
             <doubleProp>
               <name>throughput</name>
               <value>0.533333333</value>
@@ -2650,12 +2650,12 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="querypage">
+            <ThroughputController guiclass="ThroughputControllerGui" testclass="ThroughputController" testname="querypage" enabled="true">
               <intProp name="ThroughputController.style">1</intProp>
               <boolProp name="ThroughputController.perThread">false</boolProp>
               <intProp name="ThroughputController.maxThroughput">1</intProp>
@@ -2666,7 +2666,7 @@ vars.putObject(&quot;machine_code&quot;, &quot;${__Random(1,${conn_pool_size},)}
               </FloatProperty>
             </ThroughputController>
             <hashTree>
-              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="querypage">
+              <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="querypage" enabled="true">
                 <stringProp name="dataSource">default_pool</stringProp>
                 <stringProp name="queryType">Prepared Select Statement</stringProp>
                 <stringProp name="query">select k_timestamp,machine_code,cur_a,cur_b,cur_c from ${db_name}.t_electmeter where 1=1 and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz order by k_timestamp desc, machine_code asc limit ${page_size} offset 0;</stringProp>
@@ -2754,7 +2754,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
             </hashTree>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == true" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;true&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2848,7 +2848,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
           </hashTree>
         </hashTree>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(last_15min)">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Query]读取Electmeter数据(last_15min)" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <stringProp name="ThreadGroup.duration">${read_duration}</stringProp>
@@ -2861,7 +2861,7 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="autocommit == false" enabled="true">
           <stringProp name="IfController.condition">${__groovy(vars.get(&quot;autocommit&quot;) == &quot;false&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -2876,12 +2876,12 @@ vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})</stringPro
             <intProp name="calcMode">0</intProp>
           </ConstantThroughputTimer>
           <hashTree/>
-          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取">
+          <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="循环读取" enabled="true">
             <boolProp name="LoopController.continue_forever">true</boolProp>
             <intProp name="LoopController.loops">-1</intProp>
           </LoopController>
           <hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last curs">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="last curs" enabled="true">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Select Statement</stringProp>
               <stringProp name="query">SELECT last_row(*) FROM db_shig.t_electmeter where 1=1 group by machine_code</stringProp>
@@ -3397,13 +3397,16 @@ if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
                 <stringProp name="scriptLanguage">groovy</stringProp>
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
                 <stringProp name="cacheKey">false</stringProp>
                 <stringProp name="script">vars.putObject(&quot;begin_timestamp&quot;, ${__timeShift(,,PT-121M,,)})
-vars.putObject(&quot;end_timestamp&quot;, ${__timeShift(,,PT-10M,,)})
+int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+long endTimestamp = beginTimestamp + 111 * 60 * 1000 / dataTsStep * lineNum
+vars.putObject(&quot;end_timestamp&quot;, endTimestamp)
 def query_machine_code = &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;
 vars.putObject(&quot;machine_code&quot;, query_machine_code)
 log.warn(&quot;query_machine_code=&quot; + query_machine_code)
@@ -4123,7 +4126,7 @@ if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
               </JSR223Assertion>
               <hashTree/>
             </hashTree>
-            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL4: max min and avg in electmeters" enabled="true">
+            <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="SQL4: max min and avg in electmeters">
               <stringProp name="dataSource">default_pool</stringProp>
               <stringProp name="queryType">Prepared Select Statement</stringProp>
               <stringProp name="query">SELECT machine_code, max(cur_a) as max_cur,min(cur_a) as min_cur,avg(cur_a) as avg_cur, sum(cur_a) as sum_cur, count(cur_a) as count_cur FROM db_shig.t_electmeter where 1=1 and machine_code = ? and elect_name = ? and k_timestamp &gt; (${begin_timestamp})::timestamptz and k_timestamp &lt; (${end_timestamp})::timestamptz group by machine_code order by machine_code asc;</stringProp>
@@ -4136,7 +4139,7 @@ if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
               <stringProp name="resultSetHandler">Store as String</stringProp>
             </JDBCSampler>
             <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序" enabled="true">
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 预处理程序">
                 <stringProp name="scriptLanguage">groovy</stringProp>
                 <stringProp name="parameters"></stringProp>
                 <stringProp name="filename"></stringProp>
@@ -4144,7 +4147,9 @@ if ( lastElectmeterActual.equals(lastElectmeterExpect) ) {
                 <stringProp name="script">long beginTimestamp = ${__timeShift(,,PT-121M,,)}
 log.warn(&quot;beginTimestamp=&quot;+beginTimestamp)
 vars.putObject(&quot;begin_timestamp&quot;, beginTimestamp)
-long endTimestamp = ${__timeShift(,,PT-10M,,)}
+int lineNum = Integer.parseInt(vars.get(&quot;write_lines&quot;))
+long dataTsStep = Long.parseLong(vars.get(&quot;data_ts_step&quot;))
+long endTimestamp = beginTimestamp + 111 * 60 * 1000 / dataTsStep * lineNum
 log.warn(&quot;endTimestamp=&quot;+endTimestamp)
 vars.putObject(&quot;end_timestamp&quot;, endTimestamp)
 def query_machine_code = &quot;${__Random(1,${conn_pool_size},)}_${__Random(1,${device_rand_end},)}&quot;
