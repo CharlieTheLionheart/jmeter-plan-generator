@@ -3,9 +3,9 @@ set -e
 
 source ./prepare-build.sh
 
-IMAGE_REPO=${IMAGE_REPO:-10.110.10.145}
+IMAGE_REPO=${IMAGE_REPO:-devops.inspur.com:80/isg/zdp/repo/local_repo/quality_team}
 IMAGE_NAME=${IMAGE_NAME:-svt_images/ubuntu-2004-svt-data-collector}
-IMAGE_VER=${1:-20241220}
+IMAGE_VER=${1:-20251029}
 
 docker build --build-arg OPENJDK_VER=openjdk-21-jre-headless \
   --build-arg JMETER_VER=5.6.3 \
