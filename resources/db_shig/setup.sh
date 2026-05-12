@@ -13,10 +13,4 @@ eval "$cmd"
 
 { echo "CREATE TS DATABASE db_shig partition interval 1d;";\
 echo "CREATE DATABASE db_shig_meta;";\
-bash "${script_dir}"/../gen_sql.sh -t db_shig/t_electmeter -m db_shig/t_electmeter.meta;\
-bash "${script_dir}"/../gen_sql.sh -t db_shig/t_cnc -m db_shig/t_cnc.meta;\
-bash "${script_dir}"/../gen_sql.sh -t db_shig_meta/sub_company -m db_shig_meta/common.meta -r;\
-bash "${script_dir}"/../gen_sql.sh -t db_shig_meta/factory -m db_shig_meta/common.meta -r;\
-bash "${script_dir}"/../gen_sql.sh -t db_shig_meta/workshop -m db_shig_meta/common.meta -r; } >> "${script_dir}"/create.sql
-
-cat "${script_dir}"/t_electmeter.pipe >> "${script_dir}"/create_pipe.sql
+bash "${script_dir}"/../gen_sql.sh -t db_shig/t_cnc -m db_shig/t_cnc.meta; } >> "${script_dir}"/create.sql

@@ -1,1 +1,0 @@
-CREATE PIPE t_electmeter_alarm FOR TABLE db_shig.t_electmeter(*) WHERE vol_a > 10 WITH OPTIONS(enable='on',sink='kafka://KAFKA_SOCKET?topic_name=t_electmeter_alarm');
