@@ -1,9 +1,0 @@
-k_timestamp timestamp false false _ [] true
-measure_value double true false random_double [2.5875270406316982e-05,9.999842645447115,16,0] false
-point_sn varchar(64) false true serial_str [point_sn_,1,150000] true
-sub_com_sn varchar(32) true true serial_str [sub_com_sn_,1,8] false
-work_area_sn varchar(16) true true serial_str [work_area_sn_,1,41] false
-station_sn varchar(16) true true serial_str [station_sn_,1,436] false
-pipeline_sn varchar(16) true true serial_str [pipeline_sn_,1,23] false
-measure_type smallint true true serial_int [0,17] false
-measure_location varchar(32) true true serial_str [measure_location_,1,150000] false

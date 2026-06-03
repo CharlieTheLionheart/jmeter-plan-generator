@@ -1,3 +1,0 @@
-id int2 false false _ [] true
-name varchar(16) false false _ [] false
-factory_id int2 false false _ [] false
