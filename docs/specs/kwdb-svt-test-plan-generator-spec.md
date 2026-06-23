@@ -458,6 +458,56 @@ CREATE TABLE sensors (
   WITH HASH(20);
 ```
 
+#### KaiwuDB建库DDL
+
+1. 语法：
+CREATE TS DATABASE database_name [RETENTIONS keep_duration] [PARTITION INTERVAL interval] [COMMENT [=] comment_text];
+
+2. 参数说明：
+- keep_duration：直接写数值和单位（如 50d），无需加单引号，支持的时间单位有：
+  + 天（D 或 DAY）
+  + 周（W 或 WEEK）
+  + 月（MON 或 MONTH）
+  + 年（Y 或 YEAR）
+- interval：直接写数值和单位（如 2d），无需加单引号
+- 可选参数必须按照 [RETENTIONS ] [PARTITION INTERVAL ] [COMMENT [=] ] 的顺序配置
+
+3. 正确示例：
+CREATE TS DATABASE iot_monitor PARTITION INTERVAL 1d;
+
+#### KaiwuDB建表DDL
+
+1. 语法：
+CREATE TABLE table_name (
+    k_timestamp TIMESTAMP/TIMESTAMPTZ NOT NULL,
+    column_name1 data_type1,
+    column_name2 data_type2,
+    ...
+) TAGS (
+    primary_tag data_type NOT NULL,
+    tag_name1 data_type1,
+    tag_name2 data_type2,
+    ...
+) PRIMARY TAGS (primary_tag);
+
+2. 参数说明：
+
+- 第一列必须是时间戳列，且列名必须为 k_timestamp，数据类型为 TIMESTAMP 或 TIMESTAMPTZ，且必须设置为 NOT NULL。
+- 数据列（column_name）：存储时序数据的具体数值。
+- 标签列（TAGS）：存储元数据信息（如设备 ID、地理位置等）。
+- 主标签必须命名为 primary_tag，且数据类型必须为 VARCHAR，同时设置为 NOT NULL。
+
+3. 正确示例：
+CREATE TABLE meters (
+    k_timestamp TIMESTAMP NOT NULL,
+    current FLOAT,
+    voltage INT,
+    phase FLOAT
+) TAGS (
+    primary_tag VARCHAR NOT NULL,
+    location VARCHAR(20)
+) PRIMARY TAGS (primary_tag);
+
 ### 8.3 术语表
 
 | 术语 | 说明 |

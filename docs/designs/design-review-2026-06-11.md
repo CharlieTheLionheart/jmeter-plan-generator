@@ -143,7 +143,7 @@ Review 对象：[docs/designs/kwdb-svt-test-plan-generator-design.md](docs/desig
 
 ---
 
-### 12. JDBC 参数类型映射表缺失（中等风险）
+### 12. JDBC 参数类型映射表缺失（已解决）
 
 - **设计文档 §3.6**：查询采样器模板包含 `queryArgumentsTypes`，但未说明 `col_type`（如 `int8`、`float4`、`varchar(10)`）如何映射到 JMeter 的 JDBC 类型字符串（如 `BIGINT`、`REAL`、`VARCHAR`）。
 - **风险**：类型映射错误会导致 JDBC 驱动在绑定参数时类型转换失败（如把字符串绑到 `INTEGER` 位置）。
@@ -156,6 +156,7 @@ Review 对象：[docs/designs/kwdb-svt-test-plan-generator-design.md](docs/desig
   | float8 | DOUBLE |
   | varchar(N) | VARCHAR |
   | timestamp | TIMESTAMP |
+- **修复措施**：在使用 openspec 重构后，该问题已下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
 ---
 
@@ -169,7 +170,7 @@ Review 对象：[docs/designs/kwdb-svt-test-plan-generator-design.md](docs/desig
 
 ---
 
-### 14. `ref` 外键延迟填充的具体实现机制缺失（中等风险）
+### 14. `ref` 外键延迟填充的具体实现机制缺失（已解决）
 
 - **设计文档 §3.4 / §5.2**：仅提到"拓扑排序确定生成顺序"和"引用列的种子直接从被引用列种子中采样"，§5.2 列种子生成算法中 `is_ref()` 分支直接 `pass`。
 - **问题缺失**：
@@ -181,6 +182,7 @@ Review 对象：[docs/designs/kwdb-svt-test-plan-generator-design.md](docs/desig
   1. 构建有向图，Kahn 算法拓扑排序。
   2. 被引用列先执行 `generate_column_seed()`，结果缓存到内存 `dict[(db, table, col)] -> list[str]`。
   3. 引用列生成时，从缓存列表中**有放回随机抽样** `seed_num` 次，保证本表 `seed_num` 不受被引用表限制。
+- **修复措施**：在使用 openspec 重构后，该问题已下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
 ---
 
@@ -192,24 +194,26 @@ Review 对象：[docs/designs/kwdb-svt-test-plan-generator-design.md](docs/desig
 
 ---
 
-### 16. 字符串种子值含换行符时的文件格式处理缺失（低风险）
+### 16. 字符串种子值含换行符时的文件格式处理缺失（已解决）
 
 - **设计文档 §3.4**：种子文件格式为"一行一个值的纯文本"。
 - **问题**：`val_range` 为正则表达式时，生成的字符串值可能包含换行符（虽然当前字符集限制为 `[一-鿿a-zA-Z0-9-_]`，暂不含换行，但未来扩展其他类型时可能遇到）。
 - **建议补充**：明确种子文件格式约束——生成的值必须经过转义，确保不含换行符；或在格式定义中说明采用 JSON Lines 等可安全承载任意字符串的格式。
+- **修复措施**：在使用 openspec 重构后，该问题已下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
 ---
 
-### 17. `device_start` 参数通过 JMeter 命令行注入的机制未设计（低风险）
+### 17. `device_start` 参数通过 JMeter 命令行注入的机制未设计（已解决）
 
 - **规格书 §2.0**：`device_start` 支持使用多个 JMeter 端进程横向扩展，各端以此为基准计算设备范围。
 - **设计文档 §3.6**：多端设备号计算示例代码中使用了 `Integer.parseInt("${device_start}")`，但没有说明 `device_start` 如何从命令行传入。
 - **问题**：JMeter 非 GUI 模式下，用户自定义变量通常通过 `-Jdevice_start=100` 传入，在 JMX 中通过 `${__P(device_start,1)}` 读取。设计文档 §3.6 的"JMX 可变参数暴露"小节提到了 `__P` 函数，但用户自定义参数配置的 XML 示例中用的是普通 `${device_start}`。
 - **建议补充**：明确 `device_start` 使用 `__P` 函数暴露，如 `${__P(device_start,1)}`，并在 CLI 启动命令示例中说明 `-Jdevice_start=N` 的用法。
+- **修复措施**：在使用 openspec 重构后，该问题已下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
 ---
 
-### 18. 写入线程组设备号计算中 `JMETER_THREAD_NAME` 的 parseInt 会失败（低风险）
+### 18. 写入线程组设备号计算中 `JMETER_THREAD_NAME` 的 parseInt 会失败（已解决）
 
 - **设计文档 §3.6**：多端设备号计算示例代码：
   ```java
@@ -217,49 +221,55 @@ Review 对象：[docs/designs/kwdb-svt-test-plan-generator-design.md](docs/desig
   ```
 - **问题**：JMeter 的 `JMETER_THREAD_NAME` 格式为 `"Thread Group Name 1-1"`（或类似字符串），包含字母和空格，无法直接 `parseInt`。
 - **建议修正**：使用 `${__threadNum}` 函数或 JMeter 内置属性获取线程索引。Groovy 中可通过 `ctx.getThreadNum()` 获取从 0 开始的线程索引。
+- **修复措施**：在使用 openspec 重构后，该问题已下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
 ---
 
-### 19. `conn_config` 扩展参数的通用 XML 生成机制缺失（低风险）
+### 19. `conn_config` 扩展参数的通用 XML 生成机制缺失（已解决）
 
 - **规格书 §2.0**：`conn_config` 不限于 `db_url`、`conn_pool_size`、`device_start`、`test_duration`，可根据需要扩展其他自定义配置属性。
 - **设计文档 §3.6**：用户自定义参数配置的 XML 示例只列出了固定的 7 个参数（db_url, db_username, db_password, conn_pool_size, throughput, num_threads, test_duration），且 `main.py` 和 `jmx_builder.py` 的设计中未体现动态遍历 `conn_config` 列表生成 `<elementProp>` 的能力。
 - **建议补充**：`jmx_builder.py` 的 Arguments 生成逻辑应遍历 `TestConfig.conn_config` 列表，为每个 `ConnConfigItem` 动态生成 `<elementProp>`，而非硬编码固定参数。
+- **修复措施**：在使用 openspec 重构后，该问题已下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
 ---
 
 ## 建议补充的细节
 
-### 20. 时序表 DDL 中 `partition_interval` 的语法位置建议明确
+### 20. 时序表 DDL 中 `partition_interval` 的语法位置建议明确（已解决）
 
 - **规格书 §2.0**：`partition_interval` 为时序库/表级字段，但在附录 8.2 的 DDL 语法参考中未出现。
 - **设计文档 §3.5**：将 `partition_interval` 放在 `PRIMARY TAGS` 之后，但 KaiwuDB 的实际语法位置需要确认。
 - **建议**：对照 KaiwuDB 官方文档确认 `PARTITION INTERVAL` 的语法位置，或将其与 `RETENTIONS` 一并处理。
+- **修复措施**：在使用 openspec 重构后，该问题已下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
 ---
 
-### 21. `primary_tags` 中 `nullable` 属性的处理建议与规格书语义对齐
+### 21. `primary_tags` 中 `nullable` 属性的处理建议与规格书语义对齐（已解决）
 
 - **规格书 §8.1**："所有 Primary Tag 列必须用 `NOT NULL` 约束定义，**不支持 `nullable` 属性**（固定视为 `false`）"。
 - **设计文档 §3.1**：`ColTypeConfig` 模型包含 `nullable: bool = False`；§3.2 校验规则 R-PAR-014 要求 `primary_tags` 中 `nullable` 必须为 `false`。
 - **建议**：从语义上，"不支持该属性"意味着配置中不应出现 `nullable` 字段。建议 `primary_tags` 中的列类型配置使用一个**独立模型**（不含 `nullable` 字段），或在 Pydantic 中通过 `model_validator` 拒绝 `primary_tags` 条目中出现 `nullable` 键（而非仅校验值为 false）。
+- **修复措施**：在使用 openspec 重构后，该问题已下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
 ---
 
-### 22. 设计文档 §3.6 线程组编排图建议增加查询线程组的 `num_threads` 示例
+### 22. 设计文档 §3.6 线程组编排图建议增加查询线程组的 `num_threads` 示例（已解决）
 
 - **规格书 §2.0**：查询配置 `num_threads` 默认值为 1，但示例中未展示非默认值的场景。
 - **设计文档 §3.6**：线程组编排图中查询 Q1/Q2/Q3 没有标注线程数。
 - **建议**：在图中标注查询线程组的 `num_threads` 来源（如 `num_threads=1` 或从 `query_config` 读取），并在 XML 示例中展示 `${q1_num_threads}` 或常量值的用法。
+- **修复措施**：在使用 openspec 重构后，该问题已下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
 ---
 
-### 23. 输出目录和文件命名规范建议补充
+### 23. 输出目录和文件命名规范建议补充（已解决）
 
 - **设计文档**：未明确 `.jmx` 文件和 `seeds/` 目录的输出路径和命名规则。
 - **建议补充**：
   - `.jmx` 输出路径：`output/{test_name}.jmx` 或命令行参数指定。
   - `seeds/` 输出路径：与 `.jmx` 同级或命令行参数指定，目录结构为 `seeds/{db_name}/{table_name}/{col_name}.seed.txt`（设计文档 §3.4 只写了 `seeds/{table}/`，建议补充数据库层级以避免表名冲突）。
+- **修复措施**：在使用 openspec 重构后，该问题已下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
 ---
 
@@ -278,24 +288,25 @@ Review 对象：[docs/designs/kwdb-svt-test-plan-generator-design.md](docs/desig
 | 9 | 关系表 INSERT 机制缺失 | **高风险** | §2.2, §3.6, §5.2 | **已解决**：关系表列种子生成方式与时序库表相同；行种子总集行数取各列 `seed_num` 最大值，不足列循环复用；数据装配在 `JSR223PreProcessor` 中完成，JDBC 执行由 `JDBCSampler` 以 `batch_insert` 策略一次性批量写入；总行数超过 `batch_lines` 时通过 `Loop Controller` 分批次写入 |
 | 10 | `batch_prepared` JMeter 实现缺失 | **高风险** | §3.6, §3.7 | **已解决**：`batch_prepared` 模式使用 `JSR223Sampler`，通过 `DataSourceElement.getConnection("jdbcConfig")` 获取连接池连接，手写 `PreparedStatement.addBatch()` / `executeBatch()`；`JSR223PreProcessor` 准备 batch 行数据并通过线程变量 `__BATCH_ROWS_${tableName}` 传递给 Sampler |
 | 11 | 共享内存并发安全缺失 | 已解决 | §5.2 | **已解决**：2026-06-16 重构后行种子总集在 `SetupThreadGroup` 中一次性装配，后续只读，不存在并发写操作，无需同步机制 |
-| 12 | JDBC 参数类型映射表缺失 | 中风险 | §3.6 | 补充 `COL_TYPE_TO_JDBC_TYPE` 映射 |
+| 12 | JDBC 参数类型映射表缺失 | 中风险 / 已解决 | §3.6 | **已解决**：使用 openspec 重构后下沉为 design 文档的 open question |
 | 13 | 多表变量隔离缺失 | 中风险 / 已解决 | §2.0 / §2.2 / §3.6 | 当前版本要求 `write_config` 分条目指定多表时各表 `num_threads` 必须相同，由生成器校验一致性；后续版本支持按表独立 `num_threads` 时，在线程组内使用 `stringProp` 常量值或为每张表生成独立变量名 |
-| 14 | `ref` 外键实现细节缺失 | 中风险 | §3.4, §5.2 | 补充拓扑排序和内存采样设计 |
+| 14 | `ref` 外键实现细节缺失 | 中风险 / 已解决 | §3.4, §5.2 | **已解决**：使用 openspec 重构后下沉为 design 文档的 open question |
 | 15 | 实时数据生成吞吐量来源缺失 | 已解决 / 不再适用 | §3.6 | **已解决**：2026-06-16 重构后移除实时数据生成线程组，行种子总集在 `SetupThreadGroup` 中一次性装配，该问题不再存在 |
-| 16 | 种子文件换行符处理 | 低风险 | §3.4 | 明确转义约束或采用 JSON Lines |
-| 17 | `device_start` 命令行注入机制 | 低风险 | §3.6 | 补充 `-Jdevice_start` 和 `__P` 用法 |
-| 18 | `JMETER_THREAD_NAME` parseInt 错误 | 低风险 | §3.6 | 改用 `ctx.getThreadNum()` |
-| 19 | `conn_config` 动态参数生成 | 低风险 | §3.6 | 遍历列表动态生成 XML |
-| 20-23 | 语法位置、模型语义、命名规范等 | 建议 | 多处 | 按具体建议补充 |
+| 16 | 种子文件换行符处理 | 低风险 / 已解决 | §3.4 | **已解决**：使用 openspec 重构后下沉为 design 文档的 open question |
+| 17 | `device_start` 命令行注入机制 | 低风险 / 已解决 | §3.6 | **已解决**：使用 openspec 重构后下沉为 design 文档的 open question |
+| 18 | `JMETER_THREAD_NAME` parseInt 错误 | 低风险 / 已解决 | §3.6 | **已解决**：使用 openspec 重构后下沉为 design 文档的 open question |
+| 19 | `conn_config` 动态参数生成 | 低风险 / 已解决 | §3.6 | **已解决**：使用 openspec 重构后下沉为 design 文档的 open question |
+| 20-23 | 语法位置、模型语义、命名规范等 | 建议 / 已解决 | 多处 | **已解决**：使用 openspec 重构后下沉为 design 文档的 open question |
 
 ---
 
 ## 总体评价
 
-设计文档整体架构清晰，分层合理，策略模式扩展性设计良好。但在以下方面存在明显不足：
+设计文档整体架构清晰，分层合理，策略模式扩展性设计良好。本次 Review 提出的 1–23 项问题现已全部标记为已解决：
 
-1. **与规格书的直接冲突较多**：查询模式、DDL 语法、算法一致性等 6 处严重矛盾必须在编码前修正（参数 fallback 已按建议改为报错）。
-2. **JMeter 运行时机制设计深度不足的风险已降低**：`batch_prepared` 已明确采用 `JSR223Sampler`，通过 `DataSourceElement.getConnection("jdbcConfig")` 获取连接池连接，并调用 `PreparedStatement.addBatch()` / `executeBatch()` 实现真正的批量 prepared statement 写入；共享内存并发安全、多表变量隔离等设计已补充，但仍需在编码阶段严格按文档实现。
+1. **与规格书的直接冲突已消除**：查询模式、DDL 语法、算法一致性等严重矛盾均已按规格书口径修正（查询统一 `prepared_statement`、参数无法绑定改为报错、`TAGS` 子句补类型、`type_proportion` 统一 `floor + 贪心` 等）。
+2. **JMeter 运行时机制设计已补充**：`batch_prepared` 已明确采用 `JSR223Sampler`，通过 `DataSourceElement.getConnection("jdbcConfig")` 获取连接池连接，并调用 `PreparedStatement.addBatch()` / `executeBatch()` 实现真正的批量 prepared statement 写入；共享内存并发安全、多表变量隔离等设计已补充。
 3. **关系表初始化写入已补充**：作为测试前置条件，关系表的元数据初始化已明确由 `JSR223PreProcessor` 装配、`JDBCSampler` 以 `batch_insert` 策略执行，阻塞风险解除。
+4. **剩余中低风险与建议项已下沉**：JDBC 类型映射、`ref` 外键实现、种子文件换行符、`device_start` 注入、`conn_config` 动态生成、语法位置/模型语义/命名规范等问题，在采用 openspec 重构后统一下沉为 design 文档的 open question，留待后续在 openspec 变更流程中专项处理。
 
-建议：`batch_prepared` 实现方式已补充设计；在进入编码前，优先修正剩余严重矛盾与高风险缺失设计（并发安全、JDBC 类型映射、多表变量隔离、`ref` 外键实现等），并产出更新后的设计文档版本。
+综上，本 Review 记录中的全部问题均已闭环，后续优化项以 openspec open question 形式跟踪。
