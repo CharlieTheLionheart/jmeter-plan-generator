@@ -152,7 +152,7 @@ The system SHALL provide utility functions for generating JSR223PreProcessor scr
 
 #### Scenario: Replace placeholder with device identifier
 - **WHEN** calling `replace_placeholder(value, device_number)`
-- **THEN** the system SHALL generate code to replace `?ptag1?` with `device_{device_number}`
+- **THEN** the system SHALL generate code to replace `${device_code}` with `device_{device_number}`
 - **THEN** the system SHALL return the replaced value
 
 #### Scenario: Generate PreProcessor script template

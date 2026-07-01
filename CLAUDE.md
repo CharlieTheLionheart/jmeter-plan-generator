@@ -53,3 +53,8 @@ For multi-step tasks, state a brief plan:
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
 These guidelines are working if: fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+
+5. Use venv
+When execute python3 command, always use the python3 under venv directory by sourcing the virtrual environment:
+source venv ./venv/bin/activate && python3 xxx

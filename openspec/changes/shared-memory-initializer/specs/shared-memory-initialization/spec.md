@@ -6,7 +6,7 @@ The system SHALL load row seed data aggregate from CSV file and store in JMeter 
 #### Scenario: Generate JSR223PreProcessor for CSV loading
 - **WHEN** generating shared memory loader for table `tsdb.t_table`
 - **THEN** the system SHALL generate a JSR223PreProcessor with Groovy script
-- **THEN** the script SHALL read from `seeds/tsdb.t_table.csv`
+- **THEN** the script SHALL read from `seeds/tsdb/t_table.csv`
 - **THEN** the system SHALL use Python `csv.reader()` to parse the CSV file
 
 #### Scenario: Parse CSV header for column names

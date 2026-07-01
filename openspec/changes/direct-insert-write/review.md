@@ -49,11 +49,11 @@
 **Findings**:
 - 无 Modified Capabilities，无破坏性变更。
 - 依赖 config-parser / seed-data-generator / jmx-skeleton-generator 既有接口，未改其契约。
-- `?ptag1?` 占位符为新约定，不影响既有种子文件格式（若旧文件无占位符则不触发替换）。
+- `${device_code}` 占位符在行种子总集 CSV 中注入，运行时由 PreProcessor 替换为设备标识。
 - **新增**: 表名限定名规范为新增约定，不破坏现有功能。
 
 **Recommendations**:
-- 文档说明：旧种子文件无 `?ptag1?` 时的行为（应原样写入）。
+- ✅ **已解决**: 首个 ptag 的 `${device_code}` 占位符机制已在 design.md 和 spec.md 中明确。
 - ✅ **已解决**: 表名限定名规范已在 design.md 和 spec.md 中明确，与 DDL 生成器保持一致。
 
 ## 5. Task Granularity
@@ -75,7 +75,7 @@
   1. 设备号计算工具方法（含越界/除零保护，使用 `${__threadNum}`）
   2. JSR223PreProcessor Groovy 脚本（拷贝+克隆+环绕）
   3. 时间戳装配（明确除法精度）
-  4. `?ptag1?` 占位符替换
+  4. `${device_code}` 占位符替换
   5. single_insert sampler 生成
   6. batch_insert sampler 生成（动态 `${batch_lines}`）
   7. 关系表 SetupThreadGroup + Loop Controller 初始化

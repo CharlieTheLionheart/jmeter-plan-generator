@@ -75,7 +75,7 @@ KaiwuDB SVT 测试计划生成器：读取两份 YAML 配置（`test_model.yaml`
 - **写入模式 `WriteMode`**：`single_insert` / `batch_insert` / `single_prepared` / `batch_prepared` / `schemaless`。
   - `batch_prepared` 用 `JSR223Sampler` 手写 JDBC `addBatch()`/`executeBatch()`（JMeter 原生 JDBCSampler 无法一次绑定多组参数）。
 - **查询模式 `QueryMode`**：`statement` / `prepared_statement`，统一以 `Prepared Select Statement` 执行，`?` 由 `JSR223PreProcessor` 从种子文件随机取值注入。
-- **时间戳与首个 ptag** 不进入列种子：时间戳由写入线程按 `base_time + batch_seq × ms_step` 装配；首个 ptag 列种子为占位串 `?ptag1?`，运行时按设备号替换为 `device_{n}`。
+- **时间戳与首个 ptag** 不进入列种子：时间戳由写入线程按 `base_time + batch_seq × ms_step` 装配；首个 ptag 列种子为占位串 `${device_code}`，运行时由写入线程组的 JSR223PreProcessor 按设备号替换为 `device_{n}`。
 
 ## Important Constraints
 
@@ -84,7 +84,7 @@ KaiwuDB SVT 测试计划生成器：读取两份 YAML 配置（`test_model.yaml`
 - `type_proportion` 同一列组之和必须等于 1.0（容差 ±1e-9）。
 - `with_hash` 取值范围 `[1, 50000]`；`primary_tag_count ≤ 4`。
 - `nullable=false` 时 `null_rate` 必须为 `0.0`；`primary_tags` 的 `nullable` 必须为 `false`。
-- NULL 计入 `seed_num` 总数，按 `round(seed_num × null_rate)` 生成后随机打散。
+- NULL 计入 `seed_num` 总数，按 `min(seed_num, floor(seed_num × null_rate))` 生成后随机打散。
 - 查询 SQL 中无法绑定到具体列的 `?` 直接报 `ValidationError`，拒绝生成。
 
 ## External Dependencies

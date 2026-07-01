@@ -1,5 +1,69 @@
 ## ADDED Requirements
 
+### Requirement: Table inheritance structure
+The system SHALL use inheritance to distinguish between relational tables and time-series tables.
+
+#### Scenario: RelTableConfig contains relational table fields only
+- **WHEN** a relational table is defined in `rel_dbs`
+- **THEN** the system SHALL parse it using `RelTableConfig` which inherits from `TableConfig`
+- **AND** the table SHALL contain `primary_key_count` and `primary_keys` fields
+- **AND** the table SHALL NOT contain `ts_col`, `primary_tags`, `regular_tags`, or `with_hash` fields
+
+#### Scenario: TsTableConfig contains time-series table fields only
+- **WHEN** a time-series table is defined in `ts_dbs`
+- **THEN** the system SHALL parse it using `TsTableConfig` which inherits from `TableConfig`
+- **AND** the table SHALL contain `ts_col`, `primary_tag_count`, `regular_tag_count`, `primary_tags`, `regular_tags`, `with_hash`, and `retentions` fields
+- **AND** the table SHALL NOT contain `primary_key_count` or `primary_keys` fields
+
+#### Scenario: TableConfig base class contains shared fields only
+- **WHEN** `TableConfig` is used as a base class
+- **THEN** it SHALL contain `name`, `comment`, `if_not_exists`, `data_col_count`, and `data_cols` fields
+- **AND** it SHALL NOT contain table-type-specific fields
+
+### Requirement: Database inheritance structure
+The system SHALL use inheritance to distinguish between relational databases and time-series databases.
+
+#### Scenario: RelDbConfig contains relational database
+- **WHEN** a relational database is defined in `rel_dbs`
+- **THEN** the system SHALL parse it using `RelDbConfig`
+- **AND** its `tables` field SHALL be of type `list[RelTableConfig]`
+
+#### Scenario: TsDbConfig contains time-series database
+- **WHEN** a time-series database is defined in `ts_dbs`
+- **THEN** the system SHALL parse it using `TsDbConfig`
+- **AND** its `tables` field SHALL be of type `list[TsTableConfig]`
+- **AND** it SHALL contain `retentions` and `partition_interval` fields
+
+### Requirement: TsColConfig for time-series timestamp column
+The system SHALL use a dedicated `TsColConfig` object for time-series table timestamp column configuration.
+
+#### Scenario: Parse ts_col as TsColConfig object
+- **WHEN** a time-series table has a `ts_col` field
+- **THEN** the system SHALL parse it as a `TsColConfig` object
+- **AND** the `TsColConfig` SHALL contain `name` (string), `type` (Literal["timestamp", "timestamptz"]), and `ms_step` (int) fields
+
+### Requirement: WriteConfig mode values
+The system SHALL support the correct set of write mode values.
+
+#### Scenario: Accept valid write modes
+- **WHEN** `write_config.mode` is set to one of `single_insert`, `batch_insert`, `single_prepared`, `batch_prepared`, or `schemaless`
+- **THEN** the system SHALL accept the configuration
+
+#### Scenario: Reject invalid write modes
+- **WHEN** `write_config.mode` is set to `direct_insert` or `write_through`
+- **THEN** the system SHALL report a validation error indicating invalid write mode
+
+### Requirement: QueryConfig mode values
+The system SHALL support the correct set of query mode values.
+
+#### Scenario: Accept valid query modes
+- **WHEN** `query_config.mode` is set to one of `statement` or `prepared_statement`
+- **THEN** the system SHALL accept the configuration
+
+#### Scenario: Reject invalid query modes
+- **WHEN** `query_config.mode` is set to `query` or `raw`
+- **THEN** the system SHALL report a validation error indicating invalid query mode
+
 ### Requirement: Parse test_model.yaml
 The system SHALL parse the test_model.yaml configuration file and validate its structure and content.
 

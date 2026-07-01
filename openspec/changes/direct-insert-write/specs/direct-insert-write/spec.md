@@ -73,7 +73,7 @@ The system SHALL obtain the thread index using JMeter built-in function to suppo
 - **THEN** the system SHALL use `${__threadNum}` instead
 
 ### Requirement: Replace first primary tag placeholder
-The system SHALL replace the first Primary Tag placeholder `?ptag1?` with the device identifier.
+The system SHALL replace the first Primary Tag placeholder `${device_code}` with the device identifier.
 
 #### Scenario: Calculate device number
 - **WHEN** a thread needs to calculate its device number
@@ -86,10 +86,10 @@ The system SHALL replace the first Primary Tag placeholder `?ptag1?` with the de
 - **THEN** the first Primary Tag value SHALL be replaced with the device identifier
 - **THEN** the replacement SHALL be `device_${device_start + ${__threadNum} * device_per_thread + (row_index % device_per_thread)}`
 
-#### Scenario: Handle first primary tag in seed file
-- **WHEN** the first Primary Tag column's seed file contains `?ptag1?`
-- **THEN** the PreProcessor SHALL treat it as a placeholder to be replaced
-- **THEN** it SHALL NOT include it in the INSERT VALUES (replaced by device identifier)
+#### Scenario: Handle first primary tag in row aggregate
+- **WHEN** the row seed aggregate CSV contains `${device_code}` in the first ptag column
+- **THEN** the PreProcessor SHALL treat it as a placeholder to be replaced with the device identifier
+- **THEN** it SHALL NOT include it in the INSERT VALUES as-is (replaced by device identifier)
 
 ### Requirement: Generate relational table initialization sampler
 The system SHALL generate a JDBCSampler for one-time initialization of relational tables with qualified table names.

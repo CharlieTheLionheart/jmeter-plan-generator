@@ -1,2 +1,8 @@
 venv/
 .memsearch/*
+.codegraph/*
+tests/__pycache__/*
+*/*/__pycache__/*
+*.egg-info/
+*.egg
+uv.lock

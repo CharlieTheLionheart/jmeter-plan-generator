@@ -45,7 +45,7 @@
 
 ### 第一个 Primary Tag 占位符处理
 
-**Decision:** 列种子文件中使用 `?ptag1?` 作为占位符，写入时替换为 `device_{设备号}`。
+**Decision:** 首个 ptag 列不生成列种子文件；`${device_code}` 占位符在行种子总集 CSV 中由 `build_row_aggregate` 注入，运行时由写入线程组的 JSR223PreProcessor 替换为 `device_{设备号}`。
 
 **Rationale:**
 - 符合设计文档要求

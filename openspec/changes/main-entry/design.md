@@ -82,7 +82,7 @@ KaiwuDB SVT 测试计划生成器已经通过多个 openspec change 拆分解耦
 
 **Decision:** 输出目录下包含：
 - `{test_plan_name}.jmx`（默认 `test_plan.jmx`，可通过 `test_cfg.yaml` 或 CLI 覆盖）
-- `seeds/{table_name}/{index}_{col_name}.{type}` 种子文件
+- `seeds/{database_name}/{table_name}/{index}_{col_name}.csv` 种子文件
 
 **Rationale:**
 - 与设计文档 §2.2 和 §3.4 保持一致

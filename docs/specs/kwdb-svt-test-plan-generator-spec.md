@@ -68,7 +68,7 @@
 - `seed_num`：该列类型需要生成的种子数据行数。生成器按各列的 `seed_num` 预生成**列种子文件**，在生成测试计划时同步输出到 `seeds/{table}/` 目录，供查询时 `?` 占位符采样使用。同一张表所有列的列种子文件按顺序逐个读取后，在 JMeter 运行时的 `SetupThreadGroup` 中拼接为**行种子数据总集**并放入共享内存，供后续写入线程组拷贝使用；行种子数据总集的行数等于该表所有列中最大的 `seed_num`，其余 `seed_num` 较小的列按自身种子顺序循环填充。写入时不再为每列单独随机采样，而是直接从共享的行种子总集中批量拷贝完整行。各表间非主外键种子数据隔离
 
   > **列种子文件命名约定**：`{列序号}_{列名}.{类型名}`，其中列序号按表中除时间戳列外的字段顺序从 1 开始自然数编号（如 `1_ptag_int8_1.int8`、`2_col_int8_1.int8`），读取时按列序号数值排序；类型名为规范化后的基本类型（不含长度/精度，如 `varchar` 而非 `varchar(10)`）。
-- `nullable`：是否允许 NULL 值。`true` 表示列允许 NULL，且种子数据中将按 `null_rate` 比例填充 `null`；`false`（默认值）表示列不允许 NULL，DDL 生成时附加 `NOT NULL` 约束，种子数据中不包含 `null`
+- `nullable`：是否允许 NULL 值。`true` 表示列允许 NULL，且种子数据中将按 `null_rate` 比例填充 `null`；`false`（默认值）表示列不允许 NULL，DDL 生成时附加 `not null` 约束，种子数据中不包含 `null`
 - `null_rate`：NULL 值在种子数据中的占比，取值范围 `[0.0, 1.0]`。仅当 `nullable` 为 `true` 时生效。`null` 数量 = `seed_num × null_rate`（四舍五入取整），生成的 `null` 值在列种子文件中逐行输出为 `null`（不区分大小写），且**计入 `seed_num` 总数**。NULL 值与非 NULL 值在种子文件中**随机打乱后输出**，使 `null` 均匀分散在整列种子数据中。`nullable` 为 `false` 时此字段无效，固定视为 `0.0`，且配置中若显式指定 `null_rate > 0.0` 视为非法；`nullable` 为 `true` 时 `null_rate` 允许为 `0.0`（允许 NULL 但占比为零，即实际不生成 NULL）
 
 > **nullable 与 null_rate 示例**：
@@ -385,7 +385,7 @@ query_config:
 
 ### 8.1 KaiwuDB 数据类型参考
 
-SQL 中数据类型名称大小写不敏感，生成器内部统一按全小写处理，输出 DDL 及模板中的类型名均为小写形式（如 `int8`、`varchar` 等）。
+SQL 中数据类型名称和关键字大小写均不敏感，生成器内部统一按全小写处理，输出 DDL 及模板中的类型名和 SQL 关键字（如 `int8`、`varchar`、`retentions`、`partition interval`、`tags`、`primary tags`、`with hash`、`comment` 等）均为小写形式。
 
 #### 关系表数据类型
 - 数值类型：int2, int4, int8, float4, float8, decimal, serial
@@ -411,7 +411,7 @@ SQL 中数据类型名称大小写不敏感，生成器内部统一按全小写�
 
 **Primary Tag 类型额外限制（仅适用于 `primary_tags`）**
 - Primary Tag 列总数最多不超过 4 个
-- 所有 Primary Tag 列必须用 `NOT NULL` 约束定义，**不支持 `nullable` 属性（固定视为 `false`）**
+- 所有 Primary Tag 列必须用 `not null` 约束定义，**不支持 `nullable` 属性（固定视为 `false`）**
 - 不支持浮点类型（float4、float8）和除 varchar 之外的变长数据类型
 - varchar 类型长度默认 64 字节，最大长度为 128 字节
 
@@ -430,11 +430,11 @@ SQL 中数据类型名称大小写不敏感，生成器内部统一按全小写�
 `WITH HASH(<hash_value>)` 是创建时序表时的可选参数，用于定义分布式集群中 HASH 环的大小，以决定最大 Range 分片数量。
 
 **语法位置**：必须放在可选参数的最后位置，如：
-`[RETENTIONS <keep_duration>] [DICT ENCODING] [COMMENT [=] <comment_text>] [WITH HASH(<hash_value>)]`
+`[retentions <keep_duration>] [dict encoding] [comment [=] <comment_text>] [with hash(<hash_value>)]`
 
 **参数说明**：
 - `hash_value`：整数，取值范围 `[1, 50000]`，默认值为 `2000`
-- 例如 `WITH HASH(100)` 表示最多可产生 100 个不同的 Range 分片
+- 例如 `with hash(100)` 表示最多可产生 100 个不同的 Range 分片
 
 **性能影响与推荐配置**：
 - HASH 值过小：多个设备的数据集中在少数 Range 中，形成写入热点
@@ -450,18 +450,18 @@ SQL 中数据类型名称大小写不敏感，生成器内部统一按全小写�
 
 **示例**：
 ```sql
-CREATE TABLE sensors (
-    ts TIMESTAMP NOT NULL,
-    value FLOAT
-) TAGS (sensor_id INT NOT NULL)
-  PRIMARY TAGS (sensor_id)
-  WITH HASH(20);
+create table sensors (
+    ts timestamp not null,
+    value float
+) tags (sensor_id int not null)
+  primary tags (sensor_id)
+  with hash(20);
 ```
 
 #### KaiwuDB建库DDL
 
 1. 语法：
-CREATE TS DATABASE database_name [RETENTIONS keep_duration] [PARTITION INTERVAL interval] [COMMENT [=] comment_text];
+create ts database database_name [retentions keep_duration] [partition interval interval] [comment [=] comment_text];
 
 2. 参数说明：
 - keep_duration：直接写数值和单位（如 50d），无需加单引号，支持的时间单位有：
@@ -470,43 +470,48 @@ CREATE TS DATABASE database_name [RETENTIONS keep_duration] [PARTITION INTERVAL 
   + 月（MON 或 MONTH）
   + 年（Y 或 YEAR）
 - interval：直接写数值和单位（如 2d），无需加单引号
-- 可选参数必须按照 [RETENTIONS ] [PARTITION INTERVAL ] [COMMENT [=] ] 的顺序配置
+- 可选参数必须按照 [retentions] [partition interval] [comment [=]] 的顺序配置
 
 3. 正确示例：
-CREATE TS DATABASE iot_monitor PARTITION INTERVAL 1d;
+create ts database iot_monitor partition interval 1d;
 
 #### KaiwuDB建表DDL
 
 1. 语法：
-CREATE TABLE table_name (
-    k_timestamp TIMESTAMP/TIMESTAMPTZ NOT NULL,
-    column_name1 data_type1,
-    column_name2 data_type2,
+create table table_name (
+    timestamp_column timestamp/timestamptz not null,
+    column1 data_type,
+    column2 data_type,
     ...
-) TAGS (
-    primary_tag data_type NOT NULL,
-    tag_name1 data_type1,
-    tag_name2 data_type2,
+) tags (
+    tag1 data_type not null,
+    tag2 data_type,
     ...
-) PRIMARY TAGS (primary_tag);
+) primary tags(tag1)
+  [retentions keep_duration];
 
 2. 参数说明：
-
-- 第一列必须是时间戳列，且列名必须为 k_timestamp，数据类型为 TIMESTAMP 或 TIMESTAMPTZ，且必须设置为 NOT NULL。
+- 第一列必须是时间戳列，且列名必须为 k_timestamp，数据类型为 timestamp 或 timestamptz，且必须设置为 not null。
 - 数据列（column_name）：存储时序数据的具体数值。
-- 标签列（TAGS）：存储元数据信息（如设备 ID、地理位置等）。
-- 主标签必须命名为 primary_tag，且数据类型必须为 VARCHAR，同时设置为 NOT NULL。
+- 标签列（tags）：存储元数据信息（如设备 ID、地理位置等）。
+- 主标签必须命名为 primary_tag，且数据类型必须为 varchar，同时设置为 not null。
+- keep_duration：直接写数值和单位（如 50d），无需加单引号，支持的时间单位有：
+  + 天（D 或 DAY）
+  + 周（W 或 WEEK）
+  + 月（MON 或 MONTH）
+  + 年（Y 或 YEAR）
+- interval：直接写数值和单位（如 2d），无需加单引号
 
 3. 正确示例：
-CREATE TABLE meters (
-    k_timestamp TIMESTAMP NOT NULL,
-    current FLOAT,
-    voltage INT,
-    phase FLOAT
-) TAGS (
-    primary_tag VARCHAR NOT NULL,
-    location VARCHAR(20)
-) PRIMARY TAGS (primary_tag);
+create table meters (
+    k_timestamp timestamp not null,
+    current float,
+    voltage int,
+    phase float
+) tags (
+    primary_tag varchar not null,
+    location varchar(20)
+) primary tags (primary_tag);
 
 ### 8.3 术语表
 

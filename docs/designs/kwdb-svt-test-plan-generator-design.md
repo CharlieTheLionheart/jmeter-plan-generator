@@ -102,15 +102,15 @@ subgraph Main["🔧 main.py"]
   QSG["QuerySamplerGenerator"]
 end
 JMX[("test_plan.jmx")]
-SEEDS[("seeds/{table}/")]
+SEEDS[("seeds/{db}/{table}/")]
 
 TM -.-> PM
 TC -.-> PC
 
-PM -.->|ModelConfig| CN
-PM -.->|ModelConfig| SDG
-PM -.->|ModelConfig| DDG
-PM -.->|ModelConfig| PITG
+PM -.->|TestModelConfig| CN
+PM -.->|TestModelConfig| SDG
+PM -.->|TestModelConfig| DDG
+PM -.->|TestModelConfig| PITG
 
 PC -.->|ConnConfig| JB
 PC -.->|WriteConfig| WSG
@@ -181,7 +181,7 @@ sequenceDiagram
     participant QSG as QuerySamplerGenerator
     participant SCG as SchemaSamplerGenerator
     participant JB as JmxBuilder
-    participant SEEDS as seeds/{table}/
+    participant SEEDS as seeds/{db}/{table}/
     participant JMX as test_plan.jmx
 
     %% 入口：用户启动
@@ -192,10 +192,10 @@ sequenceDiagram
     M-->PC: test_cfg.yaml
 
     %% 解析器输出
-    PM->>CN: ModelConfig
-    PM->>SDG: ModelConfig
-    PM->>DDG: ModelConfig
-    PM->>PITG: ModelConfig
+    PM->>CN: TestModelConfig
+    PM->>SDG: TestModelConfig
+    PM->>DDG: TestModelConfig
+    PM->>PITG: TestModelConfig
 
     PC->>JB: ConnConfig
     PC->>WSG: WriteConfig
@@ -228,7 +228,7 @@ sequenceDiagram
     JB->>JMX: 生成 test_plan.jmx
     
     Note right of JMX: 🗂️ test_plan.jmx
-    Note right of SEEDS: 📁 seeds/{table}/
+    Note right of SEEDS: 📁 seeds/{db}/{table}/
 ```
 
 ---
@@ -242,28 +242,29 @@ sequenceDiagram
 #### 库级别模型
 
 ```python
-class ModelConfig(BaseModel):
+class TestModelConfig(BaseModel):
     """test_model.yaml 根模型"""
     rel_dbs: list[RelDbConfig] = Field(default_factory=list)
     ts_dbs: list[TsDbConfig] = Field(default_factory=list)
 
 
-class RelDbConfig(BaseModel):
-    """关系库配置"""
+class DatabaseConfig(BaseModel):
+    """Database configuration base class."""
     name: str
-    if_not_exists: bool = False
+    if_not_exists: bool = True
+    comment: Optional[str] = None
+
+
+class RelDbConfig(DatabaseConfig):
+    """关系库配置"""
     with_encoding: str | None = None   # 无此属性时建库语句不含 WITH ENCODING
-    comment: str | None = None
     tables: list[RelTableConfig] = Field(default_factory=list)
 
 
-class TsDbConfig(BaseModel):
+class TsDbConfig(DatabaseConfig):
     """时序库配置"""
-    name: str
-    if_not_exists: bool = False
     retentions: str | None = None       # 数据保留策略，时序库专用
     partition_interval: str | None = None
-    comment: str | None = None
     tables: list[TsTableConfig] = Field(default_factory=list)
 ```
 
@@ -293,7 +294,7 @@ class TsTableConfig(TableConfig):
     regular_tag_count: int              # 一般 tag 列总数
     primary_tags: list[ColTypeConfig]   # 值绑定到设备后固定不变，用于唯一标识时序数据源
     regular_tags: list[ColTypeConfig]   # 值在初始化时绑定到设备后固定不变
-
+    retentions: Optional[str] = None    # 数据生命周期（可选），不指定默认 0s，表示永久保存
 
 class TsColConfig(BaseModel):
     """时序表时间戳列配置"""
@@ -308,7 +309,7 @@ class ColTypeConfig(BaseModel):
     type_proportion: float              # (0, 1]，同一列组下之和须等于 1.0
     val_range: str                      # 取值范围表达式或 ref 引用
     seed_num: int                       # 该类型需要预生成的种子数据行数
-    nullable: bool = False              # 是否允许 NULL；false 时 DDL 附加 NOT NULL
+    nullable: bool = True              # 是否允许 NULL；false 时 DDL 附加 NOT NULL
     null_rate: float = 0.0              # NULL 占比 [0.0, 1.0]；仅 nullable=true 时生效
 ```
 
@@ -319,15 +320,17 @@ class ColTypeConfig(BaseModel):
 ```python
 class TestConfig(BaseModel):
     """test_cfg.yaml 根模型"""
-    conn_config: list[ConnConfigItem]
-    write_config: list[WriteConfigItem]
-    query_config: list[QueryConfigItem] = Field(default_factory=list)
+    conn_config: ConnConfig
+    write_config: list[WriteConfig]
+    query_config: list[QueryConfig] = Field(default_factory=list)
 
 
-class ConnConfigItem(BaseModel):
-    """库连接配置项，对应 JMeter 可变参数"""
-    param_name: str                     # 不限于"db_url", "conn_pool_size", "device_start", "test_duration"这4个属性，可以根据需要扩展其他自定义配置属性
-    default: str                        # 参数默认值，支持命令行覆盖
+class ConnConfig(BaseModel):
+    """Connection configuration."""
+    db_url: str
+    conn_pool_size: int = Field(default=10, ge=1)
+    device_start: int = Field(default=1, ge=0)
+    test_duration: int = Field(default=60, ge=1)
 
 
 WriteMode = Literal[
@@ -342,7 +345,7 @@ class WriteConfigItem(BaseModel):
     tbl_name: str                       # "all" 表示所有表共用本配置；否则按表名单独配置
     throughput: float                   # 单端目标写入吞吐量，单位次/分钟
     mode: WriteMode                     # 写入方式（single_insert / batch_insert / single_prepared / batch_prepared / schemaless）
-    batch_lines: int | None = None      # 批次写入条数；batch/schemaless 模式有效，默认 1
+    batch_lines: int = 1               # 批次写入条数，应大于等于 1；single_insert 模式须为 1
     device_per_thread: int              # 每线程负责的设备数
     num_threads: int                    # 写入线程并发数
 
@@ -365,9 +368,10 @@ class QueryConfigItem(BaseModel):
 职责：读取 YAML、校验、返回强类型数据模型。
 
 ```
-parse_models(yaml_text) → ModelConfig
-parse_test_cfg(yaml_text) → TestConfig
-validate_consistency(models, cfg) → list[Error]
+parse_test_model_yaml(path: str | Path) → TestModelConfig
+parse_test_cfg_yaml(path: str | Path) → TestConfig
+validate_consistency(model, cfg) → list[str]
+load_yaml(path: str | Path) → dict[str, Any]
 ```
 
 **校验规则：**
@@ -389,6 +393,7 @@ validate_consistency(models, cfg) → list[Error]
 | R-PAR-013 | `null_rate` 在 [0.0, 1.0] 范围内 | ERROR |
 | R-PAR-014 | `primary_tags` 中 `nullable` 必须为 `false` | ERROR |
 | R-PAR-015 | `nullable=false` 时 `null_rate` 必须为 `0.0`；`nullable=true` 时 `null_rate` 允许为 `0.0` | ERROR |
+| R-PAR-016 | `batch_lines` 须为大于等于 1 的正整数；`single_insert` 模式下须严格等于 `1` | ERROR |
 
 ### 3.3 列名生成器 (`column_namer.py`)
 
@@ -417,13 +422,15 @@ def resolve_column_groups(table: TableConfig) -> ColumnGroups:
 
 > 详细实现见 **§5.1 type_proportion 分配算法**。
 
-**示例**：`data_col_count=4000`, 两种类型各 0.25 → 每种 1000 列：
+**示例**：`data_col_count=4000`, 两种类型各 0.25 → 每种 1000 列，各类型序号独立从 1 开始：
 
 ```
 col_int8_1 .. col_int8_1000
-col_double_1001 .. col_double_2000
+col_double_1 .. col_double_1000
 ...
 ```
+
+> **序号规则**：每种 `{前缀}_{类型}` 的序号在该类型内部独立递增，从 1 开始；不同类型之间序号独立，不跨类型连续。
 
 ### 3.4 种子生成器 (`seed_gen.py`)
 
@@ -442,7 +449,7 @@ generate_seeds(model_config) → dict[filepath, bytes]
 | `>=N` / `<=N` / `>N` / `<N` / `=N` | 从合法区间均匀随机采样 |
 | `[a,b]` / `(a,b)` 等区间表达式 | 按区间开闭规则采样；整数类型跳过非法值 |
 | `^regex$` | 生成符合正则的字符串（简化版：按字符集拼接定长串） |
-| `enum:v1,v2,...` | 顺序循环选取枚举值；当 `seed_num`（扣除 NULL 后的剩余数量）小于枚举值数量时，仅取前 `seed_num` 个枚举值，不再循环 |
+| `enum:v1,v2,...` | 顺序循环选取枚举值，始终循环，不做截断 |
 | `ref:db.table.col` | 延迟处理（需等待被引用列的种子生成完毕） |
 
 #### 外键种子处理
@@ -461,7 +468,7 @@ generate_seeds(model_config) → dict[filepath, bytes]
 
 #### NULL 值生成策略
 
-当 `nullable=true` 时，种子生成器在生成随机值前**先计算 NULL 数量**，按 `null_count = round(seed_num × null_rate)` 生成对应数量的 `null` 行，剩余配额再按 `val_range` 规则生成实际值。NULL 值与非 NULL 值在种子文件中**随机打乱后输出**，使 `null` 均匀分散在整列种子数据中，模拟真实场景下的缺失分布。
+当 `nullable=true` 时，种子生成器在生成随机值前**先计算 NULL 数量**，按 `null_count = min(seed_num, floor(seed_num × null_rate))` 生成对应数量的 `null` 行，剩余配额再按 `val_range` 规则生成实际值。NULL 值与非 NULL 值在种子文件中**随机打乱后输出**，使 `null` 均匀分散在整列种子数据中，模拟真实场景下的缺失分布。
 
 | 参数组合 | 行为 |
 |----------|------|
@@ -473,20 +480,25 @@ generate_seeds(model_config) → dict[filepath, bytes]
 
 #### 输出格式
 
-每个种子文件为一行一个值的纯文本。文件名约定为：
+列种子文件为无表头 CSV 格式（每行一个值，`null` 表示 NULL）。文件名约定为：
 
 ```
-{table_seed_dir}/{列序号}_{列名}.{类型名}
+seeds/{db}/{table}/{列序号}_{列名}.csv
 ```
 
-- `列序号`：按表中除时间戳列外的字段顺序从 1 开始自然数编号，读取时按列序号数值排序得到正确的列顺序。
-- `类型名`：规范化后的基本类型名（不含长度/精度），如 `int8`、`varchar`。
-- 第一个 Primary Tag 列的种子文件内容为占位串 `?ptag1?`，写入线程组按线程设备号替换为实际设备标识。
+- `列序号`：按表中除时间戳列外的字段顺序从 1 开始自然数编号，读取时按列序号数值排序得到正确的列顺序。列序号在整表范围内连续递增，不按类型分组。
+- **首个 Primary Tag 列不生成列种子文件**，其 `${device_code}` 占位符由行种子总集装配阶段注入。
 
-示例：
+行种子总集为带表头 CSV 格式：
 
 ```
-# 1_col_int8_1.int8 (nullable=false)
+seeds/{db}/{table}.csv
+```
+
+示例（列种子文件，无表头）：
+
+```
+# iot_monitor/t_cnc/2_col_int8_1.csv (nullable=false)
 1
 2
 3
@@ -495,7 +507,7 @@ generate_seeds(model_config) → dict[filepath, bytes]
 ```
 
 ```
-# 2_col_float4_1.float4 (nullable=true, null_rate=0.2, seed_num=10，null 值打散后)
+# iot_monitor/t_cnc/3_col_float4_1.csv (nullable=true, null_rate=0.2, seed_num=10，null 值打散后)
 0.0000000
 null
 1.0000000
@@ -508,6 +520,14 @@ null
 7.0000000
 ```
 
+示例（行种子总集 CSV，带表头；首个 ptag 列的 `${device_code}` 由 PreProcessor 在运行时替换为实际设备标识）：
+
+```csv
+ptag_int8_1,rtag_varchar_1,col_int8_1
+${device_code},device_1,100
+${device_code},device_2,200
+```
+
 ### 3.5 数据库对象与写入模板生成
 
 #### 3.5.1 DDL 引擎 (`ddl_generator.py`)
@@ -515,47 +535,44 @@ null
 职责：根据模型配置生成 CREATE DATABASE / CREATE TABLE 语句。
 
 ```
-generate_ddl(model_config) → list[DdlStatement]
-
-@dataclass
-class DdlStatement:
-    db: str
-    sql: str
-    phase: DdlPhase  # CREATE_DB / CREATE_REL_TABLE / CREATE_TS_TABLE
+generate_ddl(model_config) → str
 ```
+
+返回以分号分隔的 SQL 脚本字符串，各语句按依赖顺序排列。
 
 #### 关系表建表语句模板
 
 ```sql
-CREATE TABLE {db}.{table} (
+create table {db}.{table} (
     {pk_columns},
     {data_column_defs},
-    PRIMARY KEY ({pk_columns})
+    primary key ({pk_columns})
 );
 ```
 
 #### 时序表建表语句模板
 
 ```sql
-CREATE TABLE {db}.{table} (
-    {ts_col.name} {ts_col.type} NOT NULL,
+create table {db}.{table} (
+    {ts_col.name} {ts_col.type} not null,
     {ptag_column_defs},
     {rtag_column_defs},
     {data_column_defs}
-) TAGS ({ptag_column_defs}),
+) TAGS ({ptag_column_defs})
   PRIMARY TAGS ({ptag_names})
-  {[RETENTIONS {retention}]}
-  {[PARTITION INTERVAL {partition_interval}]}
-  {[COMMENT [=] {comment}]}
-  {[WITH HASH({hash})]};
+  {[retentions {retention}]}
+  {[partition interval {partition_interval}]}
+  {[comment {comment}]}
+  {[with hash({hash})]};
 ```
 
 **约束要求：**
-- Primary Tag 列统一添加 `NOT NULL` 约束（`nullable` 强制为 `false`）
-- `data_cols`、`regular_tags`、`primary_keys` 中 `nullable=false` 时附加 `NOT NULL`，`nullable=true` 时不附加
+- Primary Tag 列统一添加 `not null` 约束（`nullable` 强制为 `false`）
+- `data_cols`、`regular_tags`、`primary_keys` 中 `nullable=false` 时附加 `not null`，`nullable=true` 时不附加
 - Primary Tag 不允许浮点类型，VARCHAR 长度默认 64
-- `WITH HASH` 必须放在可选参数最后位置
+- `with hash` 必须放在可选参数最后位置
 - 库级 `retentions` 在表级未指定时使用库级值
+- SQL 关键字统一使用小写（如 `not null`、`tags`、`primary tags`、`retentions`、`partition interval`、`with hash`、`comment`）
 
 #### 3.5.2 Prepared Insert 模板生成器 (`prepared_insert_template_generator.py`)
 
@@ -563,7 +580,7 @@ CREATE TABLE {db}.{table} (
 
 ```python
 generate_prepared_insert_templates(
-    model_config: ModelConfig,
+    model_config: TestModelConfig,
     column_names: dict[str, ColumnNameList],
 ) -> dict[str, str]
 
@@ -956,7 +973,7 @@ DataSourceElement.getConnection("jdbcConfig").withCloseable { conn ->
 
 `SetupThreadGroup: 初始化共享内存种子区` 在普通线程组之前执行，**使用单线程只执行一次**，为每张时序表从列种子文件拼接出完整的**行种子数据总集**，并放入全局共享内存。所有写入线程共享同一块内存，不再按线程拆分，也不再使用单独的实时数据生成线程组。
 
-行种子总集的结构为 `ArrayList<Object[]>`：每个元素为一行，按建表字段顺序保存除时间戳外的各列值（第一个 Primary Tag 列保留占位串 `?ptag1?`）；总集行数等于该表各列 `seed_num` 的最大值，`seed_num` 较小的列按自身种子顺序循环填充。通过 `props.put("__SHARED_MEM_${tableName}", rows)` 全局保存。
+行种子总集的结构为 `ArrayList<Object[]>`：每个元素为一行，按建表字段顺序保存除时间戳外的各列值（第一个 Primary Tag 列保留占位串 `${device_code}`）；总集行数等于该表各列 `seed_num` 的最大值，`seed_num` 较小的列按自身种子顺序循环填充。通过 `props.put("__SHARED_MEM_${tableName}", rows)` 全局保存。
 
 ##### 关系表初始化采样器
 
@@ -1448,24 +1465,18 @@ def allocate_columns(total: int, proportions: list[float]) -> list[int]:
 
 #### 列种子生成算法
 
-列种子生成时不包含时间戳列和第一个ptag值，时间戳由写入线程组临时生成装配，第一个ptag值在列种子阶段只生成一个约定的占位符，实际内容由写入线程组根据当前线程分到的设备号按约定命名规则 "device_"前缀 + 随机设备号 生成并替换
-
-为单列生成种子数据的算法如下：
+列种子生成时不包含时间戳列和首个 ptag 列（首个 ptag 的 `${device_code}` 占位符在行种子总集装配时注入）。为单列生成种子数据的算法如下：
 ```python
-def generate_column_seed(col_config: TsColConfig, is_first_ptag: bool) -> list[str]:
-    """生成单列种子数据。"""
+def generate_column_seed(col_config: TsColConfig) -> list[str]:
+    """生成单列种子数据（不含时间戳列和首个 ptag 列）。"""
     total_seed_num = col_config.seed_num
-
-    # 如果是第一个ptag，直接生成占位串 list
-    if is_first_ptag:
-        return ["?ptag1?"] * total_seed_num
 
     parser = ValRangeParser(col_config.val_range)
 
     # 1. 计算 NULL 值数量（nullable=true 时生效）
     null_count = 0
     if col_config.nullable:
-        null_count = round(total_seed_num * col_config.null_rate)
+        null_count = min(total_seed_num, math.floor(total_seed_num * col_config.null_rate))
 
     # 2. 生成 NULL 值部分
     seeds = ["null"] * null_count
@@ -1474,12 +1485,8 @@ def generate_column_seed(col_config: TsColConfig, is_first_ptag: bool) -> list[s
     non_null_col_num = total_seed_num - null_count
 
     if parser.is_enum():
-        enum_values = parser.enum_values()
-        # 当需要的非 NULL 值数量少于枚举值总数时，直接取前 non_null_col_num 个枚举值
-        if non_null_col_num < len(enum_values):
-            seeds.extend(enum_values[:non_null_col_num])
-        else:
-            seeds.extend(parser.enum_cycle(non_null_col_num))
+        # 始终顺序循环选取枚举值，不做截断
+        seeds.extend(parser.enum_cycle(non_null_col_num))
 
     elif parser.is_ref():
         # 直接使用 ref 串占位
@@ -1504,7 +1511,7 @@ def generate_column_seed(col_config: TsColConfig, is_first_ptag: bool) -> list[s
 
 行种子数据总集在 `SetupThreadGroup` 中一次性装配完成，后续所有写入线程共享同一块内存，不再由实时数据生成线程组动态刷新。关系表初始化写入同样复用本算法在 `JSR223PreProcessor` 中装配行数据（见 §3.6「关系表初始化采样器」）。
 
-共享内存种子区使用 JMeter 全局 `props`（`JMeterProperties`）存储，对所有线程组及线程可见。每表维护一个 `ArrayList<Object[]>`：每个元素为一行，按建表字段顺序保存除时间戳列外的各列值（第一个 Primary Tag 列保留占位串 `?ptag1?`，由写入线程按设备号替换）。总集行数等于该表所有列 `seed_num` 的最大值，其余列按自身种子顺序循环填充。
+共享内存种子区使用 JMeter 全局 `props`（`JMeterProperties`）存储，对所有线程组及线程可见。每表维护一个 `ArrayList<Object[]>`：每个元素为一行，按建表字段顺序保存除时间戳列外的各列值（第一个 Primary Tag 列的值已在行种子总集 CSV 中为 `${device_code}` 占位符，由写入线程组的 JSR223PreProcessor 按设备号替换）。总集行数等于该表所有列 `seed_num` 的最大值，其余列按自身种子顺序循环填充。
 
 **算法分为两个阶段：**
 
@@ -1686,7 +1693,7 @@ def bind_query_params(
         table_name, col = col_map[col_name]
         col_idx = seed_column_index(table, col)      # 表中除时间戳列外的列序号，从 1 开始
         bindings.append(ParamBinding(
-            seed_file=f"seeds/{table.name}/{col_idx}_{col.name}.{base_type(col.col_type)}",
+            seed_file=f"seeds/{db.name}/{table.name}/{col_idx}_{col.name}.csv",
             col_name=col.name,
             col_type=col.col_type,
         ))
@@ -1885,7 +1892,7 @@ TYPE_MAP = {
 | 填充色 | 说明 | 对应模块 |
 |--------|------|---------|
 | <div style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#ffffff;border:2px solid #f9a825;vertical-align:middle;margin-right:6px;"></div> 白色（黄框） | `#ffffff` / `#f9a825` | 框架/分组（Input、Parser、Generator、MG、SG、Builder） |
-| <div style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#fff8e1;border:2px solid #f9a825;vertical-align:middle;margin-right:6px;"></div> 黄色 | `#fff8e1` / `#f9a825` | 数据/配置（ModelConfig、TestConfig、ColumnNameList、DDL、WriteSampler） |
+| <div style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#fff8e1;border:2px solid #f9a825;vertical-align:middle;margin-right:6px;"></div> 黄色 | `#fff8e1` / `#f9a825` | 数据/配置（TestModelConfig、TestConfig、ColumnNameList、DDL、WriteSampler） |
 | <div style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#ede7f6;border:2px solid #6a1b9a;vertical-align:middle;margin-right:6px;"></div> 紫色 | `#ede7f6` / `#6a1b9a` | Parser 解析层（ModelParser、TestParser） |
 | <div style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#e3f2fd;border:2px solid #1565c0;vertical-align:middle;margin-right:6px;"></div> 蓝色 | `#e3f2fd` / `#1565c0` | 输入源（`test_model.yaml`、`test_cfg.yaml`） |
 | <div style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#e8f5e9;border:2px solid #2e7d32;vertical-align:middle;margin-right:6px;"></div> 绿色 | `#e8f5e9` / `#2e7d32` | 核心生成层（ColumnNamer、SeedGenerator、DDLGenerator、SchemaSamplerGenerator、WriteSamplerGenerator、QuerySamplerGenerator） |
@@ -1912,5 +1919,5 @@ TYPE_MAP = {
 | 1.4 | 2026-06-16 | liujin | **按 design-review-2026-06-11 修正问题 5**：§3.6 `ConstantThroughputTimer` XML 示例补充 `calcMode=0`，`throughput` 变量名由 `${throughput}` 修正为 `${write_throughput}`，与 JMX 参考文档及规格书保持一致 |
 | 1.3 | 2026-06-15 | liujin | **按 design-review-2026-06-11 修正问题 4**：§3.3 列名生成器删除 `ceil` 分配描述，统一为 §5.1 的 `floor + 贪心` 算法，确保列数分配章节前后一致 |
 | 1.2 | 2026-06-15 | liujin | **按 design-review-2026-06-11 修正问题 3**：§3.5 时序表建表语句模板中 `TAGS` 子句由 `{ptag_names}` 修正为 `{ptag_column_defs}`，Primary Tag 列按 `列名 类型 [NOT NULL]` 格式输出，补齐 DDL 中缺失的类型定义 |
-| 1.1 | 2026-06-10 | liujin | **设计阶段人工 review 发现的回溯修改**：`ColTypeConfig` 模型新增 `nullable`（bool，默认 `false`）和 `null_rate`（float，默认 `0.0`）字段。§3.4 种子生成器增加 NULL 值生成策略（`null_count = round(seed_num × null_rate)`，NULL 值随机打乱后均匀分散在种子文件中）；§3.5 DDL 引擎增加 `nullable` 对 `NOT NULL` 约束的控制逻辑；§3.2 校验规则增加 R-PAR-012 ~ R-PAR-015；§5.2 种子生成算法增加 NULL 值处理步骤 |
+| 1.1 | 2026-06-10 | liujin | **设计阶段人工 review 发现的回溯修改**：`ColTypeConfig` 模型新增 `nullable`（bool，默认 `false`）和 `null_rate`（float，默认 `0.0`）字段。§3.4 种子生成器增加 NULL 值生成策略（`null_count = min(seed_num, floor(seed_num × null_rate))`，NULL 值随机打乱后均匀分散在种子文件中）；§3.5 DDL 引擎增加 `nullable` 对 `NOT NULL` 约束的控制逻辑；§3.2 校验规则增加 R-PAR-012 ~ R-PAR-015；§5.2 种子生成算法增加 NULL 值处理步骤 |
 | 1.0 | 2026-06-08 | liujin | 初始版本：分层架构、6 个核心模块、策略模式、流水线设计 |

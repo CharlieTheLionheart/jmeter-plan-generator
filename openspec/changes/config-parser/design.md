@@ -48,23 +48,39 @@ KaiwuDB SVT 测试计划生成器需要支持通过 YAML 配置文件定义复�
 
 ### 数据模型设计
 
-**Decision:** 使用分层的数据模型结构，所有 Pydantic 模型统一实现在 `src/config_parser/models.py` 中，作为本 change 的核心交付物之一：
+**Decision:** 使用分层的数据模型结构，所有 Pydantic 模型统一实现在 `src/config_parser/models.py` 中，采用继承结构区分关系表与时序表：
+
+**库级别模型：**
 - `TestModelConfig`: 顶层配置，包含 `rel_dbs` 和 `ts_dbs`
-- `DatabaseConfig`: 库级别配置
-- `TableConfig`: 表级别配置
-- `ColTypeConfig`: 列类型配置（用于 `primary_keys`、`regular_tags`、`data_cols`）
-- `PrimaryTagColTypeConfig`: Primary Tag 专用列类型配置（不含 `nullable` 字段）
+- `RelDbConfig`: 关系库配置，继承自 `DatabaseConfig`，其 `tables` 字段类型为 `list[RelTableConfig]`
+- `TsDbConfig`: 时序库配置，其 `tables` 字段类型为 `list[TsTableConfig]`，额外包含 `retentions` 和 `partition_interval` 字段
+- `DatabaseConfig`: 库级别配置基类（`RelDbConfig` 和 `TsDbConfig` 的公共字段）
+
+**表级别模型：**
+- `TableConfig`: 表配置基类，包含 `name`、`comment`、`if_not_exists`、`data_col_count`、`data_cols`
+- `RelTableConfig(TableConfig)`: 关系表配置，额外包含 `primary_key_count`、`primary_keys`
+- `TsTableConfig(TableConfig)`: 时序表配置，额外包含 `with_hash`、`ts_col`、`primary_tag_count`、`regular_tag_count`、`primary_tags`、`regular_tags`、`retentions`
+
+**列级别模型：**
+- `ColTypeConfig`: 列类型配置（用于 `primary_keys`、`regular_tags`、`data_cols`），包含 `col_type`、`type_proportion`、`val_range`、`seed_num`、`nullable`、`null_rate`
+- `PrimaryTagColTypeConfig(BaseModel)`: Primary Tag 专用列类型配置（不含 `nullable` 字段），包含 `col_type`、`type_proportion`、`val_range`、`seed_num`
+- `TsColConfig(BaseModel)`: 时序表时间戳列配置，包含 `name`、`type`（`timestamp` 或 `timestamptz`）、`ms_step`
+
+**测试配置模型：**
 - `TestConfig`: 测试配置，包含 `conn_config`、`write_config`、`query_config`
+- `ConnConfig`: 连接配置，包含 `db_url`、`conn_pool_size`、`device_start`、`test_duration`
+- `WriteConfig`: 写入配置，包含 `tbl_name`、`throughput`、`mode`、`batch_lines`、`device_per_thread`、`num_threads`
+- `QueryConfig`: 查询配置，包含 `query`、`throughput`、`mode`、`num_threads`
+- `TestConfig`: 测试配置，包含 `conn_config`（单个 `ConnConfig`）、`write_config`、`query_config`
 
 **Rationale:**
-- 分层设计对应配置文件的嵌套结构，代码可读性强
-- 每层负责自己的校验逻辑，职责清晰
-- 便于后续扩展新的配置字段
+- 继承结构严格区分关系表与时序表，关系表不含 `ts_col`/`primary_tags`/`regular_tags`/`with_hash`，时序表不含 `primary_key_count`/`primary_keys`
+- `TsColConfig` 作为独立对象封装时间戳列的元数据（name/type/ms_step），而非用字符串字段简单替代
 - `PrimaryTagColTypeConfig` 专用于 `primary_tags`，通过模型结构强制约束 `nullable` 字段不可出现，确保业务规则在模型层面得到保证
+- 分层设计对应配置文件的嵌套结构，代码可读性强，每层负责自己的校验逻辑，职责清晰
 
 **Alternatives considered:**
-- **扁平化设计**: 无法表达配置的层级关系，不利于理解和维护
-- **动态字典**: 类型不安全，容易在运行时出错
+- **扁平化设计**: 无法表达配置的层级关系，关系表和时序表字段混在一起，容易导致类型错误
 - **共用 ColTypeConfig**: 需要在校验阶段检查 `nullable=false`，但用户仍可能在配置中错误地设置 `nullable=true`，导致运行时才发现错误
 
 ### Primary Tag nullable 约束的建模方式
@@ -74,9 +90,11 @@ KaiwuDB SVT 测试计划生成器需要支持通过 YAML 配置文件定义复�
 **模型定义：**
 ```python
 class PrimaryTagColTypeConfig(BaseModel):
+    """Primary Tag 专用列类型配置（不含 nullable 字段）"""
     col_type: str
     type_proportion: float
     val_range: Optional[str] = None
+    seed_num: int = Field(default=1000, ge=0)
 
     # 不包含 nullable 字段，强制约束 Primary Tag 不可为 NULL
 ```

@@ -100,64 +100,46 @@ header, rows = load_row_seeds('seeds/tsdb.ts_table.csv')
 
 ### 列种子文件格式
 
-**Decision:** 列种子文件使用 CSV 格式保存，每列一个文件。普通列种子文件命名：`{列序号}_{列名}.{类型名}`；被引用的主键列种子文件：`{列序号}_{列名}.{类型名}.ref`。
+**Decision:** 列种子文件使用无表头 CSV 格式（每行一个值），文件名约定为 `{列序号}_{列名}.csv`；所有列统一使用 `.csv` 扩展名，无 `.ref` 后缀。行种子总集使用带表头 CSV 格式。
 
 **Rationale:**
-- 与行种子总集保持一致的 CSV 格式，简化代码实现
+- 无表头列种子文件更简洁，读取时无需跳过表头行
+- 所有列统一使用 `.csv` 扩展名，无 `.ref` 后缀区分
 - Python `csv` 模块自动处理字段内含换行符、逗号、引号等特殊字符的场景（通过引号包裹），无需自定义转义规则
 - 当 `val_range` 为正则表达式生成的字符串包含换行符时，CSV 能正确转义和解析
 - Excel 可直接打开编辑，便于人工校验和调试
-- ⚠️ **注：** Python `csv` 模块对文件扩展名不敏感，`.ref` 文件内容采用 CSV 格式时，`csv.reader()` 完全可以正常解析
+- 首个 Primary Tag 列不生成列种子文件，其 `${device_code}` 占位符在行种子总集装配时注入
 
-**Alternatives considered:**
-- **一行一个值的纯文本格式**: 需要手动处理换行符转义（如 `\n`），容易出错；与行种子总集格式不一致，增加维护成本
-- **JSON Lines 格式**: 标准格式但与行种子总集不一致，需要两套读取逻辑
-- **统一改为 .csv 扩展名**: 扩展名对 `csv` 模块无影响，`.ref` 扩展名可用于快速区分文件类型（被引用的主键列 vs 普通列）
-
-**示例格式（普通列）:**
-```csv
-value
+**示例格式（列种子文件，无表头）:**
+```
 Alice Smith
 Bob Johnson
 "Multi-line
 field"
 ```
 
-**示例格式（主键列 .ref 文件）:**
-```csv
-value
-1
-2
-3
-```
-
 **Python 加载代码示例:**
 ```python
 import csv
 
-def load_column_seeds(csv_path):
-    """加载列种子 CSV 文件，返回值列表"""
-    with open(csv_path, 'r', newline='') as f:
+def load_column_seeds(path):
+    """加载列种子文件，返回值列表（无表头）"""
+    with open(path, 'r', newline='') as f:
         reader = csv.reader(f)
-        header = next(reader)  # 第一行为固定列名 "value"
-        values = [row[0] for row in reader]  # 读取每行的第一列
-        return values
+        return [row[0] for row in reader]
 
 # 使用示例
-values = load_column_seeds('seeds/tsdb.t_table/1_ptag_int8_1.int8')
-# .ref 文件同样适用
-pk_values = load_column_seeds('seeds/rel_db.t_workshop/1_pk_int8_1.int8.ref')
+values = load_column_seeds('seeds/rel_db/t_workshop/1_pk_int8_1.csv')
 ```
 
 **写入代码示例（正确处理换行符）:**
 ```python
 import csv
 
-def save_column_seeds(csv_path, values):
-    """保存列种子到 CSV 文件"""
-    with open(csv_path, 'w', newline='') as f:
+def save_column_seeds(path, values):
+    """保存列种子到 CSV 文件（无表头）"""
+    with open(path, 'w', newline='') as f:
         writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
-        writer.writerow(['value'])  # 写入表头
         for val in values:
             if val is None:
                 writer.writerow(['null'])  # NULL 值写入为 "null"
@@ -166,13 +148,7 @@ def save_column_seeds(csv_path, values):
 
 # 使用示例
 values = ['line1\nline2', 'line3', None]
-save_column_seeds('seeds/tsdb.t_table/1_col_varchar.varchar', values)
-# 输出 CSV:
-# value
-# "line1
-# line2"
-# line3
-# null
+save_column_seeds('seeds/tsdb/t_table/3_col_varchar.csv', values)
 ```
 
 ### 外键引用采样机制
@@ -188,29 +164,28 @@ save_column_seeds('seeds/tsdb.t_table/1_col_varchar.varchar', values)
 1. **生成阶段：预生成关系表主键列种子**
    - 在生成关系表种子数据前，先识别哪些主键列被时序表引用（扫描配置中所有时序表的 `val_range="ref:关系库.关系表.主键列"`）
    - 对每个被引用的主键列，根据其配置的 `seed_num` 预生成列种子数据
-   - 将预生成的列种子数据单独保存为独立文件，路径为 `seeds/{关系库}.{关系表}/{列序号}_{列名}.{类型名}.ref`
+   - 将预生成的列种子数据单独保存为独立文件，路径为 `seeds/{关系库}/{关系表}/{列序号}_{列名}.csv`
    - 该文件包含该主键列的所有种子值，行数 = 该列配置的 `seed_num`
 
 2. **关系表初始化阶段：使用预生成的列种子文件**
-   - 初始化关系表数据时，对于被引用的主键列，直接读取对应的 `.ref` 文件作为主键列种子
+   - 初始化关系表数据时，对于被引用的主键列，直接读取对应的 CSV 文件作为主键列种子
    - 按照该文件中的值顺序填充关系表的主键列
    - 确保关系表的主键值与预生成的列种子文件完全一致，保证引用正确性
 
 3. **时序表生成阶段：从预生成的列种子文件采样**
    - 当时序表的某列配置为 `val_range="ref:关系库.关系表.主键列"` 时，不进行实时采样
-   - 直接从 `seeds/{关系库}.{关系表}/{列序号}_{列名}.{类型名}.ref` 文件中随机选取值
-   - 采样方式：**无放回随机抽样**，确保时序表tag列的值都来自关系表实际存在的主键
+   - 直接从 `seeds/{关系库}/{关系表}/{列序号}_{列名}.csv` 文件中随机选取值
+   - 采样方式：**循环使用**，确保时序表tag列的值都来自关系表实际存在的主键
    - 如果时序表的 `seed_num` 大于关系表主键的 `seed_num`，则循环使用关系表主键列种子文件中的值
 
 4. **查询阶段：从预生成的列种子文件采样**
    - 生成查询语句时，如果查询条件中涉及 `val_range="ref:关系库.关系表.主键列"` 的列
-   - 查询参数也从对应的 `.ref` 文件中随机选取
+   - 查询参数也从对应的 CSV 文件中随机选取
    - 保证查询参数一定在关系表主键范围内，避免查询不存在的主键值
 
 **文件命名约定:**
-- 被引用的主键列种子文件：`seeds/{库名}.{表名}/{列序号}_{列名}.{类型名}.ref`
-- 普通列种子文件：`seeds/{库名}.{表名}/{列序号}_{列名}.{类型名}`
-- 行种子总集：`seeds/{库名}.{表名}.csv`
+- 列种子文件：`seeds/{库名}/{表名}/{列序号}_{列名}.csv`
+- 行种子总集：`seeds/{库名}/{表名}.csv`
 
 **示例:**
 ```
@@ -220,17 +195,17 @@ save_column_seeds('seeds/tsdb.t_table/1_col_varchar.varchar', values)
 
 执行流程：
 1. 扫描发现 pk_int8_1 被时序表引用
-2. 预生成 pk_int8_1 的列种子数据（100个值），保存到 seeds/rel_db.t_workshop/1_pk_int8_1.int8.ref
-3. 初始化关系表 t_workshop 时，读取 1_pk_int8_1.int8.ref 填充主键列
-4. 生成时序表 t_table 时，从 1_pk_int8_1.int8.ref 中采样（循环使用5次以填充500个tag值）
-5. 查询时如果条件涉及 rtag_int8_1，也从 1_pk_int8_1.int8.ref 中随机选取参数
+2. 预生成 pk_int8_1 的列种子数据（100个值），保存到 seeds/rel_db/t_workshop/1_pk_int8_1.csv
+3. 初始化关系表 t_workshop 时，读取 1_pk_int8_1.csv 填充主键列
+4. 生成时序表 t_table 时，从 1_pk_int8_1.csv 中采样（循环使用5次以填充500个tag值）
+5. 查询时如果条件涉及 rtag_int8_1，也从 1_pk_int8_1.csv 中随机选取参数
 ```
 
 **Rationale:**
 - 避免循环依赖：只有时序表引用关系表主键，不存在关系表引用时序表的情况，无需拓扑排序
 - 保证数据一致性：预生成的主键列种子文件被关系表初始化和时序表引用共享使用，确保引用关系正确
 - 简化实现：无需复杂的缓存管理机制，直接通过文件系统共享种子数据
-- 支持跨库引用：`.ref` 文件路径包含库名，天然支持跨库引用场景
+- 支持跨库引用：文件路径包含库名，天然支持跨库引用场景
 
 **Alternatives considered:**
 - **拓扑排序 + 动态采样**：虽然更通用，但当前业务场景不存在循环依赖，引入复杂度不必要

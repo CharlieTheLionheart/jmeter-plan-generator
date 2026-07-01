@@ -33,7 +33,7 @@ The system SHALL generate seed data for each column based on `val_range` and `se
 
 #### Scenario: Generate enum seed data with less than seed_num
 - **WHEN** a column has `val_range="enum:M1,M2,M3"` and `seed_num=2`
-- **THEN** the system SHALL generate 2 values: [M1, M2]
+- **THEN** the system SHALL generate 2 values by cycling through [M1, M2, M3] in order: [M1, M2]
 
 ### Requirement: Generate NULL values
 The system SHALL generate NULL values based on `nullable` and `null_rate` configuration.
@@ -60,12 +60,12 @@ The system SHALL generate seed data for columns with foreign key references by s
 - **THEN** the sampling SHALL be uniform random with replacement
 
 ### Requirement: Generate column seed files
-The system SHALL output column seed data to files with the naming convention `{column_index}_{column_name}.{type_name}`.
+The system SHALL output column seed data to files with the naming convention `{column_index}_{column_name}.csv`.
 
 #### Scenario: Output column seed file
-- **WHEN** column index is 1, column name is `ptag_int8_1`, and type name is `int8`
-- **THEN** the system SHALL create file `seeds/{table_name}/1_ptag_int8_1.int8`
-- **THEN** the file SHALL be in CSV format with a header line containing `value`
+- **WHEN** column index is 2, column name is `col_int8_1`
+- **THEN** the system SHALL create file `seeds/{database}/{table}/2_col_int8_1.csv`
+- **THEN** the file SHALL be in CSV format with no header line
 - **THEN** each seed value SHALL be written on a separate row in the CSV file
 - **THEN** NULL values SHALL be written as `null` (case-insensitive)
 - **THEN** CSV quoting rules SHALL be used to handle special characters (newlines, commas, quotes)
@@ -89,11 +89,11 @@ The system SHALL read column seed files in numerical order of column index.
 - **THEN** the system SHALL read them in order: `1_col_int8_1.int8`, `2_col_float4_1.float4`, `10_col_varchar_1.varchar`
 
 ### Requirement: Generate row seed data aggregate as shared memory data
-The system SHALL generate row seed data aggregate in CSV format with file naming convention `{database}.{table}.csv`.
+The system SHALL generate row seed data aggregate in CSV format with file naming convention `{database}/{table}.csv`.
 
 #### Scenario: Output row seed data aggregate as CSV
 - **WHEN** all column seed files are combined into the row aggregate for table `tsdb.t_table`
-- **THEN** the system SHALL output to file `seeds/tsdb.t_table.csv`
+- **THEN** the system SHALL output to file `seeds/tsdb/t_table.csv`
 - **THEN** the first line SHALL contain column names as header (comma-separated)
 - **THEN** each subsequent line SHALL contain one row of seed values (comma-separated)
 - **THEN** the output SHALL preserve column ordering for correct sampling

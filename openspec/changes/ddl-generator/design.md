@@ -8,8 +8,9 @@ DDL 生成模块负责将配置解析模块输出的结构化配置转换为 Kai
 - 生成符合 KaiwuDB 语法的 DDL 语句
 - 支持关系库和时序库的完整语法特性
 - 列名生成遵循 `{type_prefix}_{data_type}_{sequence}` 规范
-- 支持约束生成（`NOT NULL`、`PRIMARY KEY`、`PRIMARY TAGS`）
+- 支持约束生成（`not null`、`primary key`、`primary tags`）
 - 输出结构化的 DDL 脚本
+- 所有 SQL 标识符和关键字统一使用小写
 
 **Non-Goals:**
 - 不支持 DDL 的增量更新或版本管理
@@ -141,13 +142,95 @@ create table iot_monitor.t_cnc (
 );
 
 -- 错误：使用了大写（虽然 KaiwuDB 支持，但不规范）
-CREATE DATABASE IoTMetadata;
-CREATE TABLE IOT_METADATA.T_WORKSHOP (
+create database IoTMetadata;
+create table IOT_METADATA.T_WORKSHOP (
     PK_INT8_1 INT8 NOT NULL,
     COL_VARCHAR_1 VARCHAR(16),
     PRIMARY KEY (PK_INT8_1)
 );
 ```
+
+### 时序库建库语句模板
+
+```sql
+create ts database {db_name}
+  [if not exists]
+  [retentions {retention}]
+  [partition interval {partition_interval}]
+  [comment '{comment}'];
+```
+
+**约束：**
+- `retentions`、`partition interval`、`comment` 均为可选参数
+- `retentions` 直接写数值和单位（如 `3d`），无需加单引号
+- `partition interval` 直接写数值和单位（如 `1d`），无需加单引号
+- 所有关键字统一使用小写
+
+### 时序表建表语句模板
+
+```sql
+create table {db_name}.{table_name} (
+    {ts_col_name} {ts_col_type} not null,
+    {ptag_column_defs},
+    {rtag_column_defs},
+    {data_column_defs}
+) TAGS ({ptag_column_defs})
+  PRIMARY TAGS ({ptag_names})
+  [with retentions '{retention}']
+  [with hash({hash})];
+```
+
+**列定义格式：**
+- `ptag_column_defs`：主 tag 列按 `列名 类型 not null` 格式输出，多个列用逗号分隔
+- `rtag_column_defs`：一般 tag 列按 `列名 类型` 格式输出，`nullable=true` 时不附加 `not null`，`nullable=false` 时附加 `not null`
+- `data_column_defs`：数据列按 `列名 类型` 格式输出，`nullable=true` 时不附加 `not null`，`nullable=false` 时附加 `not null`
+
+**约束：**
+- 主 tag 列统一添加 `not null` 约束（`nullable` 强制为 `false`）
+- 主 tag 不允许浮点类型，VARCHAR 长度默认 64
+- `with hash` 必须放在可选参数最后位置
+- 库级 `retentions` 在表级未指定时使用库级值
+- 时序表建表语句支持 `comment` 子句（`comment '{table_comment}'`）
+- 所有 SQL 关键字统一使用小写
+
+**生成顺序示例：**
+```sql
+create table iot_monitor.t_cnc (
+    ts timestamp not null,
+    ptag_int8_1 int8 not null,
+    rtag_varchar_1 varchar(10),
+    col_int8_1 int8,
+    col_double_1 double
+) TAGS (ptag_int8_1 int8 not null, rtag_varchar_1 varchar(10))
+  PRIMARY TAGS (ptag_int8_1)
+  with retentions '5d'
+  comment '数控机床表'
+  with hash(64);
+```
+
+### 关系库建库语句模板
+
+```sql
+create database {db_name}
+  [if not exists]
+  [with encoding '{encoding}']
+  [comment '{comment}'];
+```
+
+### 关系表建表语句模板
+
+```sql
+create table {db_name}.{table_name} (
+    {pk_column_defs},
+    {data_column_defs},
+    primary key ({pk_names})
+) [comment '{comment}'];
+```
+
+**约束：**
+- `primary key` 中的列按 `列名 类型 not null` 格式定义
+- `nullable=false` 时列定义附加 `not null`
+- 所有 SQL 关键字统一使用小写
 
 ## Risks / Trade-offs
 

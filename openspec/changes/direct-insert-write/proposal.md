@@ -9,7 +9,7 @@ T0 阶段需要实现基本的写入功能，包括单条和批量直接 INSERT 
   - `batch_insert` 模式：批量 INSERT 语句（`INSERT INTO ... VALUES (...),(...)`）
   - 写入采样器生成（JDBCSampler）
   - JSR223PreProcessor 数据准备（从共享内存拷贝行数据、装配时间戳）
-  - 第一个 Primary Tag 占位符替换（`?ptag1?` → `device_{设备号}`）
+  - 第一个 Primary Tag 占位符替换（`${device_code}` → `device_{设备号}`）
   - 设备号计算（基于线程索引和 `device_per_thread`）
 
 ## Capabilities

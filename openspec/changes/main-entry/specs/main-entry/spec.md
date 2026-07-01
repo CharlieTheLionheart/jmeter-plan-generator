@@ -41,7 +41,7 @@ The system SHALL invoke the generator modules in the correct order and pass data
 
 #### Scenario: Generate seed files and DDL statements
 - **WHEN** column names are available
-- **THEN** the system SHALL call `SeedGenerator` to write seed files under `seeds/{table_name}/`
+- **THEN** the system SHALL call `SeedGenerator` to write seed files under `seeds/{database_name}/{table_name}/`
 - **THEN** the system SHALL call `DDLGenerator` to produce DDL statements
 
 #### Scenario: Conditionally generate prepared insert templates
@@ -95,7 +95,7 @@ The system SHALL write the final `.jmx` file and seed files to the configured ou
 
 #### Scenario: Output seed directory structure
 - **WHEN** the pipeline completes successfully
-- **THEN** the system SHALL create `seeds/{table_name}/` subdirectories in the output directory
+- **THEN** the system SHALL create `seeds/{database_name}/{table_name}/` subdirectories in the output directory
 - **THEN** each subdirectory SHALL contain the column seed files generated for that table
 
 #### Scenario: Overwrite existing output files

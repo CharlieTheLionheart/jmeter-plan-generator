@@ -56,7 +56,7 @@
 
 ### 第一个 Primary Tag 替换
 
-**Decision:** 将第一个 Primary Tag 占位符 `?ptag1?` 替换为 `device_{local_device_start + (row_index % device_per_thread)}`。
+**Decision:** 将第一个 Primary Tag 占位符 `${device_code}` 替换为 `device_{local_device_start + (row_index % device_per_thread)}`。
 
 **Rationale:**
 - 设备号标识设备
