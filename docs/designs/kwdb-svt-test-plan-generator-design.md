@@ -579,16 +579,40 @@ create table {db}.{table} (
 职责：为使用 PreparedStatement 的写入方式生成带 `?` 占位符的 INSERT 模板语句。
 
 ```python
-generate_prepared_insert_templates(
-    model_config: TestModelConfig,
-    column_names: dict[str, ColumnNameList],
-) -> dict[str, str]
+class PreparedInsertTemplateGenerator:
+    """生成 PreparedStatement INSERT 模板。"""
 
-# 返回：{table_fqn: insert_sql}
-# 示例：
-# {
-#   "iot_monitor.t_cnc": "INSERT INTO iot_monitor.t_cnc (ts,ptag_float8_1,ptag_int8_1,rtag_varchar_1,col_int8_1,...) VALUES (?,?,?,?,?,...)",
-# }
+    def __init__(
+        self,
+        model: TestModelConfig,
+        write_config: list[WriteConfig],
+        columns_by_table: dict[str, list[str]],
+    ):
+        """初始化生成器。
+
+        Parameters
+        ----------
+        model:
+            解析后的测试模型配置。
+        write_config:
+            写入配置列表。仅当存在 single_prepared / batch_prepared 模式时
+            才生成模板，否则 generate() 返回空字典。
+        columns_by_table:
+            按表完全限定名（db.table，小写）索引的列名有序列表。
+            列顺序须与建表字段顺序一致。
+        """
+
+    def generate(self) -> dict[str, str]:
+        """返回模板字典。
+
+        Returns
+        -------
+        {table_fqn: insert_sql}，例如：
+        {
+            "iot_monitor.t_cnc": "insert into iot_monitor.t_cnc (ts,ptag_float8_1,ptag_int8_1,rtag_varchar_1,col_int8_1,...) values (?,?,?,?,?,...)",
+        }
+        无 prepared 模式或无有效表时返回空字典。
+        """
 ```
 
 生成规则：
@@ -815,7 +839,7 @@ setUp 线程组，在主测试开始前执行（如 DDL、建库建表、初始�
 ```groovy
 // 写入线程组 JSR223PreProcessor (groovy): 准备 batch_prepared 当前批次数据
 def tableName = vars.get("table_name")
-def sharedRows = props.get("__SHARED_MEM_${tableName}") as ArrayList<Object[]>
+def sharedRows = props.get("__SHARED_MEM_{db}.{table}") as ArrayList<Object[]>
 
 def batchLines = Integer.parseInt(vars.get("batch_lines") ?: "1")
 def totalRows = sharedRows.size()
@@ -859,7 +883,7 @@ vars.put("batch_seq", String.valueOf(batchSeq + 1))
 import org.apache.jmeter.protocol.jdbc.config.DataSourceElement
 
 def tableName = vars.get("table_name")
-def insertSql = vars.get("insert_sql")  // 由 PreparedInsertTemplateGenerator 生成，如 INSERT INTO db.table (ts, cols...) VALUES (?, ?, ...)
+def insertSql = vars.get("insert_sql")  // 由 PreparedInsertTemplateGenerator 生成，如 insert into db.table (ts, cols...) values (?, ?, ...)
 def batchRows = vars.getObject("__BATCH_ROWS_${tableName}") as ArrayList<Object[]>
 
 def rowCount = batchRows.size()
@@ -973,7 +997,18 @@ DataSourceElement.getConnection("jdbcConfig").withCloseable { conn ->
 
 `SetupThreadGroup: 初始化共享内存种子区` 在普通线程组之前执行，**使用单线程只执行一次**，为每张时序表从列种子文件拼接出完整的**行种子数据总集**，并放入全局共享内存。所有写入线程共享同一块内存，不再按线程拆分，也不再使用单独的实时数据生成线程组。
 
-行种子总集的结构为 `ArrayList<Object[]>`：每个元素为一行，按建表字段顺序保存除时间戳外的各列值（第一个 Primary Tag 列保留占位串 `${device_code}`）；总集行数等于该表各列 `seed_num` 的最大值，`seed_num` 较小的列按自身种子顺序循环填充。通过 `props.put("__SHARED_MEM_${tableName}", rows)` 全局保存。
+行种子总集的结构为 `ArrayList<Object[]>`：每个元素为一行，按建表字段顺序保存除时间戳外的各列值（第一个 Primary Tag 列保留占位串 `${device_code}`）；总集行数等于该表各列 `seed_num` 的最大值，`seed_num` 较小的列按自身种子顺序循环填充。
+
+**共享内存双键约定**（与 `shared-memory-initializer` 装载协议对齐）：
+
+| 键 | 类型 | 说明 |
+|---|---|---|
+| `__SHARED_MEM_{db}.{table}` | `List[List[Any]]` | 行种子总集，行优先；每行对应一行 INSERT VALUES |
+| `__SHARED_MEM_{db}.{table}_columns` | `List[String]` | 列名列表，按建表 DDL 字段顺序；运行时提供列序权威值，写入与查询 PreProcessor 均从此键取列序 |
+
+两键由 `SetupThreadGroup` 中 `shared-memory-initializer` 生成的 JSR223PreProcessor 单线程装载一次；下游写入线程组与查询线程组共享读取。`db` / `table` 中的非字母数字字符折叠为下划线，与 CSV 文件名编码规则一致。
+
+通过 `props.put("__SHARED_MEM_{db}.{table}", rows)` 与 `props.put("__SHARED_MEM_{db}.{table}_columns", columns)` 全局保存。
 
 ##### 关系表初始化采样器
 
@@ -983,7 +1018,9 @@ DataSourceElement.getConnection("jdbcConfig").withCloseable { conn ->
 - **列间对齐**：不进行笛卡尔积展开；`seed_num` 较小的列按自身种子顺序循环复用，保证每行都有值。
 - **NULL 处理**：种子文件中的字符串 `"null"` 映射为 Java `null`，由 JDBC 驱动按对应列类型处理为数据库 NULL。
 
-关系表初始化采用 `batch_insert` 策略：数据装配由挂载在 `JDBCSampler` 前的 `JSR223PreProcessor` 完成，JDBC 执行仍由 `JDBCSampler` 负责。当总行数超过 `batch_lines` 时，生成器在 `JDBCSampler` 外生成 `Loop Controller`（或 `While Controller`）分批次写入，每次循环由 `JSR223PreProcessor` 装配一个批次，由 `JDBCSampler` 执行一次 `INSERT ... VALUES (...),(...)`。
+关系表初始化采用 `batch_insert` 策略：数据装配由挂载在 `JDBCSampler` 前的 `JSR223PreProcessor` 完成，JDBC 执行仍由 `JDBCSampler` 负责。当总行数超过 `batch_lines` 时，生成器在 `JDBCSampler` 外生成 `Loop Controller`（或 `While Controller`）分批次写入，每次循环由 `JSR223PreProcessor` 装配一个批次，由 `JDBCSampler` 执行一次 `insert ... values (...),(...)`。
+
+**无尾批约束**（`direct-insert-write` 决议，2026-07-09 review.md 关闭"残尾批"问题）：每次循环装配的批次大小**严格等于** `batch_lines`，**不支持**最后一批不足 `batch_lines` 的尾批。`total_rows` 必须是 `batch_lines` 的正整数倍，否则 `generate_relational_table_init_sampler` 在生成阶段直接抛 `DirectInsertGenerationError` 拒收，强制调用方保证 `total_rows % batch_lines == 0`。`LoopController` 迭代次数固定为 `total_rows // batch_lines`，无可变尾批循环。
 
 `JSR223PreProcessor` 负责：
 
@@ -996,7 +1033,7 @@ DataSourceElement.getConnection("jdbcConfig").withCloseable { conn ->
 | 属性 | 值 |
 |------|-----|
 | `queryType` | `Prepared Update Statement` |
-| `query` | `INSERT INTO {db}.{table} ({columns}) VALUES ({placeholders}), ({placeholders}), ...` |
+| `query` | `insert into {db}.{table} ({columns}) values ({placeholders}), ({placeholders}), ...` |
 | `queryArguments` | `${param_0},${param_1},...,${param_N}` |
 | `queryArgumentsTypes` | 按每行列顺序重复 `batch_lines` 次 |
 
@@ -1069,7 +1106,7 @@ vars.putLong("base_time", baseTime);
 
 ```xml
 <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-    <stringProp name="throughput">${__BeanShell(${write_throughput} / ${num_threads},)}</stringProp>
+    <stringProp name="throughput">${write_throughput}</stringProp>
     <intProp name="calcMode">0</intProp>
     <boolProp name="legacyMode">false</boolProp>
 </ConstantThroughputTimer>
@@ -1078,18 +1115,25 @@ vars.putLong("base_time", baseTime);
 
 ##### 多端设备号计算
 
-在每个写入线程组的 BeanShell PreProcessor 中计算设备号范围：
+> **职责边界说明**：设备号范围的划分（多 JMeter 实例间的设备起始号分配）属于**调用测试计划生成器的上游流水线**的职责，而非测试计划生成器本身。测试计划生成器仅负责生成单一 JMeter 实例的测试计划，不感知多端并发的编排结构。
+>
+> 测试计划生成器在 UDV 中暴露以下变量供调用方注入：
+> - `device_start`：本 JMeter 实例的起始设备号（由调用方根据实例序号计算后注入）
+> - `device_per_thread`：每个线程负责的设备数量
+> - `num_threads`：写入线程并发数
+>
+> 写入线程组内通过 `JSR223PreProcessor` 使用上述变量完成**本端内**的设备号计算：
 
 ```java
-// 计算本端负责的该表设备范围
-int myIndex = Integer.parseInt(vars.get("JMETER_THREAD_NAME")); // or pass as param
-int deviceStart = Integer.parseInt("${device_start}");
-int devicePerThread = ${device_per_thread};
-int numThreads = ${num_threads};
-// Thread index within this JMeter instance starts at 0
+// 写入线程 JSR223PreProcessor：计算本线程负责的设备范围
+int myIndex = ctx.getThreadNum();  // JMeter 线程内序号，从 0 开始
+int deviceStart = Integer.parseInt(vars.get("device_start") ?: "1");
+int devicePerThread = Integer.parseInt(vars.get("device_per_thread") ?: "1");
 int localDeviceStart = deviceStart + myIndex * devicePerThread;
-vars.putInt("local_device_start", localDeviceStart);
+vars.put("local_device_start", String.valueOf(localDeviceStart));
 ```
+
+> 调用方（多端并发流水线）应在启动各 JMeter 实例前，计算并通过 `-Jdevice_start=<value>` 或 UDV 覆盖 `device_start` 的值，确保不同实例间的设备号范围不重叠。
 
 ##### 查询采样器参数化
 
@@ -1190,8 +1234,8 @@ class SingleInsertStrategy(WriteStrategy):
     def generate_query(self, table, batch_lines=1, insert_template=None):
         cols = table.all_column_names
         return (
-            f"INSERT INTO {table.fqn} ({','.join(cols)}) "
-            f"VALUES ({','.join(['?']*len(cols))})"
+            f"insert into {table.fqn} ({','.join(cols)}) "
+            f"values ({','.join(['?']*len(cols))})"
         )
 
     def get_sampler_type(self):
@@ -1213,7 +1257,7 @@ class SingleInsertStrategy(WriteStrategy):
 
 # strategies/batch_insert.py
 class BatchInsertStrategy(WriteStrategy):
-    """批量直接 INSERT: INSERT INTO ... VALUES (...),(...),..."""
+    """批量直接 insert: insert into ... values (...),(...),..."""
     mode_name = "batch_insert"
 
     def requires_prepared_insert_template(self):
@@ -1223,7 +1267,7 @@ class BatchInsertStrategy(WriteStrategy):
         cols = table.all_column_names
         placeholders_per_row = ','.join(['?'] * len(cols))
         rows = ','.join([f'({placeholders_per_row})' for _ in range(batch_lines)])
-        return f"INSERT INTO {table.fqn} ({','.join(cols)}) VALUES {rows}"
+        return f"insert into {table.fqn} ({','.join(cols)}) values {rows}"
 
     def get_sampler_type(self):
         return "JDBCSampler"
@@ -1319,13 +1363,15 @@ class BatchPreparedStatementStrategy(WriteStrategy):
 >
 > **Prepared Insert 模板使用约定**：`WriteSamplerGenerator` 在构造写入策略后，先调用 `requires_prepared_insert_template()`；若返回 `True`，则从 `PreparedInsertTemplateGenerator` 取出对应表的模板，并通过 `generate_query()` 的 `insert_template` 参数传入。`single_prepared` / `batch_prepared` 的 `generate_query()` 直接返回该模板，不在策略内部重复拼接 SQL。
 
-#### schemaless 实现（预留）
+#### schemaless 实现（预留，暂不实现）
 
 ```python
 # strategies/schemaless.py
 class SchemalessWriteStrategy(WriteStrategy):
     mode_name = "schemaless"
     # kaiwudb schemaless line protocol format
+    # ⚠️ 当前版本不实现：所有方法均为占位实现，配置 schemaless 模式将在校验阶段报错
+    # 后续由独立 DCR 推动该功能的完整设计与实现
 
     def requires_prepared_insert_template(self):
         return False
@@ -1377,47 +1423,77 @@ kwjdbc-svt/
 │   └── designs/
 │       └── kwdb-svt-test-plan-generator-design.md
 ├── src/
-│   └── kwjdbc_svt/
+│   ├── column_namer/               # 列名生成
+│   │   ├── __init__.py
+│   │   ├── allocate.py             # type_proportion 分配算法
+│   │   ├── constants.py            # 前缀常量映射
+│   │   ├── generate.py             # 列名生成入口
+│   │   ├── namer.py                # 列名生成器实现
+│   │   └── normalize.py            # 类型规范化
+│   ├── config_parser/              # YAML 配置解析
+│   │   ├── __init__.py
+│   │   ├── models.py               # Pydantic 数据模型
+│   │   └── parser.py               # YAML 解析 + 校验
+│   ├── ddl_generator/              # DDL SQL 生成
+│   │   ├── __init__.py
+│   │   ├── column_name_generator.py
+│   │   ├── data_type_mapper.py
+│   │   └── generator.py
+│   ├── jdbc_datasource/            # JDBC 数据源配置生成
+│   │   ├── __init__.py
+│   │   └── jdbc_data_source_generator.py
+│   ├── jmx_skeleton_generator/     # JMX 骨架生成
+│   │   ├── __init__.py
+│   │   └── generators/
+│   │       ├── __init__.py
+│   │       ├── ddl_setup.py
+│   │       └── skeleton.py
+│   ├── prepared_insert_template/   # PreparedStatement INSERT 模板生成
+│   │   ├── __init__.py
+│   │   └── generator.py
+│   ├── seed_data_generator/        # 种子数据生成
+│   │   ├── __init__.py
+│   │   ├── adapter.py
+│   │   ├── generators.py
+│   │   ├── io.py
+│   │   ├── orchestrator.py
+│   │   └── reference.py
+│   ├── strategies/                 # 写入策略
+│   │   ├── __init__.py
+│   │   ├── base.py                 # WriteStrategy ABC
+│   │   ├── batch_insert.py         # 批量直接 insert 策略
+│   │   ├── batch_prepared.py       # 批量 PreparedStatement 策略
+│   │   ├── schemaless.py           # 无模式写入策略
+│   │   ├── single_insert.py        # 单条直接 insert 策略
+│   │   └── single_prepared.py      # 单条 PreparedStatement 策略
+│   └── utils/
 │       ├── __init__.py
-│       ├── main.py                  # CLI 入口，argparse
-│       ├── models.py                # Pydantic 数据模型
-│       ├── parser.py                # YAML 解析 + 校验
-│       ├── column_namer.py          # 列名生成
-│       ├── seed_gen.py              # 种子数据生成
-│       ├── ddl_generator.py         # DDL SQL 生成
-│       ├── prepared_insert_template_generator.py  # PreparedStatement INSERT 模板生成
-│       ├── jmx_builder.py           # JMX XML 构建
-│       ├── strategies/              # 写入策略
-│       │   ├── __init__.py
-│       │   ├── base.py              # WriteStrategy ABC
-│       │   ├── single_insert.py     # 单条直接 INSERT 策略
-│       │   ├── batch_insert.py      # 批量直接 INSERT 策略
-│       │   ├── single_prepared.py   # 单条 PreparedStatement 策略
-│       │   ├── batch_prepared.py    # 批量 PreparedStatement 策略
-│       │   └── schemaless.py        # 无模式写入策略
-│       └── utils/
-│           ├── __init__.py
-│           ├── xml_helpers.py       # XML 元素便捷创建
-│           └── val_range_parser.py  # val_range 表达式解析
+│       ├── val_range_parser.py     # val_range 表达式解析
+│       └── xml_helpers.py          # XML 元素便捷创建
 ├── examples/
 │   ├── test_model_sample.yaml
 │   └── test_cfg_sample.yaml
 ├── tests/
 │   ├── conftest.py
+│   ├── test_column_namer.py
+│   ├── test_ddl_generator.py
 │   ├── test_models.py
 │   ├── test_parser.py
-│   ├── test_column_namer.py
-│   ├── test_seed_gen.py
-│   ├── test_ddl_generator.py
-│   ├── test_prepared_insert_template_generator.py
-│   ├── test_jmx_builder.py
+│   ├── test_seed_data_generator.py
+│   ├── prepared_insert_template/
+│   │   ├── __init__.py
+│   │   └── test_generator.py
 │   └── test_strategies/
+│       ├── __init__.py
 │       ├── test_base.py
-│       ├── test_single_insert.py
 │       ├── test_batch_insert.py
-│       ├── test_single_prepared.py
 │       ├── test_batch_prepared.py
-│       └── test_schemaless.py
+│       ├── test_schemaless.py
+│       ├── test_single_insert.py
+│       └── test_single_prepared.py
+├── openspec/
+│   └── changes/
+│       └── prepared-insert-template/  # prepared_insert_template 变更记录
 ├── pyproject.toml
 ├── pytest.ini
 └── README.md
@@ -1556,9 +1632,10 @@ for (int rowIdx = 0; rowIdx < maxRows; rowIdx++) {
     sharedRows.add(row)
 }
 
-props.put("__SHARED_MEM_${tableName}", sharedRows)
+props.put("__SHARED_MEM_{db}.{table}", sharedRows)
+props.put("__SHARED_MEM_{db}.{table}_columns", columns)
 
-log.info("Shared memory seed area initialized for table: ${tableName}, rows=${sharedRows.size()}, cols=${colSeeds.size()}")
+log.info("Shared memory seed area initialized for table: ${db}.${table}, rows=${sharedRows.size()}, cols=${columns.size()}")
 ```
 
 **阶段 2 — 写入线程组：从行种子总集随机拷贝连续 batch 行**
@@ -1568,7 +1645,8 @@ log.info("Shared memory seed area initialized for table: ${tableName}, rows=${sh
 ```groovy
 // 写入线程组 JSR223PreProcessor (groovy): 随机拷贝连续 batch 行
 def tableName = vars.get("table_name")
-def sharedRows = props.get("__SHARED_MEM_${tableName}") as ArrayList<Object[]>
+def sharedRows = props.get("__SHARED_MEM_{db}.{table}") as ArrayList<Object[]>
+def columns = props.get("__SHARED_MEM_{db}.{table}_columns") as List<String>
 
 def batchLines = Integer.parseInt(vars.get("batch_lines") ?: "1")
 def totalRows = sharedRows.size()
@@ -1599,53 +1677,66 @@ vars.putObject("__BATCH_ROWS_${tableName}", batchRows)
 
 ### 5.3 查询参数绑定算法
 
-查询参数绑定在**生成阶段**（Python）完成 SQL 解析与列匹配，在**运行阶段**（Groovy）从种子文件随机取值。
+查询参数绑定在**生成阶段**（Python）完成 SQL 解析与表名/列名提取，在**运行阶段**（Groovy）从种子文件随机取值。
 
-**生成阶段算法：**
+**种子文件定位逻辑**：
+
+1. 从查询 SQL 中提取 `db.table`（FROM 子句或 WHERE 子句中的限定表名），得到种子文件根目录 `seeds/{db}/{table}/`
+2. 从 SQL 上下文中提取每个 `?` 占位符对应的列名（如 `WHERE col_int8_1 = ?` → `col_int8_1`）
+3. 在 `seeds/{db}/{table}/` 目录下，通过 `*_{col_name}.csv` 文件名模式匹配定位种子文件（列名全局唯一，无需列序号）
+4. 运行时 Groovy 脚本读取匹配到的文件，随机取一行绑定到 `param_N`
+
+**Python 生成阶段算法：**
 
 ```python
-@dataclass
-class ParamBinding:
-    """查询参数绑定信息"""
-    seed_file: str          # 种子文件路径
-    col_name: str           # 列名
-    col_type: str           # 列类型
+def extract_table_path(sql: str) -> str | None:
+    """从 SQL 中提取 db.table 表名路径，返回 seeds/{db}/{table} 目录路径。
+
+    扫描 FROM 和 JOIN 子句，匹配格式 db.table 或 table。
+    仅返回第一个匹配（单表查询场景）。
+    """
+    # 匹配 FROM db.table 或 FROM table
+    patterns = [
+        r'\bFROM\s+([a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*)\b',
+        r'\bFROM\s+([a-zA-Z_][a-zA-Z0-9_]*)\b',
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, sql, re.IGNORECASE)
+        if m:
+            return m.group(1).lower()
+    return None
 
 
-def extract_placeholders(sql: str) -> list[int]:
-    """提取 SQL 中所有 ? 占位符的位置索引。
+def extract_placeholders(sql: str) -> list[tuple[int, int]]:
+    """提取 SQL 中所有 ? 占位符的 (start, end) 位置。
     
-    注意：跳过字符串字面量中的 ?。
+    跳过字符串字面量中的 ?。
     """
     positions = []
     in_string = False
     string_char = None
-    
     for i, ch in enumerate(sql):
         if ch in ("'", '"'):
             if not in_string:
                 in_string = True
                 string_char = ch
-            elif string_char == ch and sql[i - 1] != '\\':
+            elif string_char == ch:
                 in_string = False
                 string_char = None
-        
         if not in_string and ch == '?':
-            positions.append(i)
-    
+            positions.append((i, i + 1))
     return positions
 
 
 def extract_column_context(sql: str, pos: int) -> str | None:
     """提取 ? 占位符前的列名上下文。
-    
+
     示例：
         WHERE t_cnc.col_int8_1 = ? → "col_int8_1"
         WHERE col_int8_1 = ?       → "col_int8_1"
         AND ptag_varchar_1 LIKE ?  → "ptag_varchar_1"
     """
     prefix = sql[:pos].rstrip()
-    
     match = re.search(
         r'(\b(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?[a-zA-Z_][a-zA-Z0-9_]*)\s*(?:=|<>|!=|<=|>=|<|>|LIKE|IN)\s*$',
         prefix,
@@ -1653,88 +1744,95 @@ def extract_column_context(sql: str, pos: int) -> str | None:
     )
     if match:
         col_ref = match.group(1)
-        if '.' in col_ref:
-            return col_ref.split('.')[-1]
-        return col_ref
+        return col_ref.split('.')[-1] if '.' in col_ref else col_ref
     return None
 
 
-def bind_query_params(
-    sql: str,
-    tables: list[TableConfig],
-) -> list[ParamBinding]:
-    """为查询 SQL 中的 ? 绑定列种子参数。
-    
-    1. 提取 SQL 中所有 ? 的位置
-    2. 通过上下文分析尝试识别每个 ? 对应的列名
-    3. 能明确匹配时，绑定该列的种子文件
-    4. 无法明确绑定到具体列时，抛出 ValidationError，拒绝生成
-    5. 返回绑定列表，用于生成 JMeter JSR223PreProcessor 脚本
-    """
-    col_map: dict[str, tuple[str, ColTypeConfig]] = {}
-    
-    for table in tables:
-        for col in table.all_columns():
-            col_map[col.name] = (table.name, col)
-            col_map[f"{table.name}.{col.name}"] = (table.name, col)
-    
-    positions = extract_placeholders(sql)
-    bindings: list[ParamBinding] = []
-    
-    for pos in positions:
-        col_name = extract_column_context(sql, pos)
-        
-        if col_name is None or col_name not in col_map:
-            raise ValidationError(
-                f"无法将查询参数绑定到具体列: SQL 中位置 {pos} 的 '?' "
-                f"上下文为 {col_name!r}，无法关联到查询涉及表的已知列"
-            )
-        
-        table_name, col = col_map[col_name]
-        col_idx = seed_column_index(table, col)      # 表中除时间戳列外的列序号，从 1 开始
-        bindings.append(ParamBinding(
-            seed_file=f"seeds/{db.name}/{table.name}/{col_idx}_{col.name}.csv",
-            col_name=col.name,
-            col_type=col.col_type,
-        ))
-    
-    return bindings
+def build_query_param_script(sql: str, seed_dir: str = "${seed_dir}") -> str:
+    """生成 Groovy JSR223PreProcessor 脚本。
 
-
-def generate_query_param_script(bindings: list[ParamBinding]) -> str:
-    """生成 Groovy 预处理脚本。
-    
-    作为查询 JDBCSampler 的 JSR223PreProcessor，在每次查询执行前
-    从对应种子文件中随机读取一行，设置到 JMeter 变量 param_0, param_1, ...
+    1. 从 SQL 中提取 db.table → seeds/{db}/{table}/ 目录
+    2. 对每个 ? 占位符，提取列名后用 *_{col_name}.csv 模式匹配种子文件
+    3. 无法解析列名时回退到 {seed_dir}/param.csv
     """
+    table_path = extract_table_path(sql)                     # e.g. "iot_monitor.t_cnc"
+    placeholders = extract_placeholders(sql)
+    if not placeholders or not table_path:
+        return "// No placeholders or table path resolved"
+
+    seed_base = f"seeds/{table_path}"                        # e.g. seeds/iot_monitor.t_cnc
     lines = [
         "// JSR223PreProcessor (groovy): 查询参数绑定",
-        f"// 共 {len(bindings)} 个参数",
+        f"// Table: {table_path}",
+        f"def seedDir = vars.get('seed_dir') ?: 'seeds'",
+        f"def tableDir = new File(seedDir + '/{table_path}')",
         "",
     ]
-    
-    for i, b in enumerate(bindings):
-        lines.extend([
-            f"// param_{i}: {b.col_name} ({b.col_type})",
-            f'def seeds_{i} = new File("{b.seed_file}").readLines()',
-            f"def idx_{i} = (int)(Math.random() * seeds_{i}.size())",
-            f"def raw_{i} = seeds_{i}.get(idx_{i})",
-            f'vars.put("param_{i}", "null".equalsIgnoreCase(raw_{i}) ? "" : raw_{i})',
-            "",
-        ])
-    
-    return "\\n".join(lines)
+
+    for param_idx, (start, end) in enumerate(placeholders):
+        col_name = extract_column_context(sql, start)
+        if col_name:
+            # Groovy: 在 tableDir 下用 *_{col_name}.csv 模式匹配文件
+            lines.extend([
+                f"// param_{param_idx}: {col_name}",
+                f"def matched_{param_idx} = tableDir.listFiles()?.find{{ it.name.endsWith('_{col_name}.csv') }}",
+                f"def lines_{param_idx} = matched_{param_idx}?.readLines() ?: ['null']",
+                f"def raw_{param_idx} = lines_{param_idx}.get((int)(Math.random() * lines_{param_idx}.size()))",
+                f'vars.put("param_{param_idx}", "null".equalsIgnoreCase(raw_{param_idx}) ? "" : raw_{param_idx})',
+                "",
+            ])
+        else:
+            lines.extend([
+                f"// param_{param_idx}: (unresolved column, generic fallback)",
+                f"def f_{param_idx} = new File(seedDir + '/param.csv')",
+                f"def lines_{param_idx} = f_{param_idx}.exists() ? f_{param_idx}.readLines() : ['null']",
+                f"def raw_{param_idx} = lines_{param_idx}.get((int)(Math.random() * lines_{param_idx}.size()))",
+                f'vars.put("param_{param_idx}", "null".equalsIgnoreCase(raw_{param_idx}) ? "" : raw_{param_idx})',
+                "",
+            ])
+
+    return "\n".join(lines)
+```
+
+**JDBCSampler 生成阶段**（Python）同时处理 SQL 中的 `?` 替换：
+
+```python
+def replace_placeholders_with_vars(sql: str) -> tuple[str, int]:
+    """将 SQL 中每个 ? 替换为 ${param_N}，返回 (替换后SQL, 占位符数量)。
+
+    跳过字符串字面量中的 ?。
+    """
+    result = []
+    param_count = 0
+    in_string = False
+    string_char = None
+    for ch in sql:
+        if ch in ("'", '"'):
+            if not in_string:
+                in_string = True
+                string_char = ch
+            elif string_char == ch:
+                in_string = False
+                string_char = None
+        if not in_string and ch == '?':
+            result.append(f"${{param_{param_count}}}")
+            param_count += 1
+        else:
+            result.append(ch)
+    return "".join(result), param_count
 ```
 
 **关键设计要点：**
 
 | 设计点 | 说明 |
 |--------|------|
-| **占位符提取** | `extract_placeholders` 通过状态机识别字符串字面量边界，跳过引号内的 `?`，避免误匹配 |
-| **上下文匹配** | `extract_column_context` 使用正则从 `?` 前的 SQL 片段中提取列名，支持 `table.col` 和裸 `col` 两种形式 |
-| **无法绑定报错** | 当 SQL 中 `?` 出现在无法解析上下文的场景（如 `SELECT * FROM t WHERE ? IN (...)` 或 `LIMIT ?`），生成阶段直接抛出 `ValidationError`，拒绝生成测试计划 |
-| **NULL 处理** | 运行时 Groovy 脚本将种子文件中的字符串 `"null"` 映射为空字符串 `""`，避免 JDBC 驱动将字符串 `"null"` 误当作数据库 NULL 处理 |
-| **SQL 替换** | 生成 JMX 时，原始 SQL 中的 `?` 被替换为 `${param_N}` 形式的 JMeter 变量引用；JDBCSampler 的 `queryArguments` 留空，参数值由 PreProcessor 动态注入到 `vars` |
+| **表名提取** | 从 SQL 的 FROM 子句提取 `db.table` 路径；`seeds/` 目录下的子目录结构与表路径一一对应 |
+| **种子文件定位** | 列名全局唯一，用 `*_{col_name}.csv` 模式匹配即可定位文件，无需列序号 |
+| **占位符提取** | `extract_placeholders` 通过状态机识别字符串字面量边界，跳过引号内的 `?` |
+| **上下文匹配** | `extract_column_context` 从 `?` 前的 SQL 片段提取列名，支持 `table.col` 和裸 `col` 两种形式 |
+| **回退机制** | 无法解析列名时回退到 `{seed_dir}/param.csv`，避免生成阶段因 SQL 写法特殊而中断 |
+| **NULL 处理** | Groovy 脚本将种子文件中的字符串 `"null"` 映射为空字符串 `""`，避免 JDBC 驱动误处理 |
+| **PreProcessor 位置** | JSR223PreProcessor 位于 JDBCSampler **之前**，每次 sampler 执行前重新采样，保证每次查询参数都不同 |
 
 ---
 
@@ -1754,6 +1852,21 @@ class SeedGenerationError(GeneratorError):
 
 class DdlGenerationError(GeneratorError):
     """DDL 生成失败"""
+
+class DirectInsertGenerationError(DdlGenerationError):
+    """直接 INSERT 写入生成失败（SQL 模板、PreProcessor 脚本、sampler 配置）。
+
+    继承 :class:`DdlGenerationError` 而非 :class:`JmxGenerationError`，
+    是 ``direct-insert-write`` 变更（2026-07-09 review.md 决议）做出的
+    兼容选择：上游已大量使用 ``except DdlGenerationError`` 兜住生成
+    阶段的硬错误，让写侧失败同样被该兜底捕获。新增独立类型让堆栈
+    与 ``except`` 可针对写侧失败精确化。
+
+    **调用约定**：写侧（single_insert / batch_insert / 关系表
+    init）任何边界失败——空列名、非正 batch_lines、bad qualified
+    name、列序缺失、shared memory 读取失败——一律抛本类；不要抛
+    通用 ``JmxGenerationError``。
+    """
 
 class JmxGenerationError(GeneratorError):
     """JMX 生成失败"""
@@ -1876,10 +1989,12 @@ TYPE_MAP = {
 
 | 步骤 | 模块 | 内容 |
 |------|------|------|
-| 15 | `strategies/schemaless.py` | 无模式写入策略 |
+| 15 | `strategies/schemaless.py` | **暂不实现，等待后续 DCR** |
 | 16 | 全模块 | 测试覆盖率达 80%+ |
 | 17 | `main.py` | `-v/-vv` 日志 + 错误优雅退出 |
 | 18 | 全模块 | 类型注解补全 + ruff 静态检查 |
+
+> **注意**：`schemaless`（无模式写入 T2）当前版本不实现。代码中虽已预留 `SchemalessWriteStrategy` 骨架（`strategies/schemaless.py`），但其所有方法均为空实现或返回占位值。若在 `test_cfg.yaml` 中配置 `mode: schemaless`，生成器将在校验阶段主动报错，拒绝生成测试计划。后续由独立 DCR 推动该功能的完整设计与实现。
 
 ---
 

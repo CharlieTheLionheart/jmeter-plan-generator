@@ -59,7 +59,7 @@ def test_regex_domain():
 def test_foreign_key_domain():
     domain = classify_val_range("int8", "ref:iot_metadata.t_workshop.pk_int8_1")
     assert domain.kind is DomainKind.FOREIGN_KEY
-    assert domain.foreign_key == "iot_metadata.t_workshop.pk_int8_1"
+    assert domain.foreign_key == "ref:iot_metadata.t_workshop.pk_int8_1"
 
 
 def test_numeric_val_range_on_string_type_rejected():

@@ -6,3 +6,5 @@ tests/__pycache__/*
 *.egg-info/
 *.egg
 uv.lock
+src/*/*/__pycache__/*.pyc
+graphify-out/*

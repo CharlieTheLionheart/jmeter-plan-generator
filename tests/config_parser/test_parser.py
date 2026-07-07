@@ -302,7 +302,7 @@ def test_query_placeholder_unbound(tmp_path: Path) -> None:
 def test_query_placeholder_bound(tmp_path: Path) -> None:
     data = _valid_cfg()
     data["query_config"] = [
-        {"query": "SELECT * FROM t WHERE col_int8_1 = ?", "mode": "statement", "num_threads": 1}
+        {"query": "SELECT * FROM t WHERE col_int8_1 = ?", "num_threads": 1}
     ]
     path = _write_yaml(tmp_path, "test_cfg.yaml", data)
     cfg = parse_test_cfg_yaml(path)

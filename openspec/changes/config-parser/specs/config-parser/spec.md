@@ -53,16 +53,8 @@ The system SHALL support the correct set of write mode values.
 - **WHEN** `write_config.mode` is set to `direct_insert` or `write_through`
 - **THEN** the system SHALL report a validation error indicating invalid write mode
 
-### Requirement: QueryConfig mode values
-The system SHALL support the correct set of query mode values.
-
-#### Scenario: Accept valid query modes
-- **WHEN** `query_config.mode` is set to one of `statement` or `prepared_statement`
-- **THEN** the system SHALL accept the configuration
-
-#### Scenario: Reject invalid query modes
-- **WHEN** `query_config.mode` is set to `query` or `raw`
-- **THEN** the system SHALL report a validation error indicating invalid query mode
+### Requirement: QueryConfig mode values (deprecated)
+> **Note**: The `mode` field was removed from `QueryConfig` in design review. All queries now use `PreparedStatement` exclusively. Configuration files should not include `mode` in `query_config` entries.
 
 ### Requirement: Parse test_model.yaml
 The system SHALL parse the test_model.yaml configuration file and validate its structure and content.

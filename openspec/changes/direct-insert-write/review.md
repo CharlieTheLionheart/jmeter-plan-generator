@@ -1,7 +1,7 @@
 # Quality Review
 
 ## 1. Boundary Conditions
-**Status**: ⚠️ Warning
+**Status**: ✅ Pass (was ⚠️ Warning — see resolutions below)
 
 **Findings**:
 - 共享内存环绕拷贝有覆盖：`start + batch_lines > total_rows` 时回绕到开头（spec 已覆盖）。
@@ -11,15 +11,15 @@
 - 关系表 `ceil(total_rows / batch_lines)` 最后一批不足 batch_lines 时的尾批处理未明确（VALUES 行数固定还是动态）。
 
 **Open Questions**:
-- **OQ1 设备号格式**: 是否需要支持自定义前缀（默认为 `device_`）？影响占位符替换边界。
-- **OQ2 时间戳列位置**: 是否需要支持时间戳列在非第一个位置？当前假设时间戳列为第一个参数——非首列时装配逻辑越界。
+- ~~**OQ1 设备号格式**: 是否需要支持自定义前缀（默认为 `device_`）？影响占位符替换边界。~~ **✅ 已解决（2026-07-09）**: 不开放配置，固定 `device_` 前缀；规格保持硬编码。
+- ~~**OQ2 时间戳列位置**: 是否需要支持时间戳列在非第一个位置？当前假设时间戳列为第一个参数——非首列时装配逻辑越界。~~ **✅ 已解决（2026-07-09）**: 不开放配置，时间戳列固定为首列，配置错误时由 `generate_preprocessor_script` 抛 `DdlGenerationError` 拒收。
 
 **Recommendations**:
-- 明确时间戳除法使用浮点或保证 `ms_step >= batch_lines`，并定义最小步长。
-- 增加 `device_per_thread > 0`、`batch_lines > 0` 前置校验。
-- 关系表尾批：用动态 SQL 拼实际行数，或最后一批单独处理。
-- 定型 OQ1：默认 `device_` 前缀，是否开放配置。
-- 定型 OQ2：时间戳列位置约定（固定首列 or 可配置）。
+- ✅ 明确时间戳除法使用浮点或保证 `ms_step >= batch_lines`，并定义最小步长。 → 已落到 `gcalculate_timestamps` 文档并增加 `test_integer_division_when_ms_step_lt_batch_lines` 测试。
+- ✅ 增加 `device_per_thread > 0`、`batch_lines > 0` 前置校验。 → `PreprocessorHelperError` 已实现并测试覆盖。
+- ✅ **残尾批：伪命题，已关闭（2026-07-09）**。设计澄清：每轮写入都是固定数量的 SQL，`total_rows % batch_lines != 0` 时由 `generate_relational_table_init_sampler` 抛 `DdlGenerationError` 拒收；调用方应保证 `total_rows` 是 `batch_lines` 的整数倍。`residual` / `row_count_tail` 字段已删除。
+- ✅ **阻塞项 #1 `batch_seq * ms_step` 长跑溢出（2026-07-09）**。已切换为 Groovy `long` 类型（`calculateTimestamps(long base_time_ms, long batch_seq, long ms_step, long batch_lines, int row_count)`），相关 Python 实现使用 Python 原生 `int`（任意精度）等价保护。
+- ✅ **错误类型统一为 `DirectInsertGenerationError`（2026-07-09）**。原 tasks.md §2.4 / §3.4 写的是 `DdlGenerationError`，语义与直接 INSERT 生成匹配度差。新增 [src/direct_insert_write/errors.py](src/direct_insert_write/errors.py) 定义 `DirectInsertGenerationError(DdlGenerationError)`，模块内边界失败全部改抛这一类型；向后兼容：上游 `except DdlGenerationError` 仍能兜住写路径失败。
 
 ## 2. Rollback Plan
 **Status**: ✅ Pass

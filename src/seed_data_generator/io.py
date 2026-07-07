@@ -17,16 +17,19 @@ def write_column_seed(path: Path, values: list[Any]) -> None:
     """Write a column seed file: one value per line, no header."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.writer(fh, quoting=csv.QUOTE_MINIMAL)
+        writer = csv.writer(fh, quoting=csv.QUOTE_ALL)
         for value in values:
             writer.writerow(["null" if value is None else str(value)])
 
 
 def read_column_seed(path: Path) -> list[str]:
-    """Read values from a column seed file, one value per line."""
+    """Read values from a column seed file, one value per line.
+
+    Quotes added by QUOTE_ALL are stripped from each value.
+    """
     with path.open("r", newline="", encoding="utf-8") as fh:
         reader = csv.reader(fh)
-        return [row[0] if row else "" for row in reader]
+        return [row[0].strip('"') if row else "" for row in reader]
 
 
 def discover_column_files(table_dir: Path) -> list[tuple[int, str, Path]]:
@@ -112,7 +115,7 @@ def write_row_aggregate(path: Path, header: list[str], rows: list[list[str]]) ->
     """Write a row seed aggregate CSV with ``header`` and ``rows``."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.writer(fh, quoting=csv.QUOTE_MINIMAL)
+        writer = csv.writer(fh, quoting=csv.QUOTE_ALL)
         writer.writerow(header)
         writer.writerows(rows)
 

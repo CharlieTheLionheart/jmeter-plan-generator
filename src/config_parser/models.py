@@ -293,6 +293,8 @@ class ConnConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     db_url: str
+    db_username: str = Field(default="root")
+    db_password: str = Field(default="")
     conn_pool_size: int = Field(default=10, ge=1)
     device_start: int = Field(default=1, ge=0)
     test_duration: int = Field(default=60, ge=1)
@@ -330,9 +332,6 @@ class WriteConfig(BaseModel):
         return self
 
 
-QueryMode = Literal["statement", "prepared_statement"]
-
-
 class QueryConfig(BaseModel):
     """Query workload configuration."""
 
@@ -340,7 +339,6 @@ class QueryConfig(BaseModel):
 
     query: str
     throughput: float = Field(default=100.0, ge=0)
-    mode: QueryMode
     num_threads: int = Field(default=1, ge=1)
 
     @field_validator("query")
@@ -486,7 +484,6 @@ __all__ = [
     "ConnConfig",
     "WriteConfig",
     "WriteMode",
-    "QueryMode",
     "QueryConfig",
     "TestConfig",
     "validate_foreign_key_refs",

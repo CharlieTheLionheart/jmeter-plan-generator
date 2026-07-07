@@ -33,17 +33,27 @@
 
 - [ ] 5.1 Implement `WriteThreadGroupsGenerator` to create one `ThreadGroup` per time-series table.
 - [ ] 5.2 Set `num_threads`, loop count `-1`, and duration `${test_duration}` per table write configuration.
-- [ ] 5.3 Place an empty `JDBCSampler` placeholder under each write thread group for later filling by the write module.
-- [ ] 5.4 Define behavior when no tables are configured: skip write thread groups.
-- [ ] 5.5 Write unit tests for write thread group generation, including zero-table configuration.
+- [ ] 5.3 Place a `JDBCSampler` placeholder under each write thread group for later filling by the write module.
+- [ ] **5.4 (CRITICAL) Sampler type by write mode**: 根据 `WriteConfig.mode` 决定 Sampler 类型：
+  - `batch_prepared` 模式：**必须使用 `JSR223Sampler`**（而非 `JDBCSampler`），配合前置 `JSR223PreProcessor` 准备批次数据，详见 write-strategies/design.md §JSR223Sampler 用于 batch_prepared
+  - `single_prepared` / `single_insert` / `batch_insert` 模式：使用 `JDBCSampler`
+  - `schemaless` 模式：使用 `JSR223Sampler`（T2）
+- [ ] **5.5 (CRITICAL) JSR223PreProcessor for batch_prepared**：`batch_prepared` 模式需要在 `JSR223Sampler` 前挂载 `JSR223PreProcessor`，负责从共享内存行种子总集随机拷贝连续 `batch_lines` 行、装配时间戳和设备标识，写入线程变量 `__BATCH_ROWS_${tableName}` 供 Sampler 读取
+- [ ] 5.6 Define behavior when no tables are configured: skip write thread groups.
+- [ ] 5.7 Write unit tests for write thread group generation, including zero-table configuration and sampler type selection per mode.
 
 ## 6. Query thread groups skeleton
 
 - [ ] 6.1 Implement `QueryThreadGroupsGenerator` to create one `ThreadGroup` per query configuration.
 - [ ] 6.2 Set `num_threads` (default 1) and duration `${test_duration}` per query configuration.
-- [ ] 6.3 Place an empty `JDBCSampler` placeholder under each query thread group for later filling by the query functionality module.
-- [ ] 6.4 Define behavior when no queries are configured: skip query thread groups.
-- [ ] 6.5 Write unit tests for query thread group generation, including zero-query configuration.
+- [ ] 6.3 Generate a `JDBCSampler` with `Prepared Select Statement` query type; replace each ``?`` placeholder in the SQL with ``${param_N}`` (N = 0, 1, 2, ...); set `queryArguments` to ``${param_0},${param_1},...``.
+- [ ] **6.4 (CRITICAL) JSR223PreProcessor for query parameter binding**: For each query thread group, generate a `JSR223PreProcessor` (Groovy) **before** the JDBCSampler that:
+  - Parses the SQL to extract column names preceding each ``?`` placeholder
+  - For each resolved column, constructs the seed file path as ``{seed_dir}/{column_name}.csv`` and randomly samples one line into ``param_N``
+  - Falls back to ``{seed_dir}/param.csv`` when column name cannot be resolved
+  - Maps the string ``"null"`` to empty string ``""`` for JDBC NULL handling
+- [ ] 6.5 Define behavior when no queries are configured: skip query thread groups.
+- [ ] 6.6 Write unit tests for query thread group generation, including zero-query configuration, SQL with/without placeholders, and column name resolution.
 
 ## 7. Thread group ordering and assembly
 

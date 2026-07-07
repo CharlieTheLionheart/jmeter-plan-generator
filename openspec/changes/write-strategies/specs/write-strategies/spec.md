@@ -79,17 +79,8 @@ The system SHALL implement a strategy for batch PreparedStatement write operatio
 - **THEN** `requires_param_setup()` SHALL return `True`
 - **THEN** `get_sampler_script()` SHALL return Groovy batch execution code
 
-### Requirement: Implement SchemalessWriteStrategy
-The system SHALL implement a placeholder strategy for schemaless write operations that throws a not-implemented exception.
-
-#### Scenario: Configure for schemaless write
-- **WHEN** creating `SchemalessWriteStrategy`
-- **THEN** `mode_name` SHALL return `"schemaless"`
-- **THEN** `requires_prepared_insert_template()` SHALL return `False`
-- **THEN** `generate_query()` SHALL return an empty string
-- **THEN** `get_sampler_type()` SHALL return `"JSR223Sampler"`
-- **THEN** `get_sampler_config()` SHALL return `{"scriptLanguage": "groovy"}`
-- **THEN** `get_sampler_script()` SHALL raise `NotImplementedError` with message "Schemaless write strategy is not yet implemented (T2)"
+### Requirement: Implement SchemalessWriteStrategy (deferred)
+> **Note**: Schemaless write mode (T2) is deferred. The `SchemalessWriteStrategy` class exists as a placeholder skeleton but is not functional. If `schemaless` mode is configured in `test_cfg.yaml`, the generator SHALL reject it during validation with an error message indicating the feature is not yet implemented. A future DCR will drive the full design and implementation of this feature.
 
 ### Requirement: Refactor direct-insert-write to use strategies
 The system SHALL refactor existing direct INSERT logic to use the strategy pattern.

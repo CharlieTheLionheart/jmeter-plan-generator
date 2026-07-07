@@ -14,7 +14,7 @@ JDBCDataSource 是 JMeter 测试计划中的数据库连接池配置。所有 JD
 **Non-Goals:**
 - 不实现动态连接池管理
 - 不支持多数据源配置
-- 不支持动态生成任意 `conn_config` 参数：本期仅暴露 `db_url` 和 `conn_pool_size` 两个连接相关参数（`db_username`/`db_password` 沿用既有变量），其余 `conn_config` 条目不在 JDBCDataSource 中动态生成
+- 不支持动态生成任意 `conn_config` 参数：本期暴露 `db_url`、`db_username`、`db_password` 和 `conn_pool_size` 四个连接相关参数，其余 `conn_config` 条目不在 JDBCDataSource 中动态生成
 - 不支持其他数据库驱动：`driver` 固定为 `com.kaiwudb.Driver`
 - 不将连接池参数（`connectionAge`/`timeout`/`trimInterval` 等）配置化：保持硬编码，后续按需暴露
 
@@ -55,12 +55,13 @@ JDBCDataSource 是 JMeter 测试计划中的数据库连接池配置。所有 JD
 **Alternatives considered:**
 - **关闭自动提交**: 需要手动提交事务，增加复杂度
 
-### 仅暴露 db_url 和 conn_pool_size 两个动态参数
+### 暴露 db_url、db_username、db_password 和 conn_pool_size 四个动态参数
 
-**Decision:** 本期 JDBCDataSource 仅将 `db_url`（`dbUrl="${db_url}"`）和 `conn_pool_size`（`poolMax="${conn_pool_size}"`）作为可通过 `-J` 覆盖的动态参数；`db_username`/`db_password` 沿用既有 `${db_username}`/`${db_password}` 变量；其余 `conn_config` 条目和连接池参数不动态生成。
+**Decision:** 本期 JDBCDataSource 将 `db_url`（`dbUrl="${db_url}"`）、`db_username`（`username="${db_username}"`）、`db_password`（`password="${db_password}"`）和 `conn_pool_size`（`poolMax="${conn_pool_size}"`）作为可通过 `-J` 覆盖的动态参数；其余 `conn_config` 条目和连接池参数不动态生成。
 
 **Rationale:**
 - 覆盖当前测试场景的实际需求，避免过度设计
+- `db_username`/`db_password` 支持数据库认证配置
 - 动态遍历 `conn_config` 生成任意 `<elementProp>` 增加复杂度且无即时收益
 - 连接池参数（`connectionAge`/`timeout`/`trimInterval`）大部分场景使用相同配置，硬编码足够
 - 其他参数的暴露后续按需添加，保持本期范围清晰

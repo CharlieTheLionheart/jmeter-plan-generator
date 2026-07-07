@@ -35,7 +35,8 @@ def _all_columns(
 ) -> Iterable[tuple[str, Any]]:
     """Yield (group_name, column_config) for every column in a table."""
     for group in _GROUP_ORDER:
-        for col in getattr(table, group):
+        cols = getattr(table, group, [])
+        for col in cols:
             yield group, col
 
 
@@ -48,7 +49,7 @@ def iter_table_columns(
     """
     index = 1
     for group in _GROUP_ORDER:
-        cols = getattr(table, group)
+        cols = getattr(table, group, [])
         if not cols:
             continue
         total = getattr(table, _COUNT_FIELDS[group])
@@ -130,7 +131,7 @@ def pregenerate_reference_columns(
     registry: dict[str, tuple[DatabaseConfig, TableConfig, Any, int, str, str]],
     refs: dict[str, list[tuple[DatabaseConfig, TableConfig, Any, int, str]]],
 ) -> dict[str, Path]:
-    """Write ``.ref`` files for every referenced column and return target->path."""
+    """Write ``.csv`` seed files for every referenced column and return target->path."""
     ref_paths: dict[str, Path] = {}
     for target in refs:
         entry = registry.get(target)
@@ -146,7 +147,7 @@ def pregenerate_reference_columns(
 
 
 def sample_reference_values(ref_path: Path, seed_num: int) -> list[str]:
-    """Sample ``seed_num`` values from a ``.ref`` file uniformly with replacement."""
+    """Sample ``seed_num`` values from a ``.csv`` seed file uniformly with replacement."""
     if not ref_path.exists():
         raise SeedGenError(f"reference seed file not found: {ref_path}")
 

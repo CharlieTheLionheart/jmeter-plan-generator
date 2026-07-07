@@ -30,7 +30,7 @@ The system SHALL configure database connection parameters using JMeter variables
 - **WHEN** generating the JDBCDataSource
 - **THEN** the system SHALL set `username="${db_username}"`
 - **THEN** the system SHALL set `password="${db_password}"`
-- **THEN** the variables SHALL be defined in User Defined Variables
+- **THEN** the `${db_username}` and `${db_password}` variables SHALL be defined in User Defined Variables
 
 #### Scenario: Set JDBC driver
 - **WHEN** generating the JDBCDataSource

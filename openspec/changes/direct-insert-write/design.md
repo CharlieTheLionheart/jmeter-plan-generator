@@ -31,17 +31,24 @@
 - **JMeter CSV DataSet**: 不支持动态行拷贝
 - **BeanShell PreProcessor**: 不支持编译缓存，性能差
 
-### 共享内存使用 JMeter props
+### 共享内存使用 JMeter props（双键约定）
 
-**Decision:** 使用 `props.put()` 和 `props.get()` 在 SetupThreadGroup 中初始化共享内存，写入线程组读取。
+**Decision:** 使用 `props.put()` / `props.get()` 在 SetupThreadGroup 中初始化共享内存，写入线程组读取。键名采用**双键**约定，与 `shared-memory-initializer` 装载协议对齐：
+
+- `__SHARED_MEM_{db}.{table}` — 行种子总集 `List<List[Any]]`，行优先
+- `__SHARED_MEM_{db}.{table}_columns` — 列名列表 `List[String>`，按 DDL 字段顺序
+
+`db` / `table` 中非字母数字字符折叠为下划线。
 
 **Rationale:**
 - `props` 是全局属性，跨线程组可见
 - `vars` 是线程局部变量，不适用
 - 简单直接，无需额外依赖
+- `_columns` 键让写 PreProcessor 不再依赖 Python 端硬编码列序，列名变更只需重生成装载脚本
 
 **Alternatives considered:**
 - **JMeter 文件共享**: 需要文件系统操作，复杂度高
+- **单键 + Python 端 inline 列序**: 列名变更需重生成 JMX；与 `shared-memory-initializer` 双键产出不对齐
 
 ### 第一个 Primary Tag 占位符处理
 

@@ -8,17 +8,15 @@ from pathlib import Path
 
 import pytest
 
-from config_parser.models import ColTypeConfig, DatabaseConfig, TableConfig, TestModelConfig
+from config_parser.models import ColTypeConfig, RelDbConfig, RelTableConfig, TestModelConfig
 from seed_data_generator import generate_seeds
 
 
-def _simple_table(name: str, seed_num: int = 1_000_000) -> TableConfig:
-    return TableConfig(
+def _simple_table(name: str, seed_num: int = 1_000_000) -> RelTableConfig:
+    return RelTableConfig(
         name=name,
         primary_key_count=1,
         data_col_count=1,
-        primary_tag_count=0,
-        regular_tag_count=0,
         primary_keys=[
             ColTypeConfig(col_type="int8", type_proportion=1.0, val_range="[1,1000000]", seed_num=seed_num)
         ],
@@ -31,13 +29,13 @@ def _simple_table(name: str, seed_num: int = 1_000_000) -> TableConfig:
 @pytest.mark.slow
 def test_million_row_generation(tmp_path: Path):
     model = TestModelConfig(
-        rel_dbs=[DatabaseConfig(name="perf_db", tables=[_simple_table("t_big")])]
+        rel_dbs=[RelDbConfig(name="perf_db", tables=[_simple_table("t_big")])]
     )
     start = time.perf_counter()
     results = generate_seeds(model, tmp_path, seed=1)
     elapsed = time.perf_counter() - start
 
-    aggregate = tmp_path / "perf_db.t_big.csv"
+    aggregate = tmp_path / "perf_db" / "t_big.csv"
     assert aggregate.exists()
     # header + 1_000_000 rows
     line_count = sum(1 for _ in aggregate.open("r", encoding="utf-8"))
@@ -49,7 +47,7 @@ def test_million_row_generation(tmp_path: Path):
 def test_concurrent_table_generation(tmp_path: Path):
     model = TestModelConfig(
         rel_dbs=[
-            DatabaseConfig(
+            RelDbConfig(
                 name="concurrent_db",
                 tables=[
                     _simple_table("t_a", seed_num=10_000),
@@ -63,7 +61,7 @@ def test_concurrent_table_generation(tmp_path: Path):
         # Generate a single table by building a minimal model containing only it.
         single_model = TestModelConfig(
             rel_dbs=[
-                DatabaseConfig(
+                RelDbConfig(
                     name="concurrent_db",
                     tables=[_simple_table(table_name)],
                 )
@@ -77,5 +75,5 @@ def test_concurrent_table_generation(tmp_path: Path):
         outcomes = [f.result() for f in concurrent.futures.as_completed(futures)]
 
     assert all(outcomes)
-    assert (tmp_path / "t_a" / "concurrent_db.t_a.csv").exists()
-    assert (tmp_path / "t_b" / "concurrent_db.t_b.csv").exists()
+    assert (tmp_path / "t_a" / "concurrent_db" / "t_a.csv").exists()
+    assert (tmp_path / "t_b" / "concurrent_db" / "t_b.csv").exists()

@@ -22,7 +22,7 @@
 
 ## 4. Time-series table filtering
 
-- [ ] 4.1 Implement `filter_timeseries_tables(all_tables)` excluding relational tables.
+- [ ] 4.1 Implement `filter_timeseries_tables(ts_dbs)` excluding relational tables.
 - [ ] 4.2 Confirm the filtering criterion matches the existing table metadata model (e.g., `table_type == 'time_series'` or equivalent).
 - [ ] 4.3 Return an empty list when no time-series tables are present.
 - [ ] 4.4 Write unit tests covering: only time-series tables, only relational tables, mixed table types, empty input.

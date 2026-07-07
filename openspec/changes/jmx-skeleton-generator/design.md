@@ -12,9 +12,10 @@ JMX 骨架生成模块负责创建 JMeter 测试计划的基础 XML 结构。JMe
 - 生成可被 JMeter 打开的 .jmx 文件
 
 **Non-Goals:**
-- 不实现具体的写入逻辑（由 direct-insert-write 模块实现）
+- 不实现具体的写入逻辑（由 direct-insert-write / write-strategies 模块实现）
 - 不实现具体的查询逻辑（由 query-functionality 模块实现）
 - 不实现吞吐量控制（由 throughput-control 模块实现）
+- 不实现 schemaless 写入（SCHEMALESS 模式 T2 实现）
 
 ## Decisions
 
@@ -83,6 +84,52 @@ JMX 骨架生成模块负责创建 JMeter 测试计划的基础 XML 结构。JMe
 
 **Alternatives considered:**
 - **在模块内实现共享内存加载**：职责不清晰，难以维护
+
+### DDL SetupThreadGroup 返回结构
+
+**Decision:** `generate_ddl_setup_thread_group` 返回**平铺列表**:`[SetupThreadGroup, hashTree, JDBCSampler, hashTree, JDBCSampler, hashTree, ...]`。`hashTree` 元素保留 JMeter XML 嵌套结构(JDBCSampler 作为其子节点),同时各 sampler 同步平铺到顶层,调用方可单层遍历同时定位 `SetupThreadGroup` 与 `JDBCSampler`,无需递归 `hashTree`。
+
+**Rationale:**
+- 调用方(`JMXAssembler`)通常按"元素出现顺序"做 XML 序列化,平铺列表可直接 `extend` 到 JMX 顶层序列,无需区分嵌套/扁平
+- 单元测试断言("列表里能查到 `JDBCSampler` tag"、`num_threads` 出现在 ThreadGroup 文本)只扫单层,平铺列表与该断言约定对齐
+
+**Alternatives considered:**
+- **纯嵌套**(`[SetupThreadGroup, hashTree(嵌套所有 sampler)]`):调用方需递归 `hashTree` 才能定位 sampler,API 不友好
+- **纯扁平**(`[SetupThreadGroup, JDBCSampler, hashTree, JDBCSampler, hashTree, ...]`,丢掉 hashTree 嵌套):破坏 JMeter XML 实际嵌套结构,无法直接序列化
+
+### 查询线程组 Query Type 决策
+
+**Decision:** 查询线程组的 JDBCSampler `queryType` **固定为 `Prepared Select Statement`**,统一通过 `?` 占位符 + `JSR223PreProcessor` 绑定参数执行。`QueryConfig` **不**包含 `mode` 字段,不支持 `statement` 模式(将参数拼接进 SQL 字符串)。
+
+**Rationale:**
+- 遵循 `docs/specs/kwdb-svt-test-plan-generator-spec.md` v1.4 (2026-06-15) 决策:**移除 `query_config.mode` 属性,查询统一走 prepared_statement**
+- PreparedStatement 路径唯一,生成器只需维护一种绑定逻辑,降低参数注入与转义复杂度
+- 占位符无法绑定到具体列(如 `LIMIT ?`)时,由 `TestConfig` 校验阶段直接报错(spec v1.4 §查询配置备注)
+
+**Cross-change dependency:**
+> ⚠️ 此前 config-parser 模块已按 spec v1.4 移除 `QueryConfig.mode`。本模块 `query_groups.generate_query_thread_groups` 必须与该决策一致,不得引入 `mode` 字段或额外 `queryType` 分支。
+
+### 写入线程组 Sampler 类型决策
+
+**Decision:** 写入线程组的 Sampler 类型由 `WriteConfig.mode` 决定:
+
+**Decision:** 写入线程组的 Sampler 类型由 `WriteConfig.mode` 决定：
+
+| 写入模式 | Sampler 类型 | PreProcessor |
+|----------|-------------|-------------|
+| `batch_prepared` | `JSR223Sampler`（Groovy JDBC batch） | `JSR223PreProcessor` 准备批次数据 |
+| `single_prepared` | `JDBCSampler`（Prepared Update Statement） | `JSR223PreProcessor` 绑定参数 |
+| `single_insert` | `JDBCSampler`（Update Statement） | `JSR223PreProcessor` 绑定参数 |
+| `batch_insert` | `JDBCSampler`（Update Statement） | `JSR223PreProcessor` 绑定参数 |
+| `schemaless` | `JSR223Sampler`（Groovy line protocol） | T2 |
+
+**Rationale:**
+- `batch_prepared` 必须使用 `JSR223Sampler`：JMeter `JDBCSampler` 的 `Prepared Update Statement` 每次只绑定一组参数，无法实现真正的 JDBC batch（`addBatch/executeBatch`）。必须通过 Groovy 脚本直接操作 JDBC `PreparedStatement`。
+- `JSR223PreProcessor` 负责数据准备：`batch_prepared` 的 PreProcessor 从共享内存行种子总集随机拷贝连续 `batch_lines` 行、装配时间戳和设备标识，写入线程变量 `__BATCH_ROWS_${tableName}` 供 Sampler 读取。
+- 详细 Groovy 脚本见 `write-strategies/design.md` §JSR223Sampler 用于 batch_prepared。
+
+**Cross-change dependency:**
+> ⚠️ 本模块的 Sampler 类型决策依赖于 `write-strategies` 模块的定义。具体约束见 `../write-strategies/design.md` §JSR223Sampler 用于 batch_prepared。本模块实现者必须与 write-strategies 模块保持一致，不得独立决定 `batch_prepared` 使用 `JDBCSampler`。
 
 ## Risks / Trade-offs
 

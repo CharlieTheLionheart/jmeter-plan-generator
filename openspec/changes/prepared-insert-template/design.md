@@ -65,9 +65,9 @@ Prepared Insert 模板生成器负责为 PreparedStatement 写入生成带 `?` �
     'iot_metadata.t_workshop': 'insert into iot_metadata.t_workshop (pk_int8_1, col_varchar_1) values (?, ?)'
 }
 
-# 错误：使用了大写（虽然 KaiwuDB 支持，但不规范）
+# 错误：混用大小写（与同模块其他 SQL 风格不一致）
 {
-    'iot_monitor.t_cnc': 'INSERT INTO iot_monitor.t_cnc (ts, ptag_int8_1, col_int8_1) VALUES (?, ?, ?)'
+    'iot_monitor.t_cnc': 'Insert Into iot_monitor.t_cnc (ts, ptag_int8_1, col_int8_1) Values (?, ?, ?)'
 }
 ```
 

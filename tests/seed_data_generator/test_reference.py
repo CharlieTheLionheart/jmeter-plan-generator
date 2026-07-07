@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from config_parser.models import ColTypeConfig, DatabaseConfig, TableConfig, TestModelConfig
+from config_parser.models import ColTypeConfig, RelDbConfig, TsDbConfig, RelTableConfig, TsTableConfig, TestModelConfig
 from seed_data_generator.adapter import SeedGenError
 from seed_data_generator.io import write_column_seed
 from seed_data_generator.reference import (
@@ -18,30 +18,26 @@ from seed_data_generator.reference import (
 
 
 def _model_with_ref() -> TestModelConfig:
-    rel_table = TableConfig(
+    rel_table = RelTableConfig(
         name="t_workshop",
-        primary_key_count=3,
+        primary_key_count=1,
         data_col_count=0,
-        primary_tag_count=0,
-        regular_tag_count=0,
         primary_keys=[
             ColTypeConfig(col_type="int8", type_proportion=1.0, val_range="[1,100]", seed_num=3)
         ],
         data_cols=[],
     )
-    ts_table = TableConfig(
+    ts_table = TsTableConfig(
         name="t_cnc",
-        primary_key_count=0,
         data_col_count=1,
         primary_tag_count=0,
         regular_tag_count=1,
-        primary_keys=[],
         data_cols=[ColTypeConfig(col_type="int8", type_proportion=1.0, val_range="ref:iot_metadata.t_workshop.pk_int8_1", seed_num=10)],
         regular_tags=[ColTypeConfig(col_type="varchar(16)", type_proportion=1.0, val_range="enum:A,B", seed_num=10)],
     )
     return TestModelConfig(
-        rel_dbs=[DatabaseConfig(name="iot_metadata", tables=[rel_table])],
-        ts_dbs=[DatabaseConfig(name="iot_monitor", tables=[ts_table])],
+        rel_dbs=[RelDbConfig(name="iot_metadata", tables=[rel_table])],
+        ts_dbs=[TsDbConfig(name="iot_monitor", tables=[ts_table])],
     )
 
 
@@ -68,11 +64,11 @@ def test_pregenerate_reference_columns(tmp_path: Path):
     target = "iot_metadata.t_workshop.pk_int8_1"
     assert target in ref_paths
     assert ref_paths[target].exists()
-    assert ref_paths[target].name == "1_pk_int8_1.int8.ref"
+    assert ref_paths[target].name == "1_pk_int8_1.csv"
 
 
 def test_sample_reference_with_replacement(tmp_path: Path):
-    ref_path = tmp_path / "1_pk_int8_1.int8.ref"
+    ref_path = tmp_path / "1_pk_int8_1.int8.csv"
     write_column_seed(ref_path, [1, 2, 3])
 
     values = sample_reference_values(ref_path, 10)
@@ -81,7 +77,7 @@ def test_sample_reference_with_replacement(tmp_path: Path):
 
 
 def test_sample_reference_cycles_when_smaller(tmp_path: Path):
-    ref_path = tmp_path / "1_pk_int8_1.int8.ref"
+    ref_path = tmp_path / "1_pk_int8_1.int8.csv"
     write_column_seed(ref_path, ["a", "b"])
 
     values = sample_reference_values(ref_path, 5)
@@ -91,7 +87,7 @@ def test_sample_reference_cycles_when_smaller(tmp_path: Path):
 
 def test_sample_reference_missing_file(tmp_path: Path):
     with pytest.raises(SeedGenError, match="not found"):
-        sample_reference_values(tmp_path / "missing.ref", 5)
+        sample_reference_values(tmp_path / "missing.csv", 5)
 
 
 def test_cross_database_reference(tmp_path: Path):

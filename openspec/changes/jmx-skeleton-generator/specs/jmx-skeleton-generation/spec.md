@@ -60,6 +60,32 @@ The system SHALL generate one write thread group per time-series table.
 - **THEN** the system SHALL set the loop count to infinity (`-1`)
 - **THEN** the system SHALL use `duration` to control test duration
 
+#### Scenario: Generate JSR223Sampler and JSR223PreProcessor for batch_prepared mode
+- **WHEN** a time-series table has `batch_prepared` write mode
+- **THEN** the system SHALL generate a `JSR223Sampler` element (NOT `JDBCSampler`)
+- **THEN** the system SHALL generate a `JSR223PreProcessor` that runs before the sampler
+- **AND** the JSR223PreProcessor script SHALL:
+  - Read row seed aggregate from `props.get("__SHARED_MEM_${tableName}")`
+  - Randomly select a starting row and copy `batch_lines` consecutive rows
+  - Compute device number: `localDeviceStart = deviceStart + threadNum * devicePerThread`
+  - Replace first primary tag placeholder with device identifier
+  - Assemble timestamps based on `base_time`, `batch_seq`, and `ms_step`
+  - Write the prepared batch rows to `vars.putObject("__BATCH_ROWS_${tableName}", batchRows)`
+- **AND** the JSR223Sampler script SHALL:
+  - Read `insert_sql` from `vars.get("insert_sql")`
+  - Read `batchRows` from `vars.getObject("__BATCH_ROWS_${tableName}")`
+  - Execute JDBC batch: `conn.prepareStatement(insertSql)` with `addBatch()` / `executeBatch()`
+
+#### Scenario: Generate JDBCSampler for single_prepared mode
+- **WHEN** a time-series table has `single_prepared` write mode
+- **THEN** the system SHALL generate a `JDBCSampler` element
+- **AND** the JDBCSampler SHALL use `Prepared Update Statement` query type
+
+#### Scenario: Generate JDBCSampler for single_insert and batch_insert modes
+- **WHEN** a time-series table has `single_insert` or `batch_insert` write mode
+- **THEN** the system SHALL generate a `JDBCSampler` element
+- **AND** the JDBCSampler query SHALL be a direct INSERT statement with `?` placeholders
+
 ### Requirement: Generate query thread groups
 The system SHALL generate one query thread group per query configuration.
 
@@ -69,10 +95,31 @@ The system SHALL generate one query thread group per query configuration.
 - **THEN** the thread group SHALL have `num_threads` threads (default 1)
 - **THEN** the thread group SHALL run for `${test_duration}` seconds
 
-#### Scenario: Place empty JDBC sampler placeholder
-- **WHEN** generating a query thread group
-- **THEN** the system SHALL place a placeholder `JDBCSampler` element
-- **THEN** the placeholder SHALL be filled by the query functionality module
+#### Scenario: Generate JDBCSampler with Prepared Select Statement for query
+- **WHEN** a query thread group is generated
+- **THEN** the system SHALL generate a `JDBCSampler` element
+- **AND** the JDBCSampler SHALL use `Prepared Select Statement` query type
+- **AND** the query SQL SHALL have each ``?`` placeholder replaced with ``${param_N}`` (N = 0, 1, 2, ...)
+- **AND** the JDBCSampler ``queryArguments`` SHALL list ``${param_0},${param_1},...`` in order
+
+#### Scenario: Generate JSR223PreProcessor for query parameter binding
+- **WHEN** a query thread group is generated and the query SQL has ``?`` placeholders
+- **THEN** the system SHALL generate a `JSR223PreProcessor` element before the JDBCSampler
+- **AND** the JSR223PreProcessor script SHALL be written in Groovy
+- **AND** the script SHALL extract the table path from the SQL's FROM clause (e.g. ``iot_monitor.t_cnc``) and resolve the seed directory as ``{seed_dir}/{table_path}``
+- **AND** for each ``?`` placeholder the script SHALL:
+  - Extract the column name preceding the placeholder (e.g. ``WHERE col_int8_1 = ?`` → ``col_int8_1``)
+  - Locate the seed file using glob pattern: ``{seed_dir}/{table_path}/*_{col_name}.csv`` (column names are globally unique, no column index needed)
+  - Randomly read one line from the matched seed file
+  - Write the sampled value to JMeter variable ``param_N`` (N = 0, 1, 2, ...)
+  - Map the string ``"null"`` to empty string ``""`` for JDBC NULL handling
+- **AND** if the column name cannot be resolved from SQL context, the script SHALL fall back to reading from ``{seed_dir}/param.csv``
+- **NOTE**: The JSR223PreProcessor runs before every sampler execution, so parameter values change on each query iteration
+
+#### Scenario: Handle query with no placeholders
+- **WHEN** a query SQL has no ``?`` placeholders
+- **THEN** the system SHALL still generate a JSR223PreProcessor but with an empty/minimal script (no-op)
+- **AND** the JDBCSampler ``queryArguments`` SHALL be empty
 
 ### Requirement: Generate JMX file
 The system SHALL output the complete test plan as a JMX file.

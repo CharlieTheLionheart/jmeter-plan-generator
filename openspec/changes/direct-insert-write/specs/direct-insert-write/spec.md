@@ -34,7 +34,8 @@ The system SHALL generate a JSR223PreProcessor to prepare batch data before writ
 
 #### Scenario: Copy rows from shared memory
 - **WHEN** preparing data for writing
-- **THEN** the PreProcessor SHALL read from shared memory `props.get("__SHARED_MEM_{table_name}")`
+- **THEN** the PreProcessor SHALL read from shared memory `props.get("__SHARED_MEM_{db}.{table}")` for the row aggregate
+- **THEN** the PreProcessor SHALL read the column-name list from `props.get("__SHARED_MEM_{db}.{table}_columns")` (DDL field order; overrides any Python-side fallback)
 - **THEN** it SHALL randomly select a start row index
 - **THEN** it SHALL copy `batch_lines` consecutive rows
 - **THEN** if start + batch_lines exceeds total rows, it SHALL wrap around to the beginning
