@@ -52,7 +52,7 @@ class TestRequiresPreparedInsertTemplates:
         cfg = [
             WriteConfig(tbl_name="t1", mode="single_insert"),
             WriteConfig(tbl_name="t2", mode="batch_prepared"),
-            WriteConfig(tbl_name="t3", mode="schemaless"),
+            WriteConfig(tbl_name="t3", mode="single_prepared"),
         ]
         assert requires_prepared_insert_templates(cfg) is True
 

@@ -62,6 +62,35 @@
 - **使用多个 JDBCSampler**: 无法保证事务
 - **使用自定义插件**: 过于复杂
 
+### 接口签名：显式参数 + 值对象
+
+**Decision:** 接口采用显式位置参数而非 `**context` 关键字袋：`generate_query(table, batch_lines, insert_template)`、`get_preprocessor_code(table, batch_lines, runtime)`、`get_sampler_script(table, batch_lines)`。入参拆为 `ResolvedTable`（表结构）与 `WriteRuntime`（写运行期旋钮）两个 frozen dataclass（`write_strategies/models.py`）。prepared 策略无状态：模板经 `insert_template` 形参传入，不在构造器缓存 templates 字典。
+
+**Rationale:**
+- 签名即契约，mypy/IDE 可静态查缺参；`**context` 把契约降级为运行期约定。
+- `ResolvedTable` / `WriteRuntime` 分离表结构与运行参数，职责清晰；设计 §3.7 的 2 参 preprocessor 签名缺 `device_per_thread/ms_step` 等运行参数，`WriteRuntime` 补齐该缺口（第 3 个形参 `runtime`）。
+- 无状态策略与"策略为无状态类"的既定决策一致，`get_strategy(mode)` 可无参实例化。
+
+**Alternatives considered:**
+- **保留 `**context`**: 零重构、additive 扩展，但牺牲静态契约（否决）。
+- **运行参数塞进 ResolvedTable**: 表结构与写配置混为一体，职责不纯（否决，选独立 WriteRuntime）。
+
+### 模块命名以代码实现为准
+
+**Decision:** 模块目录定为 `src/write_strategies/`，策略文件带 `_strategy` 后缀（`single_insert_strategy.py` 等），注册表独立为 `registry.py`；测试目录 `tests/write_strategies/`。
+
+**Rationale:**
+- 原始设计文档 §4 曾写 `src/strategies/` + 无后缀文件名，与落地代码不一致。核对后以代码实现为权威，回填原始设计文档（design v1.11），避免文档漂移。
+- `write_strategies` 前缀避免与潜在的 read/query 策略混淆，`_strategy` 后缀与其余模块命名风格一致。
+
+### schemaless 校验期拦截
+
+**Decision:** `mode: schemaless` 在 `config_parser` 校验阶段（R-PAR-017，`WriteConfig.reject_schemaless`）直接拒绝并报 "not yet implemented"；`SchemalessWriteStrategy.get_sampler_script()` 抛 `NotImplementedError` 作为二次兜底。
+
+**Rationale:**
+- 失败尽量前移到解析期，让配置错误在生成任何产物前暴露。
+- 策略层保留 `NotImplementedError`，防止绕过校验的调用路径静默产出错误 JMX。
+
 ## Risks / Trade-offs
 
 ### Risk: 策略状态管理

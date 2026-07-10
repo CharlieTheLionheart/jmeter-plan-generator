@@ -418,6 +418,7 @@ def jdbc_sampler_element(
     enabled: bool = True,
     guiclass: str = "TestBeanGUI",
     testclass: str = "JDBCSampler",
+    use_prepared: bool = False,
 ) -> Tuple[ET.Element, ET.Element]:
     """Create a ``<JDBCSampler>`` element and its paired ``<hashTree/>``.
 
@@ -452,6 +453,11 @@ def jdbc_sampler_element(
         Display name in the JMeter tree (defaults to ``name``).
     enabled:
         Whether the element is enabled.
+    use_prepared:
+        Whether the JMeter GUI treats the statement as prepared. Default
+        ``False`` preserves the historical XML shape; set ``True`` from
+        ``WriteStrategy.get_config("usePrepared")`` when the strategy
+        drives sampler generation.
     """
     all_props: List[ET.Element] = [
         string_prop("dataSource", data_source),
@@ -465,6 +471,10 @@ def jdbc_sampler_element(
         string_prop("resultSetMaxRows", result_set_max_rows),
         string_prop("resultSetHandler", result_set_handler),
     ]
+    # 仅在策略/上游明示 use_prepared=True 时写出 usePrepared；
+    # 默认 False 保持与既有 jmx_skeleton_generator 输出字节相同。
+    if use_prepared:
+        all_props.append(string_prop("usePrepared", "true"))
     if props:
         all_props.extend(props)
 

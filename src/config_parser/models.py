@@ -331,6 +331,16 @@ class WriteConfig(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def reject_schemaless(self) -> "WriteConfig":
+        """R-PAR-017: schemaless write mode is deferred (T2), rejected at parse."""
+        if self.mode == "schemaless":
+            raise ValueError(
+                "schemaless write mode is not yet implemented (deferred to T2); "
+                "a future DCR will drive its design and implementation"
+            )
+        return self
+
 
 class QueryConfig(BaseModel):
     """Query workload configuration."""

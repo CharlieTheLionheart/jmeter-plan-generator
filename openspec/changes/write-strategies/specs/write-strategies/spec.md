@@ -79,8 +79,21 @@ The system SHALL implement a strategy for batch PreparedStatement write operatio
 - **THEN** `requires_param_setup()` SHALL return `True`
 - **THEN** `get_sampler_script()` SHALL return Groovy batch execution code
 
+#### Scenario: Literal-output fixture for default batch_prepared sampler script
+- **WHEN** calling `get_sampler_script(ResolvedTable(fqn='iot_monitor.sensor_readings', columns=['ts','device_id','val']), batch_lines=10)` on the default `BatchPreparedStatementStrategy()`
+- **THEN** the output SHALL equal byte-for-byte the file at `./fixtures/batch_prepared_sampler.groovy`
+
 ### Requirement: Implement SchemalessWriteStrategy (deferred)
 > **Note**: Schemaless write mode (T2) is deferred. The `SchemalessWriteStrategy` class exists as a placeholder skeleton but is not functional. If `schemaless` mode is configured in `test_cfg.yaml`, the generator SHALL reject it during validation with an error message indicating the feature is not yet implemented. A future DCR will drive the full design and implementation of this feature.
+
+#### Scenario: Reject schemaless at config validation
+- **WHEN** `test_cfg.yaml` sets a `write_config` entry to `mode: schemaless`
+- **THEN** `config_parser` SHALL raise during parsing (rule R-PAR-017)
+- **THEN** the error message SHALL indicate the feature is "not yet implemented"
+
+#### Scenario: Strategy-level fallback guard
+- **WHEN** `SchemalessWriteStrategy.get_sampler_script()` is called
+- **THEN** it SHALL raise `NotImplementedError` as a second line of defense
 
 ### Requirement: Refactor direct-insert-write to use strategies
 The system SHALL refactor existing direct INSERT logic to use the strategy pattern.

@@ -14,6 +14,7 @@ from utils.xml_helpers import (
     jsr223_sampler_element,
     thread_group_element,
 )
+from write_strategies import get_strategy
 
 
 # Groovy scripts for batch_prepared JSR223PreProcessor (数据准备)
@@ -118,10 +119,18 @@ def generate_write_thread_groups(
 
     for wc in write_config:
         if wc.mode not in ("single_prepared", "batch_prepared"):
+            # 关系表 batch insert 由 SetupThreadGroup 路径处理；这里仅管 prepared modes。
             continue
 
         fqn = wc.tbl_name.lower()
         template = prepared_templates.get(fqn, f"-- placeholder for {wc.tbl_name}")
+
+        # 通过策略注册表决定 sampler 类型与 scriptLanguage；
+        # 单插入/批插入/无模式继续交给 SetupThreadGroup 路径，write_groups 不消费。
+        strategy = get_strategy(wc.mode)
+        sampler_type = strategy.get_sampler_type()
+        script_language = strategy.get_config("scriptLanguage", "groovy")
+        use_prepared = bool(strategy.get_config("usePrepared", False))
 
         tg, tg_hash = thread_group_element(
             name=f"Write-{wc.tbl_name}",
@@ -140,18 +149,20 @@ def generate_write_thread_groups(
             testname="Constant Throughput Timer",
         )
 
-        if wc.mode == "batch_prepared":
-            # batch_prepared 使用 JSR223Sampler (设计文档 §3.6)
+        if sampler_type == "JSR223Sampler":
+            # batch_prepared 使用 JSR223Sampler + 预置 Groovy 体（设计文档 §3.6）；
+            # 预置体由 strategy 注册表之外的 jmx_skeleton_generator 维护，
+            # 体现 write_groups 与 strategy 的协作边界。
             preprocessor, preproc_hash = jsr223_preprocessor_element(
                 name=f"batch_prepared-{wc.tbl_name}-pre",
                 script=BATCH_PREPARED_PREPROCESSOR_SCRIPT,
-                script_language="groovy",
+                script_language=script_language,
                 testname=f"[Write] {wc.tbl_name} - batch_prepared preprocessor",
             )
             sampler, samp_hash = jsr223_sampler_element(
                 name=f"Write-{wc.tbl_name}",
                 script=BATCH_PREPARED_SAMPLER_SCRIPT,
-                script_language="groovy",
+                script_language=script_language,
                 testname=f"[Write] {wc.tbl_name}",
             )
             results.extend([
@@ -159,12 +170,13 @@ def generate_write_thread_groups(
                 preprocessor, preproc_hash, sampler, samp_hash,
             ])
         else:
-            # single_prepared / single_insert / batch_insert 等使用 JDBCSampler
+            # single_prepared 走 JDBCSampler；usePrepared 由 strategy 提供。
             sampler, samp_hash = jdbc_sampler_element(
                 name=f"Write-{wc.tbl_name}",
                 query=template,
                 data_source="${db_url}",
                 query_type="Prepared Update Statement",
+                use_prepared=use_prepared,
                 testname=f"[Write] {wc.tbl_name}",
             )
             results.extend([tg, tg_hash, timer, timer_hash, sampler, samp_hash])

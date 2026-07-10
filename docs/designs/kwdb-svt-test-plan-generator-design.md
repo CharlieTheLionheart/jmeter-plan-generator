@@ -394,6 +394,7 @@ load_yaml(path: str | Path) → dict[str, Any]
 | R-PAR-014 | `primary_tags` 中 `nullable` 必须为 `false` | ERROR |
 | R-PAR-015 | `nullable=false` 时 `null_rate` 必须为 `0.0`；`nullable=true` 时 `null_rate` 允许为 `0.0` | ERROR |
 | R-PAR-016 | `batch_lines` 须为大于等于 1 的正整数；`single_insert` 模式下须严格等于 `1` | ERROR |
+| R-PAR-017 | `mode: schemaless` 在校验阶段直接拒绝（T2 暂未实现），报"not yet implemented" | ERROR |
 
 ### 3.3 列名生成器 (`column_namer.py`)
 
@@ -1157,9 +1158,31 @@ vars.put("local_device_start", String.valueOf(localDeviceStart));
 <intProp name="duration">${__P(test_duration,604800)}</intProp>
 ```
 
-### 3.7 写入策略层 (`strategies/`)
+### 3.7 写入策略层 (`write_strategies/`)
 
 采用 **策略模式** 实现写入方式的插件化扩展。
+
+#### 值对象
+
+策略入参拆为两个 frozen dataclass（`write_strategies/models.py`）：`ResolvedTable` 承载表结构（跨运行稳定），`WriteRuntime` 承载写运行期旋钮（随 `write_config` 条目变化）。
+
+```python
+from dataclasses import dataclass, field
+from typing import Any, Mapping, Sequence
+
+@dataclass(frozen=True)
+class ResolvedTable:
+    fqn: str                                      # "db.table"，小写
+    columns: Sequence[str]                        # 建表字段顺序
+    table_config: Mapping[str, Any] = field(default_factory=dict)
+
+@dataclass(frozen=True)
+class WriteRuntime:
+    device_per_thread: int = 1
+    ms_step: int = 1000
+    device_start: int = 0
+    batch_seq_init: int = 0
+```
 
 #### 接口定义
 
@@ -1185,7 +1208,7 @@ class WriteStrategy(ABC):
     def generate_query(
         self,
         table: ResolvedTable,
-        batch_lines: int,
+        batch_lines: int = 1,
         insert_template: str | None = None,
     ) -> str:
         """生成单批次写入 SQL 模板，含 ? 占位符。
@@ -1210,12 +1233,17 @@ class WriteStrategy(ABC):
         ...
 
     @abstractmethod
-    def get_preprocessor_code(self, table: ResolvedTable, batch_lines: int) -> str:
+    def get_preprocessor_code(
+        self,
+        table: ResolvedTable,
+        batch_lines: int,
+        runtime: WriteRuntime,
+    ) -> str | None:
         """返回 JSR223PreProcessor 脚本（准备当前批次数据）"""
         ...
 
     @abstractmethod
-    def get_sampler_script(self, table: ResolvedTable, batch_lines: int) -> str | None:
+    def get_sampler_script(self, table: ResolvedTable, batch_lines: int = 1) -> str | None:
         """返回 JSR223Sampler 脚本；仅当 get_sampler_type() == 'JSR223Sampler' 时非空"""
         ...
 ```
@@ -1223,7 +1251,7 @@ class WriteStrategy(ABC):
 #### single_insert / batch_insert 实现
 
 ```python
-# strategies/single_insert.py
+# write_strategies/single_insert_strategy.py
 class SingleInsertStrategy(WriteStrategy):
     """单条直接 INSERT 语句"""
     mode_name = "single_insert"
@@ -1247,7 +1275,7 @@ class SingleInsertStrategy(WriteStrategy):
     def requires_param_setup(self):
         return True
 
-    def get_preprocessor_code(self, table, batch_lines):
+    def get_preprocessor_code(self, table, batch_lines, runtime):
         # 准备单条 INSERT 的参数列表
         return "..."
 
@@ -1255,7 +1283,7 @@ class SingleInsertStrategy(WriteStrategy):
         return None
 
 
-# strategies/batch_insert.py
+# write_strategies/batch_insert_strategy.py
 class BatchInsertStrategy(WriteStrategy):
     """批量直接 insert: insert into ... values (...),(...),..."""
     mode_name = "batch_insert"
@@ -1278,7 +1306,7 @@ class BatchInsertStrategy(WriteStrategy):
     def requires_param_setup(self):
         return True
 
-    def get_preprocessor_code(self, table, batch_lines):
+    def get_preprocessor_code(self, table, batch_lines, runtime):
         # 准备批量 INSERT 的参数列表
         return "..."
 
@@ -1289,7 +1317,7 @@ class BatchInsertStrategy(WriteStrategy):
 #### single_prepared / batch_prepared 实现
 
 ```python
-# strategies/single_prepared.py
+# write_strategies/single_prepared_strategy.py
 class SinglePreparedStatementStrategy(WriteStrategy):
     mode_name = "single_prepared"
 
@@ -1314,7 +1342,7 @@ class SinglePreparedStatementStrategy(WriteStrategy):
     def requires_param_setup(self):
         return True
 
-    def get_preprocessor_code(self, table, batch_lines):
+    def get_preprocessor_code(self, table, batch_lines, runtime):
         # 准备 PreparedStatement 参数
         return "..."
 
@@ -1322,7 +1350,7 @@ class SinglePreparedStatementStrategy(WriteStrategy):
         return None
 
 
-# strategies/batch_prepared.py
+# write_strategies/batch_prepared_strategy.py
 class BatchPreparedStatementStrategy(WriteStrategy):
     """批量 PreparedStatement: 使用 JSR223Sampler 手写 JDBC batch"""
     mode_name = "batch_prepared"
@@ -1350,7 +1378,7 @@ class BatchPreparedStatementStrategy(WriteStrategy):
         # 由 JSR223PreProcessor 准备 batchRows
         return True
 
-    def get_preprocessor_code(self, table, batch_lines):
+    def get_preprocessor_code(self, table, batch_lines, runtime):
         # 生成 §3.6「JSR223Sampler（batch_prepared）」中的 JSR223PreProcessor 脚本
         return "..."
 
@@ -1366,7 +1394,7 @@ class BatchPreparedStatementStrategy(WriteStrategy):
 #### schemaless 实现（预留，暂不实现）
 
 ```python
-# strategies/schemaless.py
+# write_strategies/schemaless_strategy.py
 class SchemalessWriteStrategy(WriteStrategy):
     mode_name = "schemaless"
     # kaiwudb schemaless line protocol format
@@ -1387,13 +1415,16 @@ class SchemalessWriteStrategy(WriteStrategy):
         return {"scriptLanguage": "groovy"}
 
     def requires_param_setup(self):
-        return True
+        return False
 
-    def get_preprocessor_code(self, table, batch_lines):
-        return "..."
+    def get_preprocessor_code(self, table, batch_lines, runtime):
+        return None
 
-    def get_sampler_script(self, table, batch_lines):
-        return "..."
+    def get_sampler_script(self, table, batch_lines=1):
+        # ⚠️ 占位：schemaless 未实现，二次兜底（主拦截在 config_parser R-PAR-017）
+        raise NotImplementedError(
+            "Schemaless write strategy is not yet implemented (T2)"
+        )
 ```
 
 #### 策略注册表
@@ -1458,14 +1489,16 @@ kwjdbc-svt/
 │   │   ├── io.py
 │   │   ├── orchestrator.py
 │   │   └── reference.py
-│   ├── strategies/                 # 写入策略
+│   ├── write_strategies/           # 写入策略
 │   │   ├── __init__.py
 │   │   ├── base.py                 # WriteStrategy ABC
-│   │   ├── batch_insert.py         # 批量直接 insert 策略
-│   │   ├── batch_prepared.py       # 批量 PreparedStatement 策略
-│   │   ├── schemaless.py           # 无模式写入策略
-│   │   ├── single_insert.py        # 单条直接 insert 策略
-│   │   └── single_prepared.py      # 单条 PreparedStatement 策略
+│   │   ├── models.py               # ResolvedTable / WriteRuntime 值对象
+│   │   ├── registry.py             # STRATEGY_REGISTRY + get_strategy
+│   │   ├── batch_insert_strategy.py     # 批量直接 insert 策略
+│   │   ├── batch_prepared_strategy.py   # 批量 PreparedStatement 策略
+│   │   ├── schemaless_strategy.py       # 无模式写入策略（预留）
+│   │   ├── single_insert_strategy.py    # 单条直接 insert 策略
+│   │   └── single_prepared_strategy.py  # 单条 PreparedStatement 策略
 │   └── utils/
 │       ├── __init__.py
 │       ├── val_range_parser.py     # val_range 表达式解析
@@ -1483,14 +1516,16 @@ kwjdbc-svt/
 │   ├── prepared_insert_template/
 │   │   ├── __init__.py
 │   │   └── test_generator.py
-│   └── test_strategies/
+│   └── write_strategies/
 │       ├── __init__.py
 │       ├── test_base.py
-│       ├── test_batch_insert.py
-│       ├── test_batch_prepared.py
-│       ├── test_schemaless.py
-│       ├── test_single_insert.py
-│       └── test_single_prepared.py
+│       ├── test_registry.py
+│       ├── test_batch_insert_strategy.py
+│       ├── test_batch_prepared_strategy.py
+│       ├── test_schemaless_strategy.py
+│       ├── test_single_insert_strategy.py
+│       ├── test_single_prepared_strategy.py
+│       └── test_equivalence.py
 ├── openspec/
 │   └── changes/
 │       └── prepared-insert-template/  # prepared_insert_template 变更记录
@@ -1900,7 +1935,7 @@ CLI 统一使用 `logging` 模块，通过 `-v/-vv` 控制日志级别。
 | 单元测试 | `models.py`, `column_namer.py`, `utils/` | 90%+ |
 | 单元测试 | `parser.py` (含边界 case 校验) | 85%+ |
 | 单元测试 | `seed_gen.py` (每种 val_range 类型) | 85%+ |
-| 单元测试 | `strategies/` 各策略 | 80%+ |
+| 单元测试 | `write_strategies/` 各策略 | 80%+ |
 | 集成测试 | `ddl_generator.py` (对比预期 SQL) | 80%+ |
 | 集成测试 | `jmx_builder.py` (验证 XML 合法性) | 80%+ |
 | E2E | 端到端生成完整 `.jmx` 并用 `jmeter -n -t plan.jmx --help` 验证语法 | 冒烟 |
@@ -1917,7 +1952,7 @@ CLI 统一使用 `logging` 模块，通过 `-v/-vv` 控制日志级别。
 
 只需三步：
 
-1. 在 `strategies/` 下新建文件实现 `WriteStrategy`
+1. 在 `write_strategies/` 下新建文件实现 `WriteStrategy`
 2. 在 `STRATEGY_REGISTRY` 注册
 3. （可选）在 `WriteMode` 的 Literal 类型中添加新枚举值
 
@@ -1967,7 +2002,7 @@ TYPE_MAP = {
 | 2 | `column_namer.py` | 列名生成功能 |
 | 3 | `seed_gen.py` | 种子文件生成（不含 ref 外键） |
 | 4 | `ddl_generator.py` | DDL 语句生成 |
-| 5 | `strategies/base.py` + `strategies/single_insert.py` + `strategies/batch_insert.py` | 单条/批量直接 INSERT |
+| 5 | `write_strategies/base.py` + `write_strategies/single_insert_strategy.py` + `write_strategies/batch_insert_strategy.py` | 单条/批量直接 INSERT |
 | 6 | `jmx_builder.py` | JMX 文件生成（单表单查询） |
 | 7 | `main.py` | CLI 整合 + 端到端测试 |
 
@@ -1981,7 +2016,7 @@ TYPE_MAP = {
 | 9 | `seed_gen.py` | `ref:` 外键种子联动 |
 | 10 | `prepared_insert_template_generator.py` | PreparedStatement INSERT 模板生成（条件执行） |
 | 11 | `jmx_builder.py` | 多表写入 + 多查询并发线程组 |
-| 12 | `strategies/single_prepared.py` + `strategies/batch_prepared.py` | PreparedStatement 策略 |
+| 12 | `write_strategies/single_prepared_strategy.py` + `write_strategies/batch_prepared_strategy.py` | PreparedStatement 策略 |
 | 13 | `jmx_builder.py` | ConstantThroughputTimer 配置 |
 | 14 | `jmx_builder.py` | 多端设备号计算 BeanShell 代码 |
 
@@ -1989,12 +2024,12 @@ TYPE_MAP = {
 
 | 步骤 | 模块 | 内容 |
 |------|------|------|
-| 15 | `strategies/schemaless.py` | **暂不实现，等待后续 DCR** |
+| 15 | `write_strategies/schemaless_strategy.py` | **暂不实现，等待后续 DCR** |
 | 16 | 全模块 | 测试覆盖率达 80%+ |
 | 17 | `main.py` | `-v/-vv` 日志 + 错误优雅退出 |
 | 18 | 全模块 | 类型注解补全 + ruff 静态检查 |
 
-> **注意**：`schemaless`（无模式写入 T2）当前版本不实现。代码中虽已预留 `SchemalessWriteStrategy` 骨架（`strategies/schemaless.py`），但其所有方法均为空实现或返回占位值。若在 `test_cfg.yaml` 中配置 `mode: schemaless`，生成器将在校验阶段主动报错，拒绝生成测试计划。后续由独立 DCR 推动该功能的完整设计与实现。
+> **注意**：`schemaless`（无模式写入 T2）当前版本不实现。代码中虽已预留 `SchemalessWriteStrategy` 骨架（`write_strategies/schemaless_strategy.py`），但其为占位实现，`get_sampler_script()` 直接抛 `NotImplementedError`。若在 `test_cfg.yaml` 中配置 `mode: schemaless`，`config_parser` 在校验阶段（R-PAR-017）即主动报错，拒绝生成测试计划；策略层的 `NotImplementedError` 作为二次兜底。后续由独立 DCR 推动该功能的完整设计与实现。
 
 ---
 
@@ -2025,6 +2060,7 @@ TYPE_MAP = {
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
+| 1.11 | 2026-07-10 | liujin | **write-strategies 核对回填**：§3.2 新增 R-PAR-017（`config_parser` 校验阶段拒绝 `mode: schemaless`，报 "not yet implemented"），代码在 `WriteConfig` 加 `reject_schemaless` validator；§3.7/§4/§7/§8/§10 将模块名由 `strategies/` 统一回填为代码实现的 `write_strategies/`，文件加 `_strategy` 后缀并补 `registry.py` / `models.py`，测试目录 `tests/write_strategies/`；**接口签名改回显式参数**：新增 `ResolvedTable` / `WriteRuntime`（`write_strategies/models.py`）值对象，`generate_query(table, batch_lines, insert_template)`、`get_preprocessor_code(table, batch_lines, runtime)`、`get_sampler_script(table, batch_lines)` 取代原 `**context`；prepared 策略恢复无状态（模板经 `insert_template` 形参传入，不再构造器注入）；§3.7 schemaless 代码块与 §10 注释同步为实际实现（`get_sampler_script` 抛 `NotImplementedError`，`requires_param_setup=False`，`get_preprocessor_code` 返回 `None`），校验期拦截为主、策略层抛错为兜底 |
 | 1.10 | 2026-06-23 | liujin | **补充 PreparedInsertTemplateGenerator 设计**：§4 目录结构新增 `prepared_insert_template_generator.py` 文件引用及对应测试文件；§10 MVP 实施路线图 Phase 2 新增步骤 10，添加 PreparedStatement INSERT 模板生成模块开发任务；修订历史新增本版本说明 |
 | 1.9 | 2026-06-22 | liujin | **按 design-review-2026-06-11 修正问题 10**：`batch_prepared` 模式改为使用 `JSR223Sampler` 手写 JDBC batch prepared statement；§3.6 线程组编排图将 `batch_prepared` 示例改为 `JSR223Sampler`，并增加采样器类型说明；§3.6 新增「JSR223Sampler（batch_prepared）」小节，给出 XML 模板、PreProcessor 数据准备脚本、Sampler batch 执行脚本及关键设计要点；§3.6 写入线程组 `JSR223PreProcessor` 补充 `batch_prepared` 模式的数据传递说明；§3.7 扩展 `WriteStrategy` 接口，新增 `get_sampler_type()` 与 `get_sampler_script()`，重写 `BatchPreparedStatementStrategy` 实现 |
 | 1.8 | 2026-06-18 | liujin | 按 design-review-2026-06-11 第 13 项，在 §3.6「关键组件生成」中新增「多表写入线程数与变量隔离」小节，明确当前版本要求各表写入线程组使用相同 `num_threads`，由生成器校验一致性，避免 JMeter 全局同名变量冲突；后续版本支持按表独立 `num_threads` 时推荐在线程组内使用 `stringProp` 常量值或为每张表生成独立变量名 |

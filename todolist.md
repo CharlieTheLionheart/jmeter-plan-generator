@@ -60,7 +60,7 @@ shared-memory-initializer ❓ 需确认
 **文件**: `src/jmx_skeleton_generator/generators/skeleton.py`
 **描述**: 设计文档 §2.2 线程组编排要求两个 SetupThreadGroup：(1) DDL 执行 + 关系表初始化；(2) 初始化共享内存种子区（单线程从列种子文件拼接行种子总集，放入 props 全局共享内存）。当前只实现了第一个。
 **修复方向**: 在 skeleton.py 中添加第二个 SetupThreadGroup，参考设计文档 §5.2 阶段 1 的 Groovy 脚本，装配行种子总集并通过 `props.put("__SHARED_MEM_${tableName}", rows)` 存入全局共享内存。
-> **暂不修复原因**: 此 SetupThreadGroup 的 JSR223Sampler 需要依赖 `shared-memory-initializer` 模块提供行种子总集装配逻辑，而该模块尚未实现。此问题需等 `shared-memory-initializer` 模块实现完成后再补充。
+> **状态（2026-07-10 复核）**: ✅ 已闭环。`shared-memory-initializer` 模块已实现，`src/jmx_skeleton_generator/generators/shared_memory_setup.py` 中的 `generate_shared_memory_setup_thread_group` 已挂载到 `skeleton.py:104`，行种子总集通过 `props.put("__SHARED_MEM_${tableName}", rows)` 写入全局共享内存。本条不再作为 blocker。
 
 ---
 
@@ -182,9 +182,9 @@ shared-memory-initializer ❓ 需确认
 第5层（应用层）:                                                          │
 ┌──────────────────┐ ┌──────────────┐ ┌────────────────────┐ ┌─────────┐│
 │ direct-insert-   │ │ write-       │ │ query-             │ │through- ││
-│ write            │ │ strategies   │ │ functionality      │ │put-     ││
-│ ❌ 未实现        │ │ ❌ 未实现    │ │ ❌ 未实现          │ │control  ││
-│                  │ │              │ │                    │ │❌ 未实现││
+│ write ✅ 已实现  │ │ strategies   │ │ functionality      │ │put-     ││
+│ (48/50 tasks)   │ │ ❌ 未实现    │ │ ❌ 未实现          │ │control  ││
+│ /opsx:verify ✅  │ │ ← 下一步    │ │                    │ │❌ 未实现││
 └──────────────────┘ └──────────────┘ └────────────────────┘ └─────────┘│
                                         │                                  │
 ┌────────────────────────────────────────┴────────────────────────────────┐│
@@ -201,15 +201,15 @@ shared-memory-initializer ❓ 需确认
 utils	✅ 已实现	xml_helpers, val_range_parser
 config-parser	✅ 已实现	严重-1 所在
 column-namer	✅ 已实现	
-ddl-generator	✅ 已实现	严重-4, 严重-5 所在
+ddl-generator	✅ 已实现	(严重-4 已闭环；严重-5 仍在)
 seed-data-generator	✅ 已实现	
 shared-memory-initializer	✅ 已实现
 jdbc-datasource	✅ 已实现	
 prepared-insert-template	✅ 已实现	
 jmx-skeleton-generator	✅ 已实现	
-direct-insert-write	❌ 未实现	
-write-strategies	❌ 未实现	
+direct-insert-write	✅ 已实现	2026-07-09 /opsx:verify 通过，48/50 tasks	
+write-strategies	❌ 未实现	← 下一步，解严重-1 / 严重-5	
 query-functionality	❌ 未实现	
 throughput-control	❌ 未实现	
 multi-end-coordination	❌ 未实现	
-main-entry	❌ 未实现	
+main-entry	❌ 未实现	殿后，所有上层就绪后才进	

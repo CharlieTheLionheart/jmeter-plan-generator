@@ -291,6 +291,15 @@ def test_write_num_threads_inconsistent(tmp_path: Path) -> None:
         parse_test_cfg_yaml(path)
 
 
+def test_schemaless_mode_rejected(tmp_path: Path) -> None:
+    """R-PAR-017: schemaless write mode is deferred and rejected at parse."""
+    data = _valid_cfg()
+    data["write_config"][0]["mode"] = "schemaless"
+    path = _write_yaml(tmp_path, "test_cfg.yaml", data)
+    with pytest.raises(ConfigParserError, match="not yet implemented"):
+        parse_test_cfg_yaml(path)
+
+
 def test_query_placeholder_unbound(tmp_path: Path) -> None:
     data = _valid_cfg()
     data["query_config"] = [{"query": "SELECT * FROM t WHERE LIMIT ?", "num_threads": 1}]
