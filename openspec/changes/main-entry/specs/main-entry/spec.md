@@ -90,13 +90,13 @@ The system SHALL write the final `.jmx` file and seed files to the configured ou
 
 #### Scenario: Output JMX file lands in output directory
 - **WHEN** the pipeline completes successfully
-- **THEN** the system SHALL write `test_plan.jmx` (or the configured name) to the output directory
-- **THEN** the file SHALL be valid XML readable by JMeter 5.5+
+- **THEN** the system SHALL write `test_plan.jmx` to the output directory
+- **THEN** the file SHALL be valid XML (verifiable via `xml.etree.ElementTree.parse`)
 
 #### Scenario: Output seed directory structure
 - **WHEN** the pipeline completes successfully
 - **THEN** the system SHALL create `seeds/{database_name}/{table_name}/` subdirectories in the output directory
-- **THEN** each subdirectory SHALL contain the column seed files generated for that table
+- **THEN** each subdirectory SHALL contain the column seed files generated for that table, named `{index}_{col_name}.csv`
 
 #### Scenario: Overwrite existing output files
 - **WHEN** the output directory already contains `test_plan.jmx` or `seeds/` entries

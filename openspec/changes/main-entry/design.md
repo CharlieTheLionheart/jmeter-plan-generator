@@ -118,6 +118,70 @@ KaiwuDB SVT 测试计划生成器已经通过多个 openspec change 拆分解耦
 - **各模块自行调用 sys.exit**: 破坏模块可测试性
 - **不捕获异常，直接抛出堆栈**: 不利于终端用户体验
 
+### 与现有 `JMXSkeletonGenerator` 的协作边界
+
+**Decision:** `main.py` 不重复 `JMXSkeletonGenerator`（[src/jmx_skeleton_generator/generators/skeleton.py](../../../../src/jmx_skeleton_generator/generators/skeleton.py)）的 JMX 元素组装逻辑。后者已实现：
+- `TestPlan` + `UserDefinedVariables` + `JDBCDataSource` + `DDLSetupThreadGroup` + `SharedMemorySetupThreadGroup` + `WriteThreadGroups` + `QueryThreadGroups` 顺序拼装
+- `assemble()` 调 `JMXAssembler` + `JMXWriter.write(output_dir)` 输出
+
+`main.py` 仅做：
+1. CLI 参数解析（argparse）
+2. YAML 配置加载（`config_parser.parse_test_model_yaml` / `parse_test_cfg_yaml`）
+3. 列名生成（`ColumnNamer`）
+4. 种子文件生成（`seed_data_generator.generate_seeds`）
+5. DDL 语句生成（`ddl_generator.generate`）
+6. Prepared Insert 模板生成（条件：仅当 write_config 含 prepared mode）
+7. 调 `JMXSkeletonGenerator(test_config, ddl_statements, prepared_templates, seed_csv_paths, output_dir).generate()` 获取 .jmx 路径
+8. 退出码映射 + 异常集中捕获
+
+**Rationale:**
+- 与 `kwjdbc_svt-main-entry` 任务粒度修复（review §5 Recommendation）一致：main.py 仅做 CLI/编排/错误处理三大职责；JMX 元素装配下放到 `JMXSkeletonGenerator` 已有接口
+- 避免双轨 JMX assembler 实现漂移
+- 模块调用顺序由 `JMXSkeletonGenerator.generate()` 隐式约束；main.py 只需传正确输入
+
+**Alternatives considered:**
+- **main.py 重新拼接所有 generator 模块**: 与 JMXSkeletonGenerator 重复，违反 review §5 子模块边界
+- **JMXSkeletonGenerator 改名为 JmxBuilder 并迁入 main.py**: 越权（多层依赖）
+
+### 收敛 review §1 Open Questions
+
+**Decision:**
+- **Q1 文件名**：固定 `test_plan.jmx`（不开 CLI 配置；用户若需改名可事后 `mv`），简化 spec
+- **Q2 mode 校验**：依赖 `config_parser` 的 Pydantic 校验（`R-PAR-016`/`R-PAR-017`），main.py 不重复校验
+- **Q3 种子目录层级**：`seeds/{db_name}/{table_name}/`（与既有 `seed_data_generator.__init__.py:10` 命名约定一致），不加额外层级
+
+**Rationale:**
+- 文件名 / mode 校验 / 目录层级三个 Open Questions 都有现成下游约定（CLI 后 mv / config_parser R-PAR-* / seed_data_generator 既有命名）
+- 不在 main.py 引入新概念，降低 review 与测试面
+
+**Alternatives considered:**
+- **三个 Q 各自新增 CLI flag / 校验路径**: 增加 review 面与测试负担
+
+### 收敛 review §3 JMX 合法性验证方式
+
+**Decision:** JMX 合法性通过 `xml.etree.ElementTree.parse()` 做 XML 格式校验（spec §"Output JMX file lands in output directory" 场景已覆盖）；不引入 JMeter 进程作为验证依赖（CI 跑不起 JMeter）。
+
+**Rationale:**
+- CI 环境无 JMeter runtime；XML 格式校验是 lightweight 验证
+- 设计文档 §6.2 已给出"valid XML readable by JMeter 5.5+" 表述；XML well-formed 是最小有效检查
+
+**Alternatives considered:**
+- **用 JMeter headless 验证**: 跨平台依赖过重，超出本模块 scope
+
+### 错误处理：异常集中捕获 vs 模块自管
+
+**Decision (沿用既有决策):** `main()` 集中捕获所有业务异常与未知异常；各模块只负责抛出对应异常类型（见既有 §"异常在 `main()` 中集中捕获"）。
+
+**新增增强:** `main(argv=None)` 签名允许 programmatic 注入（测试用），默认行为仍捕获异常并返回 exit code。
+
+**Rationale:**
+- Programmatic 友好：单元测试用 `main(["test_model.yaml", "test_cfg.yaml"])` 直接传 argv，不污染 `sys.argv`
+- 与既有 §"Programmatic invocation returns exit code" 场景一致
+
+**Alternatives considered:**
+- **`main()` 强制捕获**: 阻止 pytest.raises 路径
+- **`main()` 强制抛出**: 破坏 programmatic invocation（review §1 第 5 点）
+
 ## Risks / Trade-offs
 
 ### Risk: 模块接口变动导致 main.py 频繁修改
