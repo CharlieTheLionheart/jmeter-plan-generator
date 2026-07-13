@@ -190,14 +190,16 @@ shared-memory-initializer ✅ 已实现
 │                 │ │              │ │                    │ │542 pass ││
 └──────────────────┘ └──────────────┘ └────────────────────┘ └─────────┘│
                                         │                                  │
-┌────────────────────────────────────────┴────────────────────────────────┐│
-│  multi-end-coordination ──────────────────────────────────────────────┐ │
-│  ❌ 未实现  ← 下一步                                                  │ │
-└────────────────────────────────────────────────────────────────────────┘│
+┌───────────────────────────────────────────────────────────────────────┐│
+│  multi-end-coordination ──────────────────────────────────────────┐ ││
+│  ✅ 已实现 (2026-07-13 merge)                                   │ ││
+│  review §0-§5 全 ✅ ; 556 passed                                │ ││
+│  A: UDV ${__P(...)} ; B: helper 单源 ; C: 流水线 NO-OP 文档化  │ ││
+└───────────────────────────────────────────────────────────────────┘ ││
                                         │                                   │
 第6层:                         ┌─────────┴─────────┐                        │
 │  main-entry ─────────────────│                   │────────────────────┘  │
-│  ❌ 未实现                   │                   │                        │
+│  ❌ 未实现  ← 下一步，殿后   │                   │                        │
 └──────────────────────────────┴───────────────────┴───────────────────────┘
 汇总
 模块	状态	备注
@@ -214,5 +216,5 @@ direct-insert-write	✅ 已实现	2026-07-09 /opsx:verify 通过，48/50 tasks
 write-strategies	✅ 已实现	2026-07-13 /opsx:verify 通过（490 passed），review.md §2/§3/§4 翻 ✅；严重-1 / 严重-5 闭环	
 query-functionality	✅ 已实现	2026-07-13（851b934）；520 passed；review §1-§5 全 ✅；decision 18 改写（throughput_var → throughput-control 字面数值）	
 throughput-control	✅ 已实现	2026-07-13 merge；542 passed；review §1-§5 全 ✅；D1-D5 全部落地（写 UDV ${write_throughput}=120 / 查 字面数值 / 多端 NO-OP / 模块路径 src/throughput_control/ / config_parser 校验 ge=0 → gt=0）	
-multi-end-coordination	❌ 未实现	← 下一步，依赖 throughput-control
-main-entry	❌ 未实现	殿后，所有上层就绪后才进
+multi-end-coordination	✅ 已实现	2026-07-13 merge；556 passed；review §0-§5 全 ✅；A/B/C 全落地（UDV ${__P(...)} / single-source helper / 流水线 NO-OP 文档化 docs/multi-end-pipeline-contract.md）	
+main-entry	❌ 未实现	← 下一步，殿后。所有上层（5 个模块）已就绪

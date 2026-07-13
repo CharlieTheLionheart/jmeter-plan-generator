@@ -6,6 +6,7 @@ from typing import Dict, List
 
 from config_parser.models import WriteConfig
 from throughput_control import generate_write_timer
+from utils.preprocessor_helpers import all_groovy_decls
 from utils.xml_helpers import (
     empty_hash_tree,
     hash_tree,
@@ -17,8 +18,12 @@ from utils.xml_helpers import (
 from write_strategies import get_strategy
 
 
-# Groovy scripts for batch_prepared JSR223PreProcessor (数据准备)
-BATCH_PREPARED_PREPROCESSOR_SCRIPT = r"""// JSR223PreProcessor (groovy): batch_prepared 当前批次数据准备
+# Groovy body for batch_prepared JSR223PreProcessor (data preparation).
+# The helper declarations (calculateLocalDeviceStart + others) are
+# prepended by :func:`build_batch_prepared_preprocessor_script` so
+# both this script and single_prepared_strategy share one source of
+# device-number arithmetic (review §"单一设备号计算 helper" 落地).
+_BATCH_PREPARED_PREPROCESSOR_BODY = r"""// JSR223PreProcessor (groovy): batch_prepared 当前批次数据准备
 def tableName = vars.get("table_name")
 def sharedRows = props.get("__SHARED_MEM_${tableName}") as ArrayList<Object[]>
 
@@ -38,7 +43,7 @@ def msStep = Long.parseLong(vars.get("ms_step") ?: "1000")
 def threadNum = ctx.getThreadNum()
 def deviceStart = Long.parseLong(vars.get("device_start") ?: "1")
 def devicePerThread = Integer.parseInt(vars.get("device_per_thread") ?: "1")
-def localDeviceStart = deviceStart + threadNum * devicePerThread
+def localDeviceStart = calculateLocalDeviceStart(deviceStart, threadNum, devicePerThread)
 
 def batchRows = new ArrayList<Object[]>()
 for (int i = 0; i < batchLines; i++) {
@@ -89,6 +94,17 @@ DataSourceElement.getConnection("jdbcConfig").withCloseable { conn ->
     }
 }
 """
+
+
+def build_batch_prepared_preprocessor_script() -> str:
+    """Compose the Groovy body for the batch_prepared JSR223PreProcessor.
+
+    Prepends :func:`utils.preprocessor_helpers.all_groovy_decls` so
+    that ``calculateLocalDeviceStart`` and the rest of the shared
+    helpers are visible at runtime. Single source of truth for
+    device-number arithmetic — see tasks §2.3.
+    """
+    return f"{all_groovy_decls()}\n{_BATCH_PREPARED_PREPROCESSOR_BODY}"
 
 
 def generate_write_thread_groups(
@@ -150,7 +166,7 @@ def generate_write_thread_groups(
             # 体现 write_groups 与 strategy 的协作边界。
             preprocessor, preproc_hash = jsr223_preprocessor_element(
                 name=f"batch_prepared-{wc.tbl_name}-pre",
-                script=BATCH_PREPARED_PREPROCESSOR_SCRIPT,
+                script=build_batch_prepared_preprocessor_script(),
                 script_language=script_language,
                 testname=f"[Write] {wc.tbl_name} - batch_prepared preprocessor",
             )

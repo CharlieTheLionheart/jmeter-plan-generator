@@ -76,7 +76,10 @@ class SinglePreparedStatementStrategy(WriteStrategy):
             "def threadNum = ctx.getThreadNum()\n"
             "if (threadNum < 0) { threadNum = (vars.get('__threadNum') as Integer) ?: 0 }\n"
             "long ts = System.currentTimeMillis()\n"
-            "long deviceNumber = calculateDeviceNumber(threadNum as long, 0L, devicePerThread, 0)\n"
+            # Use the shared single-source helper (multi-end tasks §2.4) — both
+            # batch_prepared and single_prepared consume calculateLocalDeviceStart.
+            "long localStart = calculateLocalDeviceStart(0L, threadNum, devicePerThread)\n"
+            "long deviceNumber = localStart\n"
             "vars.put('param_0', new java.sql.Timestamp(ts).toString())\n"
             "vars.put('param_1', deviceIdentifier(deviceNumber))\n"
             "log.info('SinglePrep: table=' + preparedTable + ' ts=' + ts + ' device=' + deviceNumber)\n"

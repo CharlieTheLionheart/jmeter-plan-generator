@@ -51,7 +51,11 @@ def generate_user_defined_variables(conn_config: ConnConfig) -> List:
         "db_username": str(conn_config.db_username),
         "db_password": str(conn_config.db_password),
         "conn_pool_size": str(conn_config.conn_pool_size),
-        "device_start": str(conn_config.device_start),
+        # multi-end tasks §1.1+§1.2: device_* fields use ${__P(...)} so that
+        # operators can override per JMeter instance via `-Jdevice_start=N`,
+        # `-Jdevice_per_thread=N` without editing the JMX file.
+        "device_start": "${__P(device_start,1)}",
+        "device_per_thread": "${__P(device_per_thread,1)}",
         "test_duration": str(conn_config.test_duration),
         "write_throughput": "120",  # default 120 samples/min; overridable via -Jwrite_throughput=N
     }

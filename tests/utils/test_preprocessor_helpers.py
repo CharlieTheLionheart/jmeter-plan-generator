@@ -172,3 +172,22 @@ class TestGroovyDecls:
     def test_helper_includes_division_guard(self):
         decls = all_groovy_decls()
         assert "must be > 0" in decls
+
+    def test_calculate_local_device_start_decl_is_emitted(self):
+        """multi-end tasks §2.1: helper appears in all_groovy_decls()."""
+        from utils.preprocessor_helpers import (
+            groovy_calculate_local_device_start_decl,
+        )
+        decl = groovy_calculate_local_device_start_decl()
+        assert "long calculateLocalDeviceStart" in decl
+        assert "long deviceStart, int threadNum, long devicePerThread" in decl
+
+    def test_calculate_local_device_start_in_all_groovy_decls(self):
+        decls = all_groovy_decls()
+        assert "calculateLocalDeviceStart" in decls
+
+    def test_calculate_local_device_start_guard_is_present(self):
+        from utils.preprocessor_helpers import (
+            groovy_calculate_local_device_start_decl,
+        )
+        assert "must be > 0" in groovy_calculate_local_device_start_decl()

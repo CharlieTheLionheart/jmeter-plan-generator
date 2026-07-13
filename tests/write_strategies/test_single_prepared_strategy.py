@@ -69,4 +69,7 @@ class TestSinglePreparedPreprocessorCode:
         )
         assert isinstance(script, str)
         assert "iot_monitor.t_cnc" in script
+        # Both helpers are present — decls section brings calculateDeviceNumber
+        # (general form), the body calls calculateLocalDeviceStart (single-source).
         assert "calculateDeviceNumber" in script
+        assert "calculateLocalDeviceStart" in script

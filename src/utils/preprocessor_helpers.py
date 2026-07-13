@@ -189,6 +189,30 @@ def groovy_clone_rows_decl() -> str:
     )
 
 
+def groovy_calculate_local_device_start_decl() -> str:
+    """Groovy source for thread-local device-start calculation.
+
+    Companion to :func:`groovy_calculate_device_number_decl` — emits the
+    simpler formula used by ``write_groups`` and ``single_prepared``
+    strategies to compute the local base per-thread device number before
+    applying the per-row ``row_index % device_per_thread`` offset::
+
+        local_device_start = device_start + thread_num * device_per_thread
+
+    The ``device_per_thread <= 0`` boundary is enforced here so both
+    downstream callers share a single point of defence (review §1
+    Resolution). OpenSpec tasks §2.1 + §2.5.
+    """
+    return (
+        "long calculateLocalDeviceStart(long deviceStart, int threadNum, "
+        "long devicePerThread) {\n"
+        "    if (devicePerThread <= 0L) { throw new RuntimeException("
+        "'devicePerThread must be > 0: ' + devicePerThread) }\n"
+        "    return deviceStart + (long) threadNum * devicePerThread\n"
+        "}\n"
+    )
+
+
 def all_groovy_decls() -> str:
     """Concatenate all helper declarations for embedding in a Groovy script."""
     return "\n".join(
@@ -197,5 +221,6 @@ def all_groovy_decls() -> str:
             groovy_calculate_device_number_decl(),
             groovy_device_identifier_decl(),
             groovy_clone_rows_decl(),
+            groovy_calculate_local_device_start_decl(),
         ]
     )

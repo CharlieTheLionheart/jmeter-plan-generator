@@ -21,6 +21,19 @@ The system SHALL generate a script for calculating device numbers in each write 
 - **THEN** the system SHALL include code to calculate `local_device_start`
 - **THEN** the calculation SHALL be `device_start + ctx.getThreadNum() * device_per_thread`
 
+### Requirement: Single-source device number calculation across write modes
+The system SHALL emit device-number calculation Groovy code through one shared helper so both ``batch_prepared`` (JSR223PreProcessor on the JSR223Sampler branch) and ``single_prepared`` (JSR223PreProcessor with single-row Groovy) reuse the same formula and arithmetic without copy/paste drift.
+
+#### Scenario: Batch_prepared delegates to the helper
+- **WHEN** ``BATCH_PREPARED_PREPROCESSOR_SCRIPT`` is rendered
+- **THEN** its body SHALL call a shared Groovy function (e.g. ``calculateLocalDeviceStart(deviceStart, threadNum, devicePerThread)``) for ``localDeviceStart``
+- **THEN** the helper SHALL be provided by ``utils.preprocessor_helpers.all_groovy_decls()``
+
+#### Scenario: Single_prepared delegates to the same helper
+- **WHEN** ``SinglePreparedStatementStrategy.get_preprocessor_code`` is rendered
+- **THEN** its body SHALL reference the SAME shared helper rather than redefining ``device_start + threadNum * devicePerThread`` inline
+- **THEN** the helper name SHALL match between the two strategies (single source of truth)
+
 ### Requirement: Support multi-end coordination
 The system SHALL support using multiple JMeter instances to scale test pressure.
 
@@ -33,6 +46,36 @@ The system SHALL support using multiple JMeter instances to scale test pressure.
 - **WHEN** current instance is processing table `t_cnc` with `num_threads=20` and `device_per_thread=10`
 - **THEN** the next instance's device_start for this table SHALL be `current_device_start + 20 * 10`
 - **THEN** device ranges SHALL not overlap for the same table across instances
+
+### Requirement: Expose device_start via JMeter property (not literal UDV value)
+The system SHALL emit the ``device_start`` User Defined Variable value as the JMeter function reference ``${__P(device_start,1)}`` so that operators can override the starting device number per JMeter instance via the ``-Jdevice_start=N`` command-line property, without editing the JMX file. ``device_per_thread`` follows the same pattern (``${__P(device_per_thread,1)}``).
+
+#### Scenario: UDV device_start references JMeter property
+- **WHEN** the test plan is rendered
+- **THEN** the UDV ``device_start`` field SHALL be the literal string ``"${__P(device_start,1)}"`` (NOT a numeric literal such as ``"1"``)
+- **THEN** the UDV ``device_per_thread`` field SHALL be the literal string ``"${__P(device_per_thread,1)}"``
+
+#### Scenario: JMeter -J property overrides the UDV default
+- **WHEN** ``jmeter -Jdevice_start=1001 -n -t plan.jmx`` is invoked
+- **THEN** the runtime value of ``device_start`` in every thread group SHALL be ``1001`` (not ``1``)
+- **THEN** the ``write_thread_groups`` Groovy PreProcessor ``vars.get("device_start")`` SHALL observe the override
+
+#### Scenario: Without -J override the documented default applies
+- **WHEN** JMeter is started without ``-Jdevice_start``
+- **THEN** the runtime value of ``device_start`` SHALL be ``1`` (the default in ``${__P(...)}``)
+
+### Requirement: Multi-end orchestration is the caller's responsibility
+The system SHALL NOT implement multi-end orchestration itself. Each generated JMX is a single-end test plan; the orchestration pipeline that runs multiple JMeter instances (one per KaiwuDB end) is responsible for:
+- computing the ``device_start`` to pass to each instance,
+- launching each instance with ``-Jdevice_start=<value>``,
+- capturing any "next instance device_start" the operator may want.
+
+The generator emits no Beanshell Listener, no JSR223 Sampler, no JMeter log statement, and no auxiliary output file whose purpose is to communicate device_start to the orchestration layer.
+
+#### Scenario: Generated JMX has no multi-end output
+- **WHEN** rendering a JMX end-to-end
+- **THEN** there SHALL be NO ``<BeanShellSampler>``, ``<JSR223Sampler>``, ``<SampleLog>``, or extra file emitter whose purpose is "tell the pipeline which device_start to use next"
+- **THEN** the only device_start path into the JMX SHALL be the UDV field ``${__P(device_start,1)}``
 
 ### Requirement: Allow device range overlap across tables
 The system SHALL allow device number ranges to overlap between different tables.

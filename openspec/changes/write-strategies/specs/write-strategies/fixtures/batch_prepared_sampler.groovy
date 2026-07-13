@@ -24,6 +24,11 @@ def cloneRows(def rows) {
     return out
 }
 
+long calculateLocalDeviceStart(long deviceStart, int threadNum, long devicePerThread) {
+    if (devicePerThread <= 0L) { throw new RuntimeException('devicePerThread must be > 0: ' + devicePerThread) }
+    return deviceStart + (long) threadNum * devicePerThread
+}
+
 // -------- batch_prepared: JSR223Sampler body --------
 def tableKey = 'iot_monitor.sensor_readings'
 def batchSizeMax = 1000
