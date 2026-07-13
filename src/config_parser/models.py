@@ -315,7 +315,7 @@ class WriteConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     tbl_name: str
-    throughput: float = Field(default=1000.0, ge=0)
+    throughput: float = Field(default=1000.0, gt=0)
     mode: WriteMode
     batch_lines: int = Field(default=1, ge=1)
     device_per_thread: int = Field(default=1, ge=1)
@@ -348,7 +348,7 @@ class QueryConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     query: str
-    throughput: float = Field(default=100.0, ge=0)
+    throughput: float = Field(default=100.0, gt=0)
     num_threads: int = Field(default=1, ge=1)
 
     @field_validator("query")

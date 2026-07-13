@@ -53,6 +53,7 @@ def generate_user_defined_variables(conn_config: ConnConfig) -> List:
         "conn_pool_size": str(conn_config.conn_pool_size),
         "device_start": str(conn_config.device_start),
         "test_duration": str(conn_config.test_duration),
+        "write_throughput": "120",  # default 120 samples/min; overridable via -Jwrite_throughput=N
     }
 
     arg_props: List = []

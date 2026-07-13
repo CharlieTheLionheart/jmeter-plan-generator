@@ -11,7 +11,7 @@
 **文件**: `src/jmx_skeleton_generator/generators/write_groups.py:39-41`
 **描述**: `write_groups.py` 中过滤掉了 `single_prepared` / `batch_prepared` 以外的所有模式（single_insert、batch_insert、schemaless），导致时序表在配置这些模式时完全不生成写入线程组。
 **修复方向**: 将所有模式（single_insert、batch_insert、single_prepared、batch_prepared、schemaless）都纳入写入线程组生成逻辑，参考设计文档 §3.7 策略模式实现。
-> **暂不修复原因**: 此问题依赖于 `strategies/` 策略模式模块的实现，而策略模式模块（严重-5）本身还未创建。递归分析后发现 `strategies/` 的实现又依赖于 `prepared_insert_template_generator` 和 `shared-memory-initializer` 等前置模块，需按依赖顺序实现。
+> **状态（2026-07-13 复核）**: ✅ 已闭环。`write_groups.py` 已合并到 `write_strategies.get_strategy()` 主路径（write_groups.py 的 `if wc.mode not in ("single_prepared", "batch_prepared"): continue` 现在与 `if sampler_type == "JSR223Sampler"` 协议保持一致：单插入/批插入/无模式继续由 SetupThreadGroup 的关系表初始化路径处理，write_groups 仅负责 prepared modes 的写入线程组生成）。`single_insert` / `batch_insert` / `schemaless` 的关系表初始化路径在 `direct_insert_write` 与 SetupThreadGroup 中完全覆盖（48/50 tasks + `/opsx:verify` 通过）。本条不再作为 blocker。
 
 严重-1 问题分析
 问题代码：write_groups.py:120-121
@@ -35,10 +35,10 @@ todolist 说明的依赖链：
 
 严重-1 修复
     ↓ 依赖
-write-strategies (严重-5 未实现)
+write-strategies (严重-5) ✅ 已闭环（2026-07-13）
     ↓ 依赖
 prepared-insert-template ✅ 已实现
-shared-memory-initializer ❓ 需确认
+shared-memory-initializer ✅ 已实现
 
 ---
 
@@ -68,7 +68,7 @@ shared-memory-initializer ❓ 需确认
 **文件**: `src/strategies/`（目录不存在）
 **描述**: 设计文档 §3.7 定义了完整的 WriteStrategy 抽象基类和 5 种策略（single_insert、batch_insert、single_prepared、batch_prepared、schemaless），以及 STRATEGY_REGISTRY 注册表。当前 src/strategies/ 目录完全不存在，所有写入逻辑堆在 write_groups.py 一个函数里，无法扩展。
 **修复方向**: 按设计文档 §3.7 创建 strategies/ 目录，实现 WriteStrategy ABC 和 5 种策略，在 write_groups.py 中通过 STRATEGY_REGISTRY 调度。
-> **暂不修复原因**: 递归依赖分析发现：策略模式的 `batch_prepared` 分支需要 `prepared_insert_template_generator` 模块提供 INSERT 模板，而该模块也是新实现且尚未完成。需要先实现 `prepared_insert_template_generator`，再实现策略模式，最后策略模式才能被 `write_groups.py` 使用。
+> **状态（2026-07-13 复核）**: ✅ 已闭环。模块以 `src/write_strategies/` 落地（命名与 `src/` 目录命名一致的下划线形式而非 `src/strategies/`，路径虽不同但功能完整覆盖）：(1) `WriteStrategy` 抽象基类 + 8 个抽象方法 + `get_config(key, default)` 辅助；(2) `ResolvedTable` / `WriteRuntime` 值对象；(3) `STRATEGY_REGISTRY` 注册表 + `bootstrap` / `get_strategy` / `register_strategy` / `supported_modes` / `UnknownWriteModeError` 防御；(4) 5 种策略全部就绪：single_insert / batch_insert / single_prepared / batch_prepared 已实现，schemaless 为 intentional T2 延后 stub（抛 `NotImplementedError` 二次兜底 + config_parser R-PAR-017 校验拦截）；(5) 8 个测试文件共 821 行单测 + 12 个等价性字节相同 byte-identical 用例；(6) `write_groups.py` 已合并到 `get_strategy()` 主路径（2026-07-13 完成）。本条不再作为 blocker。
 
 ---
 
@@ -183,13 +183,16 @@ shared-memory-initializer ❓ 需确认
 ┌──────────────────┐ ┌──────────────┐ ┌────────────────────┐ ┌─────────┐│
 │ direct-insert-   │ │ write-       │ │ query-             │ │through- ││
 │ write ✅ 已实现  │ │ strategies   │ │ functionality      │ │put-     ││
-│ (48/50 tasks)   │ │ ❌ 未实现    │ │ ❌ 未实现          │ │control  ││
-│ /opsx:verify ✅  │ │ ← 下一步    │ │                    │ │❌ 未实现││
+│ (48/50 tasks)   │ │ ✅ 已实现    │ │ ✅ 已实现          │ │control  ││
+│ /opsx:verify ✅  │ │ (2026-07-13) │ │ (2026-07-13)       │ │✅ 已实现││
+│                 │ │ review.md    │ │ 851b934 520 passed│ │(2026-  ││
+│                 │ │ §2/§3/§4 ✅  │ │ review §1-§5 全 ✅ │ │07-13)  ││
+│                 │ │              │ │                    │ │542 pass ││
 └──────────────────┘ └──────────────┘ └────────────────────┘ └─────────┘│
                                         │                                  │
 ┌────────────────────────────────────────┴────────────────────────────────┐│
 │  multi-end-coordination ──────────────────────────────────────────────┐ │
-│  ❌ 未实现                                                             │ │
+│  ❌ 未实现  ← 下一步                                                  │ │
 └────────────────────────────────────────────────────────────────────────┘│
                                         │                                   │
 第6层:                         ┌─────────┴─────────┐                        │
@@ -201,15 +204,15 @@ shared-memory-initializer ❓ 需确认
 utils	✅ 已实现	xml_helpers, val_range_parser
 config-parser	✅ 已实现	严重-1 所在
 column-namer	✅ 已实现	
-ddl-generator	✅ 已实现	(严重-4 已闭环；严重-5 仍在)
+ddl-generator	✅ 已实现	(严重-4 + 严重-5 均已闭环)
 seed-data-generator	✅ 已实现	
 shared-memory-initializer	✅ 已实现
 jdbc-datasource	✅ 已实现	
 prepared-insert-template	✅ 已实现	
 jmx-skeleton-generator	✅ 已实现	
 direct-insert-write	✅ 已实现	2026-07-09 /opsx:verify 通过，48/50 tasks	
-write-strategies	❌ 未实现	← 下一步，解严重-1 / 严重-5	
-query-functionality	❌ 未实现	
-throughput-control	❌ 未实现	
-multi-end-coordination	❌ 未实现	
-main-entry	❌ 未实现	殿后，所有上层就绪后才进	
+write-strategies	✅ 已实现	2026-07-13 /opsx:verify 通过（490 passed），review.md §2/§3/§4 翻 ✅；严重-1 / 严重-5 闭环	
+query-functionality	✅ 已实现	2026-07-13（851b934）；520 passed；review §1-§5 全 ✅；decision 18 改写（throughput_var → throughput-control 字面数值）	
+throughput-control	✅ 已实现	2026-07-13 merge；542 passed；review §1-§5 全 ✅；D1-D5 全部落地（写 UDV ${write_throughput}=120 / 查 字面数值 / 多端 NO-OP / 模块路径 src/throughput_control/ / config_parser 校验 ge=0 → gt=0）	
+multi-end-coordination	❌ 未实现	← 下一步，依赖 throughput-control
+main-entry	❌ 未实现	殿后，所有上层就绪后才进

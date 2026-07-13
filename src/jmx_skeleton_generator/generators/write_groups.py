@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Dict, List
 
 from config_parser.models import WriteConfig
+from throughput_control import generate_write_timer
 from utils.xml_helpers import (
-    constant_throughput_timer_element,
     empty_hash_tree,
     hash_tree,
     jdbc_sampler_element,
@@ -142,12 +142,7 @@ def generate_write_thread_groups(
             scheduler=True,
         )
 
-        timer, timer_hash = constant_throughput_timer_element(
-            name="Constant Throughput Timer",
-            throughput=f"${{write_throughput}}",
-            calc_mode=0,
-            testname="Constant Throughput Timer",
-        )
+        timer, timer_hash = generate_write_timer()
 
         if sampler_type == "JSR223Sampler":
             # batch_prepared 使用 JSR223Sampler + 预置 Groovy 体（设计文档 §3.6）；
