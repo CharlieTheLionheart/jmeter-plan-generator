@@ -1,0 +1,13 @@
+conn_config:
+  db_url: jdbc:kaiwudb://localhost:26257/iot
+  db_username: root
+  conn_pool_size: 10
+  device_start: 1
+  test_duration: 60
+write_config:
+  - tbl_name: iot_monitor.t_cnc
+    throughput: 1000.0
+    mode: single_insert
+    batch_lines: 1
+    device_per_thread: 1
+    num_threads: 5
