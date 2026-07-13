@@ -47,13 +47,20 @@ class TestGenerate:
         xml = ET.tostring(ds, encoding="unicode")
         assert "com.kaiwudb.Driver" in xml
 
-    def test_pool_max_references_conn_pool_size_variable(self):
+    def test_pool_max_uses_literal_integer_value(self):
+        """JMeter 5.6.3 DataSourceElement.initPool parses pool_max as
+        Integer BEFORE UDV function evaluation, so the value must be a
+        literal integer string ("10") not the ``${conn_pool_size}``
+        placeholder."""
         gen = JDBCDataSourceGenerator({"conn_pool_size": 10})
         result = gen.generate()
         ds = result[0]
         xml = ET.tostring(ds, encoding="unicode")
         assert "poolMax" in xml
-        assert "${conn_pool_size}" in xml
+        assert "10" in xml
+        # JMeter does Integer.parseInt of poolMax before function eval,
+        # so "${conn_pool_size}" placeholder would crash the listener.
+        assert "${conn_pool_size}" not in xml
 
     def test_hardcoded_connection_age(self):
         gen = JDBCDataSourceGenerator({"conn_pool_size": 10})
@@ -180,12 +187,15 @@ class TestValidation:
             gen.generate()
 
     def test_conn_pool_size_as_string_positive_int(self):
-        # String integer that is positive should work
+        # String integer that is positive should be normalized to literal int
         gen = JDBCDataSourceGenerator({"conn_pool_size": "20"})
         result = gen.generate()
         ds = result[0]
         xml = ET.tostring(ds, encoding="unicode")
-        assert "${conn_pool_size}" in xml  # value is used as-is
+        # poolMax serialized as literal "20" (JMeter parses it via
+        # Integer.parseInt before UDV function evaluation).
+        assert "20" in xml
+        assert ">20<" in xml  # tightly the poolMax stringProp element
 
     def test_empty_config_still_generates(self):
         # Empty config (no conn_config) - will fail validation on pool_size

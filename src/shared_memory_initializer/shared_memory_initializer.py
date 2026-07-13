@@ -101,23 +101,20 @@ try {{
 
     file.eachLine {{ line, lineNum ->
         if (lineNum == 1) {{
-            // Header line: parse column names
-            def reader = new StringReader(line)
-            def csvReader = new CSVReader(new InputStreamReader(new ByteArrayInputStream(line.getBytes('UTF-8')), 'UTF-8'))
-            def headerFields = csvReader.readNext()
+            // Header line: parse column names. CSV is simple
+            // comma-separated in the SVT seed format; use Groovy native
+            // ``String.split`` instead of OpenCSV to drop the
+            // jmeter-lib dependency.
+            def headerFields = (line.split(',') as List<String>)
             if (headerFields != null) {{
                 columns = headerFields.collect {{ it != null ? it.trim() : it }}
             }}
-            csvReader.close()
         }} else if (lineNum > 1) {{
             // Data line
             if (line == null || line.trim().isEmpty()) {{
                 return  // skip blank lines
             }}
-            def reader = new StringReader(line)
-            def csvReader = new CSVReader(new InputStreamReader(new ByteArrayInputStream(line.getBytes('UTF-8')), 'UTF-8'))
-            def fields = csvReader.readNext()
-            csvReader.close()
+            def fields = (line.split(',') as List<String>)
             if (fields != null) {{
                 def row = fields.collect {{ field ->
                     if (field == null) {{

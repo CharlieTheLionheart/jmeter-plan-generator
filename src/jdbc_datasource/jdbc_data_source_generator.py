@@ -80,8 +80,13 @@ class JDBCDataSourceGenerator:
         db_url = self._conn_config.get("db_url", "${db_url}")
         db_username = self._conn_config.get("db_username", "${db_username}")
         db_password = self._conn_config.get("db_password", "")
-        # poolMax always references the ${conn_pool_size} variable defined in UDV
-        pool_max = "${conn_pool_size}"
+        # poolMax rendered as a literal integer string: JMeter 5.6.3
+        # DataSourceElement.initPool runs Integer.parseInt on the raw
+        # text BEFORE UDV function evaluation, so a literal ``${var}``
+        # placeholder would crash with ``NumberFormatException``. Use
+        # the validated integer directly; UDV still carries the
+        # ``conn_pool_size`` field for downstream visibility.
+        pool_max = str(int(self._conn_config.get("conn_pool_size", 10)))
 
         ds, ds_hash = jdbc_data_source_element(
             name=DATASOURCE_NAME,
