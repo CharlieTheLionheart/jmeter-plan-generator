@@ -121,12 +121,20 @@ class TestGenerateDDLSetupThreadGroup:
         )
         assert sampler_count == 2
 
-    def test_samplers_reference_db_url_variable(self):
+    def test_samplers_reference_jdbcdatasource_pool(self):
+        """JDBCSampler.dataSource must match the ``<JDBCDataSource>`` element's
+        ``name`` attribute (``jdbcConfig``) for the pool lookup to succeed.
+
+        Earlier this assertion checked for ``${db_url}``, which left the
+        sampler pointing at a JMeter UDV field whose value is a JDBC URL
+        string, not a pool name. JMeter then raises
+        ``No pool found named: '${db_url}'`` at sampler init.
+        """
         elems = generate_ddl_setup_thread_group(["CREATE DATABASE foo"])
         for e in _walk(elems):
             if e.tag.endswith("JDBCSampler"):
                 xml = ET.tostring(e, encoding="unicode")
-                assert "${db_url}" in xml
+                assert "jdbcConfig" in xml
                 break
 
 

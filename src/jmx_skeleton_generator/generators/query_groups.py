@@ -511,7 +511,7 @@ def generate_query_thread_groups(
         sampler, samp_hash = jdbc_sampler_element(
             name="Query",
             query=query_with_vars,
-            data_source="${db_url}",
+            data_source="jdbcConfig",
             query_type="Prepared Select Statement",
             query_arguments=query_var_refs,
             testname=f"[Query]",

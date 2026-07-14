@@ -198,7 +198,7 @@ def generate_write_thread_groups(
             sampler, samp_hash = jdbc_sampler_element(
                 name=f"Write-{wc.tbl_name}",
                 query=template,
-                data_source="${db_url}",
+                data_source="jdbcConfig",
                 query_type="Prepared Update Statement",
                 use_prepared=use_prepared,
                 testname=f"[Write] {wc.tbl_name}",

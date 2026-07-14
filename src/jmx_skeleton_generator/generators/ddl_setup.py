@@ -51,7 +51,7 @@ def generate_ddl_setup_thread_group(
         sampler, samp_hash = jdbc_sampler_element(
             name=f"DDL-{i + 1}",
             query=ddl,
-            data_source="${db_url}",
+            data_source="jdbcConfig",
             query_type="Update Statement",
             testname=f"DDL-{i + 1}",
         )
