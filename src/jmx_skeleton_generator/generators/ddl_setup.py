@@ -32,12 +32,30 @@ def generate_ddl_setup_thread_group(
 
     Returns
     -------
-    A flat list of elements forming the SetupThreadGroup and all its
-    children: ``[SetupThreadGroup, hashTree, JDBCSampler, hashTree, ...]``.
-    Returns an empty list when ``ddl_statements`` is empty.
+    A 2-element list ``[SetupThreadGroup, hashTree]`` whose hashTree
+    contains all DDL JDBCSampler + their paired hashTrees. Returns an
+    empty list when ``ddl_statements`` is empty.
     """
     if not ddl_statements:
         return []
+
+    # Build children into the setup-thread-group's paired hashTree via
+    # the new ``children=`` argument. Each DDL becomes one JDBCSampler
+    # paired with its empty hashTree, so JMeter treats the sampler as
+    # belonging to the setup thread group instead of as a TestPlan-level
+    # sibling (the legacy ``[stg, hash_tree, *samplers]`` flat-list
+    # shape emitted them both inside AND outside the group, which made
+    # JMeter silently skip them).
+    children: List = []
+    for i, ddl in enumerate(ddl_statements):
+        sampler, samp_hash = jdbc_sampler_element(
+            name=f"DDL-{i + 1}",
+            query=ddl,
+            data_source="${db_url}",
+            query_type="Update Statement",
+            testname=f"DDL-{i + 1}",
+        )
+        children.extend([sampler, samp_hash])
 
     stg, stg_hash = setup_thread_group_element(
         name=name,
@@ -48,24 +66,6 @@ def generate_ddl_setup_thread_group(
         delay=0,
         loops=1,
         scheduler=True,
+        children=children,
     )
-
-    # Build the content of stg_hash (children of the SetupThreadGroup)
-    stg_children: List = []
-    for i, ddl in enumerate(ddl_statements):
-        sampler, samp_hash = jdbc_sampler_element(
-            name=f"DDL-{i + 1}",
-            query=ddl,
-            data_source="${db_url}",
-            query_type="Update Statement",
-            testname=f"DDL-{i + 1}",
-        )
-        stg_children.extend([sampler, samp_hash])
-
-    # Replace the empty stg_hash with one containing the samplers
-    stg_hash = hash_tree(*stg_children)
-
-    # Flat list per docstring: hashTree 保留 XML 嵌套结构,sampler 同步平铺到顶层,
-    # 使调用方可以单层遍历同时定位 SetupThreadGroup 和 JDBCSampler
-    elements: List = [stg, stg_hash, *stg_children]
-    return elements
+    return [stg, stg_hash]  # placeholder; replaced below

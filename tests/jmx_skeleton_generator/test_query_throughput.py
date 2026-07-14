@@ -23,8 +23,22 @@ def _render_xml(results) -> str:
     return "".join(ET.tostring(e, encoding="unicode") for e in results)
 
 
+def _walk(elements):
+    """Yield elements and all of their descendants (recursive)."""
+    seen = set()
+    def _recurse(el):
+        if id(el) in seen:
+            return
+        seen.add(id(el))
+        yield el
+        for child in el:
+            yield from _recurse(child)
+    for el in elements:
+        yield from _recurse(el)
+
+
 def _timer(results):
-    return [e for e in results if e.tag.endswith("ConstantThroughputTimer")]
+    return [e for e in _walk(results) if e.tag.endswith("ConstantThroughputTimer")]
 
 
 def _timer_throughput_text(timer):

@@ -17,6 +17,23 @@ from jmx_skeleton_generator.generators.query_groups import generate_query_thread
 # test_plan
 # ---------------------------------------------------------------------------
 
+
+def _walk(elements):
+    """Yield elements and all of their descendants (recursive)."""
+    seen = set()
+
+    def _recurse(el):
+        if id(el) in seen:
+            return
+        seen.add(id(el))
+        yield el
+        for child in el:
+            yield from _recurse(child)
+
+    for el in elements:
+        yield from _recurse(el)
+
+
 class TestGenerateTestPlan:
     def test_returns_list_of_two_elements(self):
         result = generate_test_plan()
@@ -89,7 +106,7 @@ class TestGenerateDDLSetupThreadGroup:
 
     def test_single_ddl_produces_setup_thread_group_and_sampler(self):
         elems = generate_ddl_setup_thread_group(["CREATE DATABASE foo"])
-        tags = [e.tag.split("}")[-1] for e in elems]
+        tags = [e.tag.split("}")[-1] for e in _walk(elems)]
         assert "SetupThreadGroup" in tags
         assert "JDBCSampler" in tags
         assert "hashTree" in tags
@@ -99,12 +116,14 @@ class TestGenerateDDLSetupThreadGroup:
             "CREATE DATABASE d1",
             "CREATE TABLE t1",
         ])
-        sampler_count = sum(1 for e in elems if e.tag.endswith("JDBCSampler"))
+        sampler_count = sum(
+            1 for e in _walk(elems) if e.tag.endswith("JDBCSampler")
+        )
         assert sampler_count == 2
 
     def test_samplers_reference_db_url_variable(self):
         elems = generate_ddl_setup_thread_group(["CREATE DATABASE foo"])
-        for e in elems:
+        for e in _walk(elems):
             if e.tag.endswith("JDBCSampler"):
                 xml = ET.tostring(e, encoding="unicode")
                 assert "${db_url}" in xml
@@ -147,7 +166,7 @@ class TestGenerateWriteThreadGroups:
     def test_thread_group_has_throughput_timer(self):
         cfg = [self._write_cfg("batch_prepared")]
         result = generate_write_thread_groups(cfg, {})
-        tags = [e.tag.split("}")[-1] for e in result]
+        tags = [e.tag.split("}")[-1] for e in _walk(result)]
         assert "ConstantThroughputTimer" in tags
 
     def test_template_used_as_query(self):

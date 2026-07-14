@@ -8,8 +8,6 @@ from config_parser.models import WriteConfig
 from throughput_control import generate_write_timer
 from utils.preprocessor_helpers import all_groovy_decls
 from utils.xml_helpers import (
-    empty_hash_tree,
-    hash_tree,
     jdbc_sampler_element,
     jsr223_preprocessor_element,
     jsr223_sampler_element,
@@ -176,10 +174,25 @@ def generate_write_thread_groups(
                 script_language=script_language,
                 testname=f"[Write] {wc.tbl_name}",
             )
-            results.extend([
-                tg, tg_hash, timer, timer_hash,
-                preprocessor, preproc_hash, sampler, samp_hash,
-            ])
+            # Children pass into ThreadGroup's hashTree via the
+            # ``children=`` argument — JMeter treats them as group
+            # members instead of TestPlan siblings.
+            inner_children = [
+                timer, timer_hash,
+                preprocessor, preproc_hash,
+                sampler, samp_hash,
+            ]
+            new_tg, new_tg_hash = thread_group_element(
+                name=f"Write-{wc.tbl_name}",
+                testname=f"[Write] {wc.tbl_name}",
+                num_threads=wc.num_threads,
+                ramp_time=1,
+                duration="${test_duration}",
+                loops="-1",
+                scheduler=True,
+                children=inner_children,
+            )
+            results.extend([new_tg, new_tg_hash])
         else:
             # single_prepared 走 JDBCSampler；usePrepared 由 strategy 提供。
             sampler, samp_hash = jdbc_sampler_element(
@@ -190,6 +203,20 @@ def generate_write_thread_groups(
                 use_prepared=use_prepared,
                 testname=f"[Write] {wc.tbl_name}",
             )
-            results.extend([tg, tg_hash, timer, timer_hash, sampler, samp_hash])
+            inner_children = [
+                timer, timer_hash,
+                sampler, samp_hash,
+            ]
+            new_tg, new_tg_hash = thread_group_element(
+                name=f"Write-{wc.tbl_name}",
+                testname=f"[Write] {wc.tbl_name}",
+                num_threads=wc.num_threads,
+                ramp_time=1,
+                duration="${test_duration}",
+                loops="-1",
+                scheduler=True,
+                children=inner_children,
+            )
+            results.extend([new_tg, new_tg_hash])
 
     return results

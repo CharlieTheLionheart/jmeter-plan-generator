@@ -517,6 +517,18 @@ def generate_query_thread_groups(
             testname=f"[Query]",
         )
 
+        timer, timer_hash = generate_query_timer(qc.throughput)
+
+        # Rebuild ThreadGroup with children embedded in its paired
+        # hashTree — JMeter treats timer/preprocessor/sampler as group
+        # members instead of TestPlan siblings (the legacy flat-list
+        # shape left them at TestPlan level, which made JMeter silently
+        # skip the thread group's samplers).
+        inner_children = [
+            timer, timer_hash,
+            preprocessor, preproc_hash,
+            sampler, samp_hash,
+        ]
         tg, tg_hash = thread_group_element(
             name=f"Query-{qc.query[:30]}",
             testname=f"[Query] {qc.query[:50]}",
@@ -525,16 +537,8 @@ def generate_query_thread_groups(
             duration="${test_duration}",
             loops="-1",
             scheduler=True,
+            children=inner_children,
         )
-
-        timer, timer_hash = generate_query_timer(qc.throughput)
-
-        # Order: ThreadGroup → hashTree → Timer → hashTree → PreProcessor → hashTree → Sampler → hashTree
-        results.extend([
-            tg, tg_hash,
-            timer, timer_hash,
-            preprocessor, preproc_hash,
-            sampler, samp_hash,
-        ])
+        results.extend([tg, tg_hash])
 
     return results

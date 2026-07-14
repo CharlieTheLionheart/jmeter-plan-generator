@@ -277,29 +277,14 @@ def setup_thread_group_element(
     testname: Optional[str] = None,
     guiclass: str = "SetupThreadGroupGui",
     testclass: str = "SetupThreadGroup",
+    children: Optional[List[ET.Element]] = None,
 ) -> Tuple[ET.Element, ET.Element]:
     """Create a ``<SetupThreadGroup>`` element and its paired ``<hashTree>``.
 
-    Parameters
-    ----------
-    name:
-        Internal name (used in ``name`` attribute).
-    num_threads:
-        Number of threads (or a JMeter variable string like ``${num_threads}``).
-    ramp_time:
-        Ramp-up time in seconds.
-    duration:
-        Duration in seconds (or a JMeter variable).
-    delay:
-        Start-up delay in seconds.
-    loops:
-        Loop count (or a JMeter variable). ``-1`` means infinite.
-    scheduler:
-        Enable scheduler mode.
-    props:
-        Additional property elements appended after defaults.
-    testname:
-        Display name in the JMeter tree (defaults to ``name``).
+    ``children`` are appended into the paired ``<hashTree>`` so JMeter
+    recognises them as belonging to this thread group instead of as
+    siblings at the enclosing hashTree level (the legacy
+    ``empty_hash_tree`` return path had this bug).
     """
     all_props: List[ET.Element] = [
         string_prop("SetupThreadGroup.on_sample_error", "continue"),
@@ -329,7 +314,8 @@ def setup_thread_group_element(
         attributes={"guiclass": guiclass, "testclass": testclass},
         children=all_props,
     )
-    return stg, empty_hash_tree()
+    stg_hash = hash_tree(*(children or []))
+    return stg, stg_hash
 
 
 def thread_group_element(
@@ -345,29 +331,12 @@ def thread_group_element(
     testname: Optional[str] = None,
     guiclass: str = "ThreadGroupGui",
     testclass: str = "ThreadGroup",
+    children: Optional[List[ET.Element]] = None,
 ) -> Tuple[ET.Element, ET.Element]:
     """Create a ``<ThreadGroup>`` element and its paired ``<hashTree>``.
 
-    Parameters
-    ----------
-    name:
-        Internal name.
-    num_threads:
-        Number of threads (or a JMeter variable string).
-    ramp_time:
-        Ramp-up time in seconds.
-    duration:
-        Duration in seconds (or a JMeter variable).
-    delay:
-        Start-up delay in seconds.
-    loops:
-        Loop count. ``-1`` means infinite; can also be a variable string.
-    scheduler:
-        Enable scheduler mode.
-    props:
-        Additional property elements appended after defaults.
-    testname:
-        Display name in the JMeter tree (defaults to ``name``).
+    ``children`` are appended into the paired ``<hashTree>`` so JMeter
+    recognises them as belonging to this thread group.
     """
     all_props: List[ET.Element] = [
         string_prop("ThreadGroup.num_threads", str(num_threads)),
@@ -397,7 +366,8 @@ def thread_group_element(
         attributes={"guiclass": guiclass, "testclass": testclass},
         children=all_props,
     )
-    return tg, empty_hash_tree()
+    tg_hash = hash_tree(*(children or []))
+    return tg, tg_hash
 
 
 def jdbc_sampler_element(
