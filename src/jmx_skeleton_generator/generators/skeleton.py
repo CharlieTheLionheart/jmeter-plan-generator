@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 
 from config_parser.models import (
     TestConfig,
+    TestModelConfig,
 )
 
 from jmx_skeleton_generator.generators.assembler import (
@@ -59,12 +60,17 @@ class JMXSkeletonGenerator:
         prepared_templates: Optional[Dict[str, str]] = None,
         seed_csv_paths: Optional[Dict[str, Dict[str, str]]] = None,
         output_dir: str = ".",
+        model: Optional[TestModelConfig] = None,
     ):
         self.test_config = test_config
         self.ddl_statements = ddl_statements or []
         self.prepared_templates = prepared_templates or {}
         self.seed_csv_paths = seed_csv_paths or {}
         self.output_dir = output_dir
+        # ``model`` is needed to resolve column metadata for direct-INSERT
+        # write modes (``single_insert`` / ``batch_insert``). Without it
+        # the write-groups generator falls back to skipping those entries.
+        self.model = model
 
     def generate(self) -> Path:
         """Assemble and write the JMX skeleton.
@@ -105,10 +111,11 @@ class JMXSkeletonGenerator:
         if sm_elems:
             assembler.add_many(sm_elems)
 
-        # 3d. Write ThreadGroups (prepared modes only)
+        # 3d. Write ThreadGroups (prepared + direct-insert modes)
         write_elems = generate_write_thread_groups(
             self.test_config.write_config,
             self.prepared_templates,
+            model=self.model,
         )
         if write_elems:
             assembler.add_many(write_elems)

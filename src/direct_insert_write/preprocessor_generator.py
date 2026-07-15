@@ -176,7 +176,6 @@ def generate_preprocessor_script(
     n_cols = len(columns)
     n_cells = n_cols * batch_lines
     rows_key = _make_rows_key(db, table)
-    cols_key = _make_columns_key(db, table)
     safe_db = _groovy_str_literal(db)
     safe_table = _groovy_str_literal(table)
     # Python-side columns list is the runtime fallback when the
@@ -193,12 +192,14 @@ def generate_preprocessor_script(
 def db = {safe_db}
 def table = {safe_table}
 def rowsKey = '{rows_key}'
-def colsKey = '{cols_key}'
 def allRows = props.get(rowsKey) as ArrayList
-// Column-name order comes from the shared-memory columns key (set by
-// ``shared-memory-initializer``); fall back to the Python-side list
-// when the key is absent so older builds still work.
-def columns = props.get(colsKey) as List ?: [{columns_array_groovy}]
+// Column-name order MUST match the SQL column list embedded in the
+// JDBCSampler (``insert into db.t (ts, ...) values (?, ...)``). The
+// shared-memory initializer's ``_columns`` key carries the seed-CSV
+// header which is missing the leading ``ts`` column (ts is generated
+// at write time) — using it here would mis-project ptagIndex and the
+// per-cell loop count, so we use the Python-side list directly.
+def columns = [{columns_array_groovy}]
 def nCols = columns.size()
 if (allRows == null || allRows.isEmpty()) {{
     log.warn("DirectInsertPrep: shared memory empty for " + rowsKey)
@@ -252,8 +253,13 @@ for (int r = 0; r < batchLines; r++) {{
     for (int c = 0; c < nCols; c++) {{
         def cell
         if (c == 0) {{
-            // ts column — first per design §3.5.1.
-            cell = new java.sql.Timestamp(ts).toString()
+            // ts column — first per design §3.5.1. Use a fixed-width
+            // millisecond format padded to nanoseconds so JDBC's
+            // ``Timestamp.valueOf`` (called by the sampler when
+            // ``queryArgumentsTypes=TIMESTAMP``) parses cleanly. Groovy's
+            // ``Timestamp.toString()`` returns a locale-dependent string
+            // that may omit the 9-digit fractional part.
+            cell = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSSSSS").format(new java.util.Date(ts))
         }} else if (c == ptagIndex) {{
             cell = deviceIdentifier(deviceNumber)
         }} else {{

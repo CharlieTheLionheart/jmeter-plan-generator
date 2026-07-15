@@ -146,18 +146,86 @@ class TestGenerateWriteThreadGroups:
     def _write_cfg(self, mode, tbl_name="db.t"):
         return WriteConfig(tbl_name=tbl_name, mode=mode, num_threads=10)
 
+    def _make_ts_model(self):
+        """Minimal TS model with one ts_db and one ts_table for direct-INSERT tests."""
+        from config_parser.models import (
+            ColTypeConfig,
+            PrimaryTagColTypeConfig,
+            TestModelConfig,
+            TsColConfig,
+            TsDbConfig,
+            TsTableConfig,
+        )
+
+        table = TsTableConfig(
+            name="t_cnc",
+            data_col_count=1,
+            primary_tag_count=1,
+            regular_tag_count=0,
+            ts_col=TsColConfig(name="ts", type="timestamp", ms_step=1000),
+            data_cols=[ColTypeConfig(col_type="int8", type_proportion=1.0)],
+            primary_tags=[PrimaryTagColTypeConfig(col_type="int8", type_proportion=1.0)],
+        )
+        db = TsDbConfig(name="iot_monitor", tables=[table])
+        return TestModelConfig(ts_dbs=[db])
+
     def test_empty_write_config_returns_empty(self):
         assert generate_write_thread_groups([], {}) == []
 
-    def test_single_insert_mode_skipped(self):
-        cfg = [self._write_cfg("single_insert")]
+    def test_single_insert_mode_skipped_without_model(self):
+        """Without a TestModelConfig, single_insert falls back to skip
+        (preserves pre-2026-07-15 contract for callers that don't have
+        model metadata handy)."""
+        cfg = [self._write_cfg("single_insert", "iot_monitor.t_cnc")]
         result = generate_write_thread_groups(cfg, {})
         assert result == []
 
-    def test_batch_insert_mode_skipped(self):
-        cfg = [self._write_cfg("batch_insert")]
+    def test_batch_insert_mode_skipped_without_model(self):
+        cfg = [self._write_cfg("batch_insert", "iot_monitor.t_cnc")]
         result = generate_write_thread_groups(cfg, {})
         assert result == []
+
+    def test_single_insert_mode_generates_thread_group_with_model(self):
+        """When model is provided, single_insert now produces a write
+        ThreadGroup per spec §"Generate JDBCSampler for single_insert
+        and batch_insert modes"."""
+        cfg = [self._write_cfg("single_insert", "iot_monitor.t_cnc")]
+        result = generate_write_thread_groups(cfg, {}, model=self._make_ts_model())
+        tags = [e.tag.split("}")[-1] for e in _walk(result)]
+        assert "ThreadGroup" in tags
+        assert "JDBCSampler" in tags
+        assert "JSR223PreProcessor" in tags
+        assert "ConstantThroughputTimer" in tags
+
+    def test_batch_insert_mode_generates_thread_group_with_model(self):
+        cfg = [
+            WriteConfig(
+                tbl_name="iot_monitor.t_cnc",
+                mode="batch_insert",
+                num_threads=10,
+                batch_lines=5,
+            )
+        ]
+        result = generate_write_thread_groups(cfg, {}, model=self._make_ts_model())
+        tags = [e.tag.split("}")[-1] for e in _walk(result)]
+        assert "ThreadGroup" in tags
+        assert "JDBCSampler" in tags
+        assert "JSR223PreProcessor" in tags
+
+    def test_single_insert_sampler_references_inline_sql(self):
+        """The direct-INSERT path uses ``Update Statement`` with the
+        query bound to ``${insert_sql}`` (a JMeter variable the
+        PreProcessor populates with a fully-inline INSERT). This sidesteps
+        the JMeter ``?`` placeholder limitations and the
+        ``Timestamp.valueOf`` string-format quirks on KaiwuDB."""
+        cfg = [self._write_cfg("single_insert", "iot_monitor.t_cnc")]
+        result = generate_write_thread_groups(cfg, {}, model=self._make_ts_model())
+        for e in result:
+            if e.tag.endswith("JDBCSampler"):
+                xml = ET.tostring(e, encoding="unicode")
+                assert "${insert_sql}" in xml
+                assert "Update Statement" in xml
+                break
 
     def test_single_prepared_mode_generates_thread_group(self):
         cfg = [self._write_cfg("single_prepared")]

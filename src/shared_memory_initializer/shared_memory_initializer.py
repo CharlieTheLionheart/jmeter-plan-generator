@@ -1,4 +1,4 @@
-"""Shared memory initializer - generates Groovy CSV loader scripts and JSR223PreProcessor XML.
+"""Shared memory initializer - generates Groovy CSV loader scripts and JSR223 XML.
 
 Design: openspec/changes/shared-memory-initializer/design.md
 Spec:    openspec/changes/shared-memory-initializer/specs/shared-memory-initialization/spec.md
@@ -19,6 +19,7 @@ from utils.xml_helpers import (
     JMETER_NS,
     empty_hash_tree,
     jsr223_preprocessor_element,
+    jsr223_sampler_element,
     string_prop,
 )
 
@@ -178,7 +179,11 @@ def create_jsr223_preprocessor(
 
     groovy_script = generate_groovy_loader_script(db, table, csv_path)
 
-    preprocessor, hash_tree = jsr223_preprocessor_element(
+    # Use JSR223Sampler (NOT JSR223PreProcessor) so the script actually
+    # runs. JSR223PreProcessor only fires when a sibling Sampler is
+    # present — and the SetupThreadGroup here has no other sampler, so
+    # the CSV load was silently skipped in earlier builds.
+    sampler, hash_tree = jsr223_sampler_element(
         name=f"SharedMemoryLoader_{db}_{table}",
         script=groovy_script,
         script_language="groovy",
@@ -189,9 +194,9 @@ def create_jsr223_preprocessor(
     # Add the CSV path as a parameter property so it can be overridden
     # (not used in the inline script but available for external script mode)
     path_prop = string_prop("csvPath", csv_path)
-    preprocessor.append(path_prop)
+    sampler.append(path_prop)
 
-    return preprocessor, hash_tree
+    return sampler, hash_tree
 
 
 # ---------------------------------------------------------------------------

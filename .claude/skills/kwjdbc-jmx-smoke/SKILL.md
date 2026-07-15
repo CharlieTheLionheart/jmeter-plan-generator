@@ -38,7 +38,14 @@ kwjdbc-svt 端到端 smoke 测试。
 | JMeter lib（CSV/JDBC extras） | 同上 `lib/`，确认 `lib/ext/kaiwudb-jdbc-*.jar` 存在 |
 | 项目 venv | `<repo>/venv/bin/activate` |
 | 测试 fixture yaml | `ls tests/kwjdbc_svt/fixtures/`，已就位 |
-| （可选）KaiwuDB 端点 | `-Jdb_url=jdbc:kaiwudb://<host>:<port>/<db>` |
+| （可选）KaiwuDB 端点 | `-Jdb_url=jdbc:kaiwudb://<host>:<port>/defaultdb` |
+
+> **JDBC URL 必须连 `defaultdb`**，**不可**连业务库（`iot_monitor` / `iot` 等）。
+> setup 阶段第一件事就是 `CREATE DATABASE IF NOT EXISTS iot_monitor`——
+> 这些时序库**执行 DDL 之前并不存在**，连业务库直接拒连 → 整个 setup 链炸。
+> `defaultdb` 是 KaiwuDB 系统库，永远在；用它当 bootstrap 连接，建完库
+> 之后 sampler 再切到 `iot_monitor` 写数据。同理 fixture `test_cfg.yaml`
+> 里的 `db_url` 也必须填 `defaultdb`。
 
 ## 流程
 
@@ -112,7 +119,7 @@ docker run -d --name kaiwudb-smoke -p 26257:26257 kaiwudb/kaiwudb:3.2.0 \
 
 "$JMETER" -n -t /tmp/jmeter-smoke/out/test_plan.jmx \
     -Jtest_duration=5 -Jnum_threads=1 \
-    -Jdb_url=jdbc:kaiwudb://localhost:26257/test \
+    -Jdb_url=jdbc:kaiwudb://localhost:26257/defaultdb \
     -Jdb_username=root \
     -Jwrite_throughput=120 \
     -j /tmp/jmeter-smoke/jmeter-live.log 2>&1 | tail -10

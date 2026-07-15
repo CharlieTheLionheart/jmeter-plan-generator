@@ -8,3 +8,4 @@ tests/__pycache__/*
 uv.lock
 src/*/*/__pycache__/*.pyc
 graphify-out/*
+jmeter.log

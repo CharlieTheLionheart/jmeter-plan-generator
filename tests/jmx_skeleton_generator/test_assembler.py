@@ -194,18 +194,43 @@ class TestJMXSkeletonGenerator:
             xml = path.read_text(encoding="utf-8")
             assert "SELECT * FROM mydb.t" in xml
 
-    def test_generate_single_insert_skips_write_group(self):
+    def test_generate_single_insert_generates_write_thread_group(self):
+        """single_insert produces a persistent write ThreadGroup per
+        spec §"Generate JDBCSampler for single_insert and batch_insert modes".
+        A TS model must be supplied so the column list + first ptag can be
+        resolved."""
+        from config_parser.models import (
+            ColTypeConfig,
+            PrimaryTagColTypeConfig,
+            TestModelConfig,
+            TsColConfig,
+            TsDbConfig,
+            TsTableConfig,
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
             test_config = self._make_test_config(write_mode="single_insert")
+            table = TsTableConfig(
+                name="t",
+                data_col_count=1,
+                primary_tag_count=1,
+                regular_tag_count=0,
+                ts_col=TsColConfig(name="ts", type="timestamp", ms_step=1000),
+                data_cols=[ColTypeConfig(col_type="int8", type_proportion=1.0)],
+                primary_tags=[PrimaryTagColTypeConfig(col_type="int8", type_proportion=1.0)],
+            )
+            db = TsDbConfig(name="mydb", tables=[table])
+            model = TestModelConfig(ts_dbs=[db])
             gen = JMXSkeletonGenerator(
                 test_config=test_config,
+                model=model,
                 output_dir=tmpdir,
             )
             path = gen.generate()
             xml = path.read_text(encoding="utf-8")
-            # single_insert is relational batch init, no persistent write ThreadGroup
-            # Only SetupThreadGroup for DDL (none in this case)
-            assert "ThreadGroup" not in xml or "SetupThreadGroup" not in xml
+            # Persistent write ThreadGroup for single_insert now appears.
+            assert "Write-mydb.t" in xml
+            assert 'queryType">Update Statement' in xml
+            assert "insert_sql" in xml
 
     def test_generate_empty_ddl_skips_setup_thread_group(self):
         with tempfile.TemporaryDirectory() as tmpdir:

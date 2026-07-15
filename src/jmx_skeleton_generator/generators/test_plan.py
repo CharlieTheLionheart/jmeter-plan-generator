@@ -7,6 +7,7 @@ from typing import List
 
 from config_parser.models import ConnConfig
 from utils.xml_helpers import (
+    argument_element,
     bool_prop,
     collection_prop,
     element_prop,
@@ -81,7 +82,7 @@ def generate_user_defined_variables(conn_config: ConnConfig) -> List:
         children=arg_props,
     )
 
-    args, args_hash = test_plan_element(
+    args, args_hash = argument_element(
         name="UserDefinedVariables",
         testname="User Defined Variables",
         guiclass="ArgumentsPanel",

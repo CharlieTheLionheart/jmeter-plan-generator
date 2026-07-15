@@ -193,6 +193,7 @@ def _run_pipeline(
         prepared_templates=prepared_templates,
         seed_csv_paths=seed_csv_paths,
         output_dir=str(output_dir),
+        model=model,
     ).generate()
 
 

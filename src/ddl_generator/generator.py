@@ -236,8 +236,10 @@ class DDLGenerator:
         all_tag_specs = ptag_specs + rtag_specs
         tag_defs = self._column_definitions(all_tag_specs)
 
+        # KaiwuDB convention: tag columns live only in the ``tags(...)`` /
+        # ``primary tags(...)`` clauses. Inlining them into the main column
+        # list triggers ``duplicate column name`` at DDL time.
         column_defs = [ts_col_def]
-        column_defs.extend(tag_defs)
         column_defs.extend(self._column_definitions(data_specs))
 
         parts = ["create table"]

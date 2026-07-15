@@ -43,28 +43,29 @@ class TestGeneratePreprocessorScript:
         )
         assert "as long" in script
 
-    def test_reads_shared_memory_with_qualified_key(self):
-        # Aligns with ``shared-memory-initializer`` convention:
-        # ``__SHARED_MEM_{db}.{table}`` (rows) +
-        # ``__SHARED_MEM_{db}.{table}_columns`` (column order).
+    def test_reads_shared_memory_rows_key(self):
+        # The preprocessor reads the row aggregate via
+        # ``__SHARED_MEM_{db}.{table}`` — aligns with
+        # ``shared-memory-initializer`` convention.
         script = generate_preprocessor_script(
             table_config=_table_config(),
             device_per_thread=4,
         )
         assert "'__SHARED_MEM_iot_monitor.t_cnc'" in script
-        assert "'__SHARED_MEM_iot_monitor.t_cnc_columns'" in script
         assert "props.get(rowsKey)" in script
-        assert "props.get(colsKey)" in script
 
-    def test_column_order_read_from_shared_memory(self):
-        # Column-name list comes from the columns key (set by
-        # ``shared-memory-initializer``), not from a Python-side
-        # hard-coded Groovy literal.
+    def test_column_order_uses_embedded_list(self):
+        # Column order MUST match the SQL column list embedded in the
+        # JDBCSampler (which prepends ``ts`` to the column names). The
+        # shared-memory initializer's ``_columns`` key carries the
+        # seed-CSV header which has no leading ``ts`` — using it here
+        # would mis-project ptagIndex and the per-cell loop count.
         script = generate_preprocessor_script(
             table_config=_table_config(),
             device_per_thread=4,
         )
-        assert "props.get(colsKey) as List" in script
+        assert "props.get(colsKey)" not in script
+        assert "def columns = ['ts', 'ptag_int8_1', 'col_int8_1']" in script
         # First column is still hard-coded as the ts slot (design §3.5.1).
         assert "c == 0" in script
 
@@ -126,13 +127,19 @@ class TestGeneratePreprocessorScript:
             "msStepL" in script and "batchLines as long" in script
         )
 
-    def test_timestamp_column_uses_sql_timestamp(self):
-        # Closes C6 — ts column emitted as java.sql.Timestamp string.
+    def test_timestamp_column_uses_simple_date_format(self):
+        # The ts column is emitted as a 9-digit fractional-second string
+        # (yyyy-MM-dd HH:mm:ss.SSSSSSSSS) so JDBC's
+        # ``Timestamp.valueOf`` (used when the sampler has
+        # ``queryArgumentsTypes=TIMESTAMP``) parses cleanly. We avoid
+        # ``java.sql.Timestamp.toString()`` because Groovy renders it
+        # in a locale-dependent way that may omit the fractional part.
         script = generate_preprocessor_script(
             table_config=_table_config(),
             device_per_thread=4,
         )
-        assert "java.sql.Timestamp" in script
+        assert "SimpleDateFormat" in script
+        assert "SSSSSSSSS" in script
 
     def test_zero_device_per_thread_raises(self):
         with pytest.raises(DirectInsertGenerationError):
@@ -194,7 +201,6 @@ class TestGeneratePreprocessorScript:
             device_per_thread=4,
         )
         assert "'__SHARED_MEM_iot_monitor.t_cnc_special'" in script
-        assert "'__SHARED_MEM_iot_monitor.t_cnc_special_columns'" in script
 
 
 class TestRelationalInitPreprocessorScript:

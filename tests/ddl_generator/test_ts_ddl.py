@@ -67,6 +67,28 @@ def test_ts_table_tags_clause():
     assert "tags (ptag_int8_1 int8 not null, rtag_varchar_1 varchar(10))" in script
 
 
+def test_ts_table_columns_excludes_tag_columns():
+    """Regression: tags must not also appear in the column list.
+
+    KaiwuDB rejects ``CREATE TABLE`` whose main column list duplicates a
+    column name declared in ``TAGS (...)``.  Primary tags belong only to
+    the ``primary tags (...)`` clause; regular tags only to ``tags (...)``.
+    """
+    model = TestModelConfig(ts_dbs=[_ts_db()])
+    script = DDLGenerator(model).generate()
+    # Extract the column list between the outermost parens after the table name.
+    head = script.split("iot_monitor.t_cnc (", 1)[1]
+    column_list = head.split(")", 1)[0]
+    assert "ptag_int8_1" not in column_list, (
+        f"primary tag leaked into column list: {column_list}"
+    )
+    assert "rtag_varchar_1" not in column_list, (
+        f"regular tag leaked into column list: {column_list}"
+    )
+    assert "ts" in column_list
+    assert "col_int8_1" in column_list
+
+
 def test_ts_table_primary_tags_clause():
     model = TestModelConfig(ts_dbs=[_ts_db()])
     script = DDLGenerator(model).generate()

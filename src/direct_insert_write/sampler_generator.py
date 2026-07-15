@@ -132,7 +132,7 @@ def generate_jdbc_sampler_config(
         "name": name or f"DirectInsert_{mode}",
         "query": sql,
         "data_source": data_source,
-        "query_type": "Update Statement",
+        "query_type": "Prepared Update Statement",
         "query_arguments": _param_args(n_params),
         "query_arguments_types": query_arguments_types or _default_types(n_params),
         "variable_names": "",
@@ -156,12 +156,17 @@ def create_jdbc_sampler(
     batch_lines: Optional[int] = None,
     data_source: str = "jdbcConfig",
     name: Optional[str] = None,
+    query_arguments_types: Optional[str] = None,
     testname: Optional[str] = None,
 ) -> Tuple[ET.Element, ET.Element]:
     """Return ``(JDBCSampler, hashTree)`` XML elements for the configured mode.
 
     Convenience wrapper around :func:`generate_jdbc_sampler_config` that
-    hands the config to ``jdbc_sampler_element``.
+    hands the config to ``jdbc_sampler_element``. The config's
+    ``query_arguments`` (e.g. ``${param_0},${param_1},...``) and
+    ``query_arguments_types`` are propagated so the JSR223PreProcessor's
+    per-cell ``vars.put("param_N", ...)`` calls bind to the INSERT
+    placeholders.
     """
     config = generate_jdbc_sampler_config(
         mode=mode,
@@ -169,12 +174,15 @@ def create_jdbc_sampler(
         batch_lines=batch_lines,
         data_source=data_source,
         name=name,
+        query_arguments_types=query_arguments_types,
     )
     return jdbc_sampler_element(
         name=config["name"],
         query=config["query"],
         data_source=config["data_source"],
         query_type=config["query_type"],
+        query_arguments=config["query_arguments"],
+        query_arguments_types=config["query_arguments_types"],
         testname=testname,
     )
 

@@ -1,5 +1,5 @@
 conn_config:
-  db_url: jdbc:kaiwudb://localhost:26257/iot
+  db_url: jdbc:kaiwudb://localhost:26257/defaultdb
   db_username: root
   conn_pool_size: 10
   device_start: 1

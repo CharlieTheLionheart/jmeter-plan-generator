@@ -92,10 +92,14 @@ class TestCreateJsr223Preprocessor:
         assert hash_tree is not None
 
     def test_preprocessor_has_testclass(self):
+        # The shared-memory loader is a JSR223Sampler (not a
+        # JSR223PreProcessor) so the Groovy CSV loader actually runs —
+        # JSR223PreProcessor only fires when a sibling Sampler is
+        # present, and the SetupThreadGroup here has no other sampler.
         preprocessor, _ = create_jsr223_preprocessor(
             "tsdb", "t_table", "/path/to/csv.csv"
         )
-        assert preprocessor.get("testclass") == "JSR223PreProcessor"
+        assert preprocessor.get("testclass") == "JSR223Sampler"
 
     def test_preprocessor_has_guiclass(self):
         preprocessor, _ = create_jsr223_preprocessor(
@@ -151,7 +155,7 @@ class TestSharedMemoryInitializerGenerator:
             csv_path = Path(tmp) / "t_table.csv"
             _write_csv(csv_path, [["ts", "ptag"], ["1", "2"]])
             preprocessor, hash_tree = gen.generate_for_table("tsdb", "t_table", str(csv_path))
-            assert preprocessor.get("testclass") == "JSR223PreProcessor"
+            assert preprocessor.get("testclass") == "JSR223Sampler"
 
     def test_generate_for_tables_returns_list(self):
         gen = SharedMemoryInitializerGenerator()

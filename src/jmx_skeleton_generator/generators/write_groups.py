@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Dict, List
+import logging
+from typing import Dict, List, Optional, Tuple
 
-from config_parser.models import WriteConfig
+from config_parser.models import TestModelConfig, WriteConfig
+from direct_insert_write import (
+    create_jdbc_sampler,
+    create_jsr223_preprocessor_for_write,
+)
+from direct_insert_write.sql_generator import (
+    generate_batch_insert_sql,
+    generate_single_insert_sql,
+)
 from throughput_control import generate_write_timer
 from utils.preprocessor_helpers import all_groovy_decls
 from utils.xml_helpers import (
@@ -14,6 +23,303 @@ from utils.xml_helpers import (
     thread_group_element,
 )
 from write_strategies import get_strategy
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Inline-SQL preprocessor generator (single_insert / batch_insert)
+# ---------------------------------------------------------------------------
+
+def _build_inline_sql_preprocessor_script(
+    *,
+    db: str,
+    table: str,
+    columns: List[str],
+    first_ptag_column: Optional[str],
+    device_per_thread: int,
+    column_types: Optional[List[str]] = None,
+    ms_step: int = 1000,
+    batch_lines: int = 1,
+) -> str:
+    """Render a Groovy script that builds a fully-inline INSERT statement
+    into ``vars.put("insert_sql", ...)``.
+
+    Why inline (vs. ``?`` placeholders):
+    - JMeter's ``Update Statement`` JDBC mode does not bind ``?`` to
+      ``queryArguments`` — it executes the SQL literally. Inline values
+      work in this mode.
+    - The ``Prepared Update Statement`` path coerces per-cell types via
+      ``queryArgumentsTypes``; KaiwuDB's ``Timestamp.valueOf`` rejects
+      the locale-dependent string format that Groovy's
+      ``Timestamp.toString()`` emits, so type coercion fails for ts.
+    - Inline-substituted single-quoted strings (KaiwuDB implicitly
+      casts to TIMESTAMP) sidestep both issues.
+
+    Column mapping:
+    - ``columns`` is the full SQL column list with ``ts`` prepended
+      (e.g. ``[ts, col_int8_1, ptag_varchar_1]``).
+    - The SharedMemory row CSV header does NOT include ``ts`` (it is
+      generated at write time). For each SQL column we look up its
+      position in the CSV and fetch the cell; ``ts`` and the first
+      primary tag are projected (formatted timestamp / device id).
+    """
+    safe_db = "'" + db.replace("\\", "\\\\").replace("'", "\\'") + "'"
+    safe_table = "'" + table.replace("\\", "\\\\").replace("'", "\\'") + "'"
+    rows_key = f"__SHARED_MEM_{db}.{table}"
+    cols_list = ", ".join(f"'{c}'" for c in columns)
+    ptag_index = (
+        columns.index(first_ptag_column)
+        if first_ptag_column and first_ptag_column in columns
+        else -1
+    )
+    # Map SQL column index → KaiwuDB/JDBC type. Used to decide which
+    # cells can be emitted unquoted (numeric / bool) vs. as string
+    # literals. Empty list = treat every cell as a string.
+    type_list_groovy = (
+        "[" + ", ".join(f"'{t.lower()}'" for t in column_types) + "]"
+        if column_types
+        else "[]"
+    )
+    script = f"""\
+{all_groovy_decls()}
+
+def db = {safe_db}
+def table = {safe_table}
+def rowsKey = '{rows_key}'
+def allRows = props.get(rowsKey) as ArrayList
+def columns = [{cols_list}]
+def typeList = {type_list_groovy}
+def nCols = columns.size()
+def ptagIndex = {ptag_index}
+def batchLines = {batch_lines}
+def devicePerThread = {device_per_thread}
+def msStep = {ms_step}
+
+if (allRows == null || allRows.isEmpty()) {{
+    log.warn("DirectInsertPrep: shared memory empty for " + rowsKey)
+    vars.put("insert_sql", "-- no rows in shared memory")
+    return
+}}
+
+def threadNum = ctx.getThreadNum()
+if (threadNum < 0) {{
+    threadNum = (vars.get('__threadNum') as Integer) ?: 0
+}}
+def localDeviceStart = vars.get('device_start') != null ?
+    (vars.get('device_start') as Integer) : 0
+
+def baseTimeKey = 'base_time_' + rowsKey
+def batchSeqKey = 'batch_seq_' + rowsKey
+if (vars.get(baseTimeKey) == null) {{
+    vars.put(baseTimeKey, String.valueOf(System.currentTimeMillis()))
+}}
+def baseTime = (vars.get(baseTimeKey) as Long)
+def batchSeq = vars.get(batchSeqKey) != null ?
+    (vars.get(batchSeqKey) as Integer) : 0
+vars.put(batchSeqKey, String.valueOf(batchSeq + 1))
+
+def tsFmt = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSSSSS")
+def total = allRows.size()
+
+def rows = []
+for (int r = 0; r < batchLines; r++) {{
+    def srcRow = allRows.get(new Random().nextInt(total))
+    def rowCopy = new ArrayList(srcRow)
+    long ts = baseTime + batchSeq * msStep + r * (msStep / Math.max(1, batchLines))
+    long deviceNumber = calculateDeviceNumber(threadNum as long, localDeviceStart as long, devicePerThread as long, r)
+    def values = new ArrayList()
+    // columns[0] is the ts column (synthesized at write time, not in CSV).
+    // columns[1..] are the CSV columns in their original order. The CSV
+    // header may include the first ptag column with the literal
+    // ``${{device_code}}`` placeholder — we project over the
+    // ptagIndex slot and ignore the CSV cell there.
+    for (int c = 0; c < nCols; c++) {{
+        if (c == 0) {{
+            values.add("'" + tsFmt.format(new java.util.Date(ts)) + "'")
+        }} else if (c == ptagIndex) {{
+            values.add("'" + deviceIdentifier(deviceNumber) + "'")
+        }} else {{
+            // c=1 in SQL maps to rowCopy[0], c=2 in SQL maps to rowCopy[1], etc.
+            int csvIdx = c - 1
+            if (csvIdx < 0 || csvIdx >= rowCopy.size()) {{
+                values.add("NULL")
+            }} else {{
+                def raw = rowCopy.get(csvIdx)
+                def s = raw == null ? "" : raw.toString()
+                if (s.length() >= 2 && s.startsWith('"') && s.endsWith('"')) {{
+                    s = s.substring(1, s.length() - 1)
+                }}
+                if (s.equalsIgnoreCase("null") || s.isEmpty()) {{
+                    values.add("NULL")
+                }} else {{
+                    // Numeric / bool columns: emit unquoted so KaiwuDB
+                    // does not have to coerce a quoted literal
+                    // (KaiwuDB rejects ``'62'`` for an INT8 column).
+                    def colType = (c < typeList.size()) ? typeList.get(c) : ""
+                    def needsQuoting = !(colType == "int2" || colType == "int4" || colType == "int8" || colType == "int" || colType == "tinyint" || colType == "smallint" || colType == "bigint" || colType == "float4" || colType == "float8" || colType == "double" || colType == "float" || colType == "bool" || colType == "boolean")
+                    if (needsQuoting) {{
+                        values.add("'" + s.replace("'", "''") + "'")
+                    }} else {{
+                        values.add(s)
+                    }}
+                }}
+            }}
+        }}
+    }}
+    rows.add("(" + String.join(", ", values) + ")")
+}}
+
+def qualifiedTable = db + "." + table
+def colsSql = String.join(", ", columns)
+def valuesSql = String.join(", ", rows)
+def sql = "insert into " + qualifiedTable + " (" + colsSql + ") values " + valuesSql
+vars.put("insert_sql", sql)
+"""
+    return script
+
+
+# ---------------------------------------------------------------------------
+# Direct-INSERT metadata resolution
+# ---------------------------------------------------------------------------
+
+def _split_qualified_table(fqn: str) -> Tuple[str, str]:
+    """Split ``"db.table"`` into ``(db, table)``. Lower-cased."""
+    if "." not in fqn:
+        raise ValueError(f"write config tbl_name must be qualified 'db.table', got {fqn!r}")
+    db, _, table = fqn.partition(".")
+    return db.lower(), table.lower()
+
+
+def _resolve_ts_table_metadata(
+    model: TestModelConfig,
+    fqn: str,
+) -> Tuple[List[str], Optional[str], Optional[str], List[str]]:
+    """Resolve ordered column list + first-p-tag column for a TS table.
+
+    Returns
+    -------
+    (columns, first_ptag_column, ts_col_jdbc_type, column_types)
+        ``columns`` is the SQL column list (ts first); ``first_ptag_column``
+        is the name of the first primary tag (or ``None``); ``ts_col_jdbc_type``
+        is the upper-cased JDBC type for the ts column; ``column_types``
+        is a parallel list of column types aligned with ``columns`` (used
+        by the preprocessor to decide quoting for numeric values).
+    """
+    target_db, target_table = _split_qualified_table(fqn)
+    for db in model.ts_dbs:
+        if db.name.lower() != target_db:
+            continue
+        for table in db.tables:
+            if table.name.lower() != target_table:
+                continue
+            ts_name = table.ts_col.name if table.ts_col else "ts"
+            ts_jdbc_type = (
+                table.ts_col.type.upper() if table.ts_col else None
+            )
+            first_ptag_name: Optional[str] = None
+            if table.primary_tags:
+                from column_namer.normalize import normalize_type
+                first_ptag_name = f"ptag_{normalize_type(table.primary_tags[0].col_type)}_1"
+            from column_namer import ColumnNamer
+            namer = ColumnNamer(table)
+            all_names, _idx = namer()
+            columns: List[str] = [ts_name] + list(all_names)
+            # Build parallel type list aligned with `columns`:
+            # [ts_type, *primary_tag_types, *data_col_types, *regular_tag_types]
+            ptag_types = [pt.col_type.lower() for pt in table.primary_tags]
+            data_types = [c.col_type.lower() for c in table.data_cols]
+            rtag_types = [c.col_type.lower() for c in table.regular_tags]
+            # The ColumnNamer emits names in GROUP_ORDER
+            # ``[data_cols, primary_tags, regular_tags]`` so the type
+            # list must match that order to stay aligned with
+            # ``all_names`` (then prepend ts).
+            column_types: List[str] = (
+                [(ts_jdbc_type or "timestamp").lower()]
+                + data_types
+                + ptag_types
+                + rtag_types
+            )
+            return columns, first_ptag_name, ts_jdbc_type, column_types
+    raise ValueError(f"time-series table {fqn!r} not found in model")
+
+
+def _build_direct_insert_components(
+    wc: WriteConfig,
+    columns: List[str],
+    first_ptag_column: Optional[str],
+    ts_col_jdbc_type: Optional[str] = None,
+    column_types: Optional[List[str]] = None,
+) -> Tuple:
+    """Build (JdbcSampler, hashTree, Jsr223Preprocessor, hashTree) for direct-insert write.
+
+    The sampler uses ``Update Statement`` (NOT Prepared) with
+    ``query=${insert_sql}`` and the preprocessor builds a fully
+    inline-substituted INSERT statement into ``vars.put("insert_sql", ...)``.
+    This sidesteps the JMeter limitation that ``?`` placeholders don't
+    bind in ``Update Statement`` mode, and the string-coercion quirks
+    of ``PreparedStatement.setObject`` for ``TIMESTAMP`` types.
+
+    Returns four ET elements (sampler + hashTree + preprocessor + hashTree).
+    Raises :class:`direct_insert_write.errors.DirectInsertGenerationError`
+    on validation failure.
+    """
+    if wc.mode == "single_insert":
+        # Pre-built SQL (with ``?`` placeholders) is no longer used by the
+        # sampler; the preprocessor builds a fully-inlined SQL into
+        # ``vars.insert_sql`` and the sampler references ``${insert_sql}``.
+        sampler, samp_hash = jdbc_sampler_element(
+            name=f"Write-{wc.tbl_name}",
+            query="${insert_sql}",
+            data_source="jdbcConfig",
+            query_type="Update Statement",
+            testname=f"[Write] {wc.tbl_name}",
+        )
+        db, table = _split_qualified_table(wc.tbl_name)
+        script = _build_inline_sql_preprocessor_script(
+            db=db,
+            table=table,
+            columns=columns,
+            first_ptag_column=first_ptag_column,
+            device_per_thread=wc.device_per_thread,
+            column_types=column_types,
+            batch_lines=wc.batch_lines,
+        )
+        preproc, preproc_hash = jsr223_preprocessor_element(
+            name=f"DirectInsertPrep-{wc.tbl_name}",
+            script=script,
+            script_language="groovy",
+            cache_key="true",
+            testname=f"[Write] {wc.tbl_name} - direct insert preprocessor",
+        )
+    elif wc.mode == "batch_insert":
+        sampler, samp_hash = jdbc_sampler_element(
+            name=f"Write-{wc.tbl_name}",
+            query="${insert_sql}",
+            data_source="jdbcConfig",
+            query_type="Update Statement",
+            testname=f"[Write] {wc.tbl_name}",
+        )
+        db, table = _split_qualified_table(wc.tbl_name)
+        script = _build_inline_sql_preprocessor_script(
+            db=db,
+            table=table,
+            columns=columns,
+            first_ptag_column=first_ptag_column,
+            device_per_thread=wc.device_per_thread,
+            column_types=column_types,
+            batch_lines=wc.batch_lines,
+        )
+        preproc, preproc_hash = jsr223_preprocessor_element(
+            name=f"DirectInsertPrep-{wc.tbl_name}",
+            script=script,
+            script_language="groovy",
+            cache_key="true",
+            testname=f"[Write] {wc.tbl_name} - batch insert preprocessor",
+        )
+    else:
+        raise ValueError(f"_build_direct_insert_components called with mode={wc.mode!r}")
+    return sampler, samp_hash, preproc, preproc_hash
 
 
 # Groovy body for batch_prepared JSR223PreProcessor (data preparation).
@@ -108,35 +414,96 @@ def build_batch_prepared_preprocessor_script() -> str:
 def generate_write_thread_groups(
     write_config: List[WriteConfig],
     prepared_templates: Dict[str, str],
+    *,
+    model: Optional[TestModelConfig] = None,
 ) -> List:
-    """Generate write ThreadGroups for all prepared-mode table entries.
+    """Generate write ThreadGroups for all configured table entries.
+
+    Modes are dispatched to dedicated branches:
+
+    - ``single_insert`` / ``batch_insert``: build a ThreadGroup with a
+      JSR223PreProcessor (cell projection) + JDBCSampler (Update Statement
+      with ``?`` placeholders bound via ``${param_N}``).
+    - ``single_prepared`` / ``batch_prepared``: build a ThreadGroup
+      backed by ``prepared_templates`` (JDBCSampler Prepared Update or
+      JSR223Sampler JDBC batch).
+
+    The ``single_insert`` / ``batch_insert`` branches require ``model``
+    to resolve the table's column list + first primary-tag column. When
+    ``model`` is ``None`` these entries are skipped with a logged warning
+    (preserves the pre-2026-07-15 contract where ``write_groups`` only
+    consumed prepared modes).
 
     Parameters
     ----------
     write_config:
         All write configuration entries from ``TestConfig``.
     prepared_templates:
-        Dictionary mapping ``db.table`` to INSERT template strings.
+        Dictionary mapping ``db.table`` to INSERT template strings (used
+        only by ``*_prepared`` modes).
+    model:
+        Optional :class:`TestModelConfig`; required to render
+        ``single_insert`` / ``batch_insert`` ThreadGroups.
 
     Returns
     -------
     A flat list of elements forming all write ThreadGroups.
-    - ``batch_prepared``: [ThreadGroup, hashTree, ConstantThroughputTimer,
-      hashTree, JSR223PreProcessor, hashTree, JSR223Sampler, hashTree]
-    - ``single_prepared`` / other modes: [ThreadGroup, hashTree,
-      ConstantThroughputTimer, hashTree, JDBCSampler, hashTree]
-    Skips entries that do not use ``single_prepared`` / ``batch_prepared``
-    modes (those are relational-table batch inserts handled in Setup).
-    Returns an empty list when no prepared modes are configured.
+    Each ThreadGroup is paired with its ``<hashTree>`` containing the
+    throughput timer + sampler (+ preprocessor for batch_prepared /
+    direct-insert modes).
     """
     results: List = []
 
     for wc in write_config:
-        if wc.mode not in ("single_prepared", "batch_prepared"):
-            # 关系表 batch insert 由 SetupThreadGroup 路径处理；这里仅管 prepared modes。
+        fqn = wc.tbl_name.lower()
+
+        if wc.mode in ("single_insert", "batch_insert"):
+            # Direct-INSERT path: requires model metadata.
+            if model is None:
+                logger.warning(
+                    "write_groups: skipping %s mode=%s — model is None; "
+                    "pass TestModelConfig to render direct-insert thread groups",
+                    wc.tbl_name,
+                    wc.mode,
+                )
+                continue
+            try:
+                columns, first_ptag, ts_jdbc, column_types = _resolve_ts_table_metadata(model, fqn)
+            except ValueError as exc:
+                logger.warning(
+                    "write_groups: cannot resolve columns for %s (%s); skipping",
+                    wc.tbl_name,
+                    exc,
+                )
+                continue
+
+            timer, timer_hash = generate_write_timer()
+            sampler, samp_hash, preproc, preproc_hash = _build_direct_insert_components(
+                wc, columns, first_ptag, ts_col_jdbc_type=ts_jdbc, column_types=column_types,
+            )
+            tg, tg_hash = thread_group_element(
+                name=f"Write-{wc.tbl_name}",
+                testname=f"[Write] {wc.tbl_name}",
+                num_threads=wc.num_threads,
+                ramp_time=1,
+                duration="${test_duration}",
+                loops="-1",
+                scheduler=True,
+                children=[timer, timer_hash, preproc, preproc_hash, sampler, samp_hash],
+            )
+            results.extend([tg, tg_hash])
             continue
 
-        fqn = wc.tbl_name.lower()
+        if wc.mode not in ("single_prepared", "batch_prepared"):
+            # Unknown / future modes (e.g. schemaless) are skipped here;
+            # schema-level rejection happens in WriteConfig validator.
+            logger.warning(
+                "write_groups: skipping %s mode=%s — no handler for this mode",
+                wc.tbl_name,
+                wc.mode,
+            )
+            continue
+
         template = prepared_templates.get(fqn, f"-- placeholder for {wc.tbl_name}")
 
         # 通过策略注册表决定 sampler 类型与 scriptLanguage；

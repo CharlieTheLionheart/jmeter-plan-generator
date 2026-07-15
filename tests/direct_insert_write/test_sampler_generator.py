@@ -18,9 +18,12 @@ from direct_insert_write.sql_generator import (
 
 
 class TestJdbcSamplerConfig:
-    def test_single_insert_uses_update_statement_with_param_args(self):
-        # Closes C3 — sampler must use Update Statement + ${param_N}
-        # binding, not a single JSON blob.
+    def test_single_insert_uses_prepared_update_statement_with_param_args(self):
+        # JMeter's "Update Statement" mode does not bind ``?`` placeholders
+        # to ``queryArguments`` — it executes the SQL literally. The
+        # direct-insert samplers therefore use "Prepared Update Statement"
+        # so the JSR223PreProcessor's per-cell ``vars.put("param_N", ...)``
+        # calls bind through ``queryArguments=${param_N}``.
         cfg = generate_jdbc_sampler_config(
             "single_insert",
             sql=generate_single_insert_sql(
@@ -28,7 +31,7 @@ class TestJdbcSamplerConfig:
                 ["ts", "ptag_int8_1", "col_int8_1"],
             ),
         )
-        assert cfg["query_type"] == "Update Statement"
+        assert cfg["query_type"] == "Prepared Update Statement"
         assert cfg["query_arguments"] == "${param_0},${param_1},${param_2}"
         assert cfg["query_arguments_types"] == "VARCHAR,VARCHAR,VARCHAR"
         # batch_insert-only field absent
@@ -43,7 +46,7 @@ class TestJdbcSamplerConfig:
             batch_lines=10,
         )
         cfg = generate_jdbc_sampler_config("batch_insert", sql=sql, batch_lines=10)
-        assert cfg["query_type"] == "Update Statement"
+        assert cfg["query_type"] == "Prepared Update Statement"
         # 2 cols × 10 rows = 20 params
         assert cfg["query_arguments"].count("${param_") == 20
         assert cfg["query_arguments"].endswith("${param_19}")

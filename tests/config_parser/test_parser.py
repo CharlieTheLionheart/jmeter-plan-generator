@@ -42,7 +42,7 @@ def _valid_model() -> dict:
 def _valid_cfg() -> dict:
     return {
         "conn_config": {
-            "db_url": "jdbc:kaiwudb://localhost:26257/iot",
+            "db_url": "jdbc:kaiwudb://localhost:26257/defaultdb",
             "conn_pool_size": 10,
             "device_start": 1,
             "test_duration": 60,
@@ -68,7 +68,7 @@ def test_parse_valid_test_model(tmp_path: Path) -> None:
 def test_parse_valid_test_cfg(tmp_path: Path) -> None:
     path = _write_yaml(tmp_path, "test_cfg.yaml", _valid_cfg())
     cfg = parse_test_cfg_yaml(path)
-    assert cfg.conn_config.db_url == "jdbc:kaiwudb://localhost:26257/iot"
+    assert cfg.conn_config.db_url == "jdbc:kaiwudb://localhost:26257/defaultdb"
 
 
 def test_missing_file(tmp_path: Path) -> None:
