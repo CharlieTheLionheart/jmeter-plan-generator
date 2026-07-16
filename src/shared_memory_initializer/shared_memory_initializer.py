@@ -107,15 +107,29 @@ try {{
     def rows = []
     def columns = []
 
+    // ``seed-data-generator`` emits CSVs with ``csv.QUOTE_ALL``, so
+    // every field is wrapped in ``"..."``. Stripping happens here (not
+    // in the seed generator) so the contract remains one-sided: emit
+    // QUOTE_ALL, consume strip-quotes. Without stripping the loader
+    // produces header entries like ``"col_int8_1"`` and cell strings
+    // like ``"20"`` (literal quote chars embedded). Both break
+    // downstream: ``columnNames.indexOf("ptag_varchar_1")`` returns -1
+    // (header mismatch → device identifier never overwrites the
+    // ``${{device_code}}`` placeholder), and ``pstmt.setObject(idx, "\\"20\\"")``
+    // cannot infer ``INT8`` (KaiwuDB driver rejects it as
+    // ``could not resolve "20" as INT8 type``).
     file.eachLine {{ line, lineNum ->
         if (lineNum == 1) {{
             // Header line: parse column names. CSV is simple
             // comma-separated in the SVT seed format; use Groovy native
             // ``String.split`` instead of OpenCSV to drop the
-            // jmeter-lib dependency.
+            // jmeter-lib dependency. Apply the same ``trim()`` +
+            // ``replaceAll('^"|"$', '')`` strip as data fields so
+            // ``columnNames.indexOf(firstPtag)`` matches an unquoted
+            // header like ``ptag_varchar_1``.
             def headerFields = (line.split(',') as List<String>)
             if (headerFields != null) {{
-                columns = headerFields.collect {{ it != null ? it.trim() : it }}
+                columns = headerFields.collect {{ it != null ? it.trim().replaceAll('^"|"$', '') : it }}
             }}
         }} else if (lineNum > 1) {{
             // Data line
@@ -131,7 +145,7 @@ try {{
                     if (field == null) {{
                         return null
                     }}
-                    def trimmed = field.trim()
+                    def trimmed = field.trim().replaceAll('^"|"$', '')
                     if (trimmed.equalsIgnoreCase('null') || trimmed.isEmpty()) {{
                         return null
                     }}

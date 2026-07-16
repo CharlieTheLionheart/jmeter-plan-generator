@@ -298,14 +298,22 @@ def _build_write_udv(
     insert_sql: str,
     ms_step: int,
     first_ptag: str,
+    *,
+    column_types: Optional[List[str]] = None,
 ) -> Tuple:
     """Build per-write-ThreadGroup ``<Arguments>`` UDV.
 
     The prepared-mode Groovy scripts read these UDVs at runtime:
     ``vars.get("table_name")``, ``vars.get("insert_sql")``,
     ``vars.get("batch_lines")``, ``vars.get("ms_step")``,
-    ``vars.get("first_ptag")``. Without this UDV the scripts fail
-    with NPE on the first ``.size()`` / lookup call.
+    ``vars.get("first_ptag")``,
+    ``vars.get("column_types")`` (comma-separated, aligned with the
+    INSERT column order — used by batch_prepared to dispatch
+    ``setLong`` / ``setDouble`` / ``setTimestamp`` / ``setString``
+    instead of generic ``setObject``).
+
+    Without this UDV the scripts fail with NPE on the first
+    ``.size()`` / lookup call.
     """
     fields = {
         "table_name": wc.tbl_name,
@@ -314,6 +322,12 @@ def _build_write_udv(
         "ms_step": str(ms_step),
         "first_ptag": first_ptag,
     }
+    if column_types:
+        # Comma-separated; the sampler does ``.split(',')`` at runtime
+        # to index into the type list by column index. Empty list (or
+        # ``None``) leaves the sampler to fall back to ``setString`` for
+        # every cell — which works only for purely-varchar tables.
+        fields["column_types"] = ",".join(column_types)
     arg_props = []
     for key, value in fields.items():
         arg_props.append(
@@ -491,13 +505,40 @@ vars.putObject("__BATCH_ROWS_${tableName}", batchRows)
 vars.put("batch_seq", String.valueOf(batchSeq + 1))
 """
 
-# Groovy scripts for batch_prepared JSR223Sampler (JDBC batch 执行)
+# Groovy scripts for batch_prepared JSR223Sampler (JDBC batch 执行).
+#
+# F-1 typed-binding fix: the sampler reads ``vars.get("column_types")``
+# (comma-separated, aligned with the INSERT column order — populated
+# by ``_build_write_udv``) and dispatches each cell to the matching
+# JDBC ``setXxx``. Generic ``setObject(String)`` cannot let the
+# KaiwuDB driver infer INT8/FLOAT4, so without this dispatch the
+# sampler aborts every batch with ``could not resolve "20" as INT8
+# type``. Type buckets:
+#   - integer / bigint / smallint / tinyint / int2 / int4 / int8 →
+#     ``setLong``
+#   - float / float4 / float8 / double / real / numeric / decimal →
+#     ``setDouble``
+#   - timestamp / timestamptz → ``setTimestamp``
+#   - bool / boolean → ``setBoolean``
+#   - everything else (varchar, char, …) → ``setString``
+#
+# The ``column_types`` UDV is OPTIONAL — when missing, the sampler
+# falls back to ``setString`` for every cell so unit tests / lightweight
+# callers that don't supply a model still get a working (varchar-only)
+# sampler. End-to-end smoke callers always supply it via the model.
 BATCH_PREPARED_SAMPLER_SCRIPT = r"""// JSR223Sampler (groovy): batch_prepared JDBC batch 执行
 import org.apache.jmeter.protocol.jdbc.config.DataSourceElement
 
 def tableName = vars.get("table_name")
 def insertSql = vars.get("insert_sql")
 def batchRows = vars.getObject("__BATCH_ROWS_${tableName}") as ArrayList<Object[]>
+
+// Comma-separated type list aligned with INSERT column order. When
+// absent, fall back to all-varchar (setString). Numeric cells then
+// still work at the JDBC layer because setString(string) coerces
+// only for some drivers — KaiwuDB does NOT coerce, so the typed
+// list is required for INT8/FLOAT4 columns to resolve.
+def columnTypes = (vars.get("column_types") ?: "").split(',') as List<String>
 
 def rowCount = batchRows.size()
 if (rowCount == 0) {
@@ -513,8 +554,21 @@ DataSourceElement.getConnection("jdbcConfig").withCloseable { conn ->
                 def value = row[colIdx]
                 if (value == null) {
                     pstmt.setNull(colIdx + 1, java.sql.Types.NULL)
+                    continue
+                }
+                def type = (colIdx < columnTypes.size()) ?
+                    (columnTypes.get(colIdx) ?: "").trim().toLowerCase() : ""
+                if (type in ["int", "int2", "int4", "int8", "tinyint", "smallint", "bigint"]) {
+                    pstmt.setLong(colIdx + 1, Long.parseLong(value.toString()))
+                } else if (type in ["float", "float4", "float8", "double", "real", "numeric", "decimal"]) {
+                    pstmt.setDouble(colIdx + 1, Double.parseDouble(value.toString()))
+                } else if (type in ["timestamp", "timestamptz"]) {
+                    pstmt.setTimestamp(colIdx + 1, value as java.sql.Timestamp)
+                } else if (type in ["bool", "boolean"]) {
+                    pstmt.setBoolean(colIdx + 1, Boolean.parseBoolean(value.toString()))
                 } else {
-                    pstmt.setObject(colIdx + 1, value)
+                    // varchar / char / unknown — stringify and bind.
+                    pstmt.setString(colIdx + 1, value.toString())
                 }
             }
             pstmt.addBatch()
@@ -664,14 +718,26 @@ def generate_write_thread_groups(
             try:
                 ms_step = _resolve_ts_ms_step(model, fqn)
                 first_ptag = _resolve_first_ptag(model, fqn)
+                # ``column_types`` drives the batch_prepared sampler's
+                # ``setLong`` / ``setDouble`` / ``setTimestamp`` dispatch
+                # (F-1 typed-binding fix). Without it the sampler falls
+                # back to ``setString``, which KaiwuDB rejects for
+                # INT8 / FLOAT4 columns with
+                # ``could not resolve "20" as INT8 type``.
+                column_types = _resolve_ts_table_metadata(model, fqn)[3]
             except ValueError:
                 # table not in model — keep going with defaults
                 ms_step = 1000
                 first_ptag = "ptag_varchar_1"
+                column_types = None
         else:
             ms_step = 1000
             first_ptag = "ptag_varchar_1"
-        udv, udv_hash = _build_write_udv(wc, template, ms_step, first_ptag)
+            column_types = None
+        udv, udv_hash = _build_write_udv(
+            wc, template, ms_step, first_ptag,
+            column_types=column_types,
+        )
 
         if sampler_type == "JSR223Sampler":
             # batch_prepared 使用 JSR223Sampler + 预置 Groovy 体（设计文档 §3.6）；
