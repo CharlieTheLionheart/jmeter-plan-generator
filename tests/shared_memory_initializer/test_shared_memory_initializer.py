@@ -34,11 +34,11 @@ def _write_csv(path: Path, rows: list[list[str]]) -> None:
 
 class TestMakeKey:
     def test_simple_names(self):
-        assert _make_key("tsdb", "t_table") == "__SHARED_MEM_tsdb.t_table"
+        assert _make_key("tsdb", "t_table") == "__SHARED_MEM_tsdb_t_table"
 
     def test_special_chars_replaced(self):
-        assert _make_key("my-db", "t-table") == "__SHARED_MEM_my_db.t_table"
-        assert _make_key("my.db", "t table") == "__SHARED_MEM_my_db.t_table"
+        assert _make_key("my-db", "t-table") == "__SHARED_MEM_my_db_t_table"
+        assert _make_key("my.db", "t table") == "__SHARED_MEM_my_db_t_table"
 
     def test_columns_key_suffix(self):
         key = _make_key("tsdb", "t_table")
@@ -53,11 +53,11 @@ class TestMakeKey:
 class TestGenerateGroovyLoaderScript:
     def test_script_contains_rows_key(self):
         script = generate_groovy_loader_script("tsdb", "t_table", "/path/to/seeds/tsdb/t_table.csv")
-        assert "__SHARED_MEM_tsdb.t_table" in script
+        assert "__SHARED_MEM_tsdb_t_table" in script
 
     def test_script_contains_columns_key(self):
         script = generate_groovy_loader_script("tsdb", "t_table", "/path/to/seeds/tsdb/t_table.csv")
-        assert "__SHARED_MEM_tsdb.t_table_columns" in script
+        assert "__SHARED_MEM_tsdb_t_table_columns" in script
 
     def test_script_contains_csv_path(self):
         script = generate_groovy_loader_script("tsdb", "t_table", "/path/to/seeds/tsdb/t_table.csv")
@@ -76,7 +76,7 @@ class TestGenerateGroovyLoaderScript:
     def test_special_chars_in_table_name(self):
         # Table names with special characters should be sanitized in the key
         script = generate_groovy_loader_script("tsdb", "t-table", "/path/to/t.csv")
-        assert "__SHARED_MEM_tsdb.t_table" in script  # dashes replaced
+        assert "__SHARED_MEM_tsdb_t_table" in script  # dashes replaced
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ class TestCreateJsr223Preprocessor:
         )
         for child in preprocessor:
             if child.get("name") == "script":
-                assert "__SHARED_MEM_tsdb.t_table" in (child.text or "")
+                assert "__SHARED_MEM_tsdb_t_table" in (child.text or "")
 
     def test_custom_testname(self):
         preprocessor, _ = create_jsr223_preprocessor(
@@ -184,8 +184,8 @@ class TestSharedMemoryInitializerGenerator:
                     if child.get("name") == "script":
                         scripts.append(child.text or "")
             # Each table should have its own key in the script
-            assert "__SHARED_MEM_tsdb.t_table" in scripts[0]
-            assert "__SHARED_MEM_tsdb.t_table2" in scripts[1]
+            assert "__SHARED_MEM_tsdb_t_table" in scripts[0]
+            assert "__SHARED_MEM_tsdb_t_table2" in scripts[1]
 
 
 # ---------------------------------------------------------------------------
@@ -203,8 +203,8 @@ class TestCsvNullHandling:
 class TestSpecialCharsInKeys:
     def test_db_name_with_dash(self):
         script = generate_groovy_loader_script("my-db", "t_table", "/path/to/csv.csv")
-        assert "__SHARED_MEM_my_db.t_table" in script
+        assert "__SHARED_MEM_my_db_t_table" in script
 
     def test_table_name_with_dash(self):
         script = generate_groovy_loader_script("tsdb", "my-table", "/path/to/csv.csv")
-        assert "__SHARED_MEM_tsdb.my_table" in script
+        assert "__SHARED_MEM_tsdb_my_table" in script

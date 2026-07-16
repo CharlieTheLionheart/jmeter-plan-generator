@@ -99,7 +99,10 @@ def test_ts_table_with_retentions():
     table = _ts_table(retentions="5d")
     model = TestModelConfig(ts_dbs=[_ts_db_with_table(table)])
     script = DDLGenerator(model).generate()
-    assert "with retentions '5d'" in script
+    # Per spec §8.2: ``retentions`` is bare (no ``with`` prefix) and
+    # the duration is unquoted. The previous shape ``with retentions '5d'``
+    # was rejected by KaiwuDB.
+    assert "retentions 5d" in script
 
 
 def test_ts_table_with_hash():
@@ -113,7 +116,10 @@ def test_ts_table_combined_options():
     table = _ts_table(retentions="5d", with_hash=64)
     model = TestModelConfig(ts_dbs=[_ts_db_with_table(table)])
     script = DDLGenerator(model).generate()
-    assert "with retentions '5d' with hash(64)" in script
+    # Per spec §8.2: ``retentions`` is bare, ``with hash`` is LAST.
+    assert "retentions 5d" in script
+    assert "with hash(64)" in script
+    assert script.index("retentions 5d") < script.index("with hash(64)")
 
 
 def test_ts_table_comment_with_other_options():
@@ -121,8 +127,11 @@ def test_ts_table_comment_with_other_options():
     model = TestModelConfig(ts_dbs=[_ts_db_with_table(table)])
     script = DDLGenerator(model).generate()
     assert "comment '数控机床表'" in script
-    assert "with retentions '5d'" in script
+    assert "retentions 5d" in script
     assert "with hash(64)" in script
+    # Order: retentions < comment < with hash.
+    assert script.index("retentions 5d") < script.index("comment '数控机床表'")
+    assert script.index("comment '数控机床表'") < script.index("with hash(64)")
 
 
 def test_ts_table_with_comment():

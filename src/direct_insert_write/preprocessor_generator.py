@@ -77,10 +77,15 @@ def _make_rows_key(db: str, table: str) -> str:
     """Shared-memory key for the row aggregate.
 
     Format mirrors :mod:`shared_memory_initializer`: non-alnum chars
-    in ``db``/``table`` are folded to ``_``; the qualified table name
-    (``db.table``) is appended after ``__SHARED_MEM_``.
+    in ``db``/``table`` are folded to ``_``; ``db`` and ``table`` are
+    then joined with a single ``_`` separator.
+
+    NOTE: must NOT contain ``.`` — JMeter's ``JMeterProperties``
+    traverses dotted keys as nested Hashtable paths, so a key like
+    ``__SHARED_MEM_db.table`` would not be retrievable from another
+    thread group. See review 2026-07-15 smoke fix.
     """
-    return f"__SHARED_MEM_{_safe_key_token(db)}.{_safe_key_token(table)}"
+    return f"__SHARED_MEM_{_safe_key_token(db)}_{_safe_key_token(table)}"
 
 
 def _make_columns_key(db: str, table: str) -> str:
@@ -192,7 +197,11 @@ def generate_preprocessor_script(
 def db = {safe_db}
 def table = {safe_table}
 def rowsKey = '{rows_key}'
-def allRows = props.get(rowsKey) as ArrayList
+// JSR223's per-context ``props`` is destroyed when SetupThreadGroup ends;
+// the SharedMemory loader writes through the global JMeterUtils singleton,
+// so the read here must also go through that singleton.
+def allRows = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
+    .get(rowsKey) as ArrayList
 // Column-name order MUST match the SQL column list embedded in the
 // JDBCSampler (``insert into db.t (ts, ...) values (?, ...)``). The
 // shared-memory initializer's ``_columns`` key carries the seed-CSV

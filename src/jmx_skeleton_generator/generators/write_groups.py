@@ -17,9 +17,13 @@ from direct_insert_write.sql_generator import (
 from throughput_control import generate_write_timer
 from utils.preprocessor_helpers import all_groovy_decls
 from utils.xml_helpers import (
+    argument_element,
+    collection_prop,
+    element_prop,
     jdbc_sampler_element,
     jsr223_preprocessor_element,
     jsr223_sampler_element,
+    string_prop,
     thread_group_element,
 )
 from write_strategies import get_strategy
@@ -66,7 +70,7 @@ def _build_inline_sql_preprocessor_script(
     """
     safe_db = "'" + db.replace("\\", "\\\\").replace("'", "\\'") + "'"
     safe_table = "'" + table.replace("\\", "\\\\").replace("'", "\\'") + "'"
-    rows_key = f"__SHARED_MEM_{db}.{table}"
+    rows_key = f"__SHARED_MEM_{db}_{table}"
     cols_list = ", ".join(f"'{c}'" for c in columns)
     ptag_index = (
         columns.index(first_ptag_column)
@@ -87,7 +91,11 @@ def _build_inline_sql_preprocessor_script(
 def db = {safe_db}
 def table = {safe_table}
 def rowsKey = '{rows_key}'
-def allRows = props.get(rowsKey) as ArrayList
+// JSR223's per-context ``props`` is destroyed when SetupThreadGroup ends;
+// the SharedMemory loader writes through the global JMeterUtils singleton,
+// so the read here must also go through that singleton.
+def allRows = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
+    .get(rowsKey) as ArrayList
 def columns = [{cols_list}]
 def typeList = {type_list_groovy}
 def nCols = columns.size()
@@ -244,6 +252,96 @@ def _resolve_ts_table_metadata(
     raise ValueError(f"time-series table {fqn!r} not found in model")
 
 
+def _resolve_ts_ms_step(model: TestModelConfig, fqn: str) -> int:
+    """Return ``ts_col.ms_step`` for the resolved time-series table.
+
+    Falls back to ``1000`` when the table has no ``ts_col`` (preserves the
+    Groovy-script default in ``BATCH_PREPARED_PREPROCESSOR_BODY``).
+    """
+    target_db, target_table = _split_qualified_table(fqn)
+    for db in model.ts_dbs:
+        if db.name.lower() != target_db:
+            continue
+        for table in db.tables:
+            if table.name.lower() != target_table:
+                continue
+            if table.ts_col is None:
+                return 1000
+            return table.ts_col.ms_step
+    raise ValueError(f"time-series table {fqn!r} not found in model")
+
+
+def _resolve_first_ptag(model: TestModelConfig, fqn: str) -> str:
+    """Return the first Primary Tag's column name for ``fqn``.
+
+    Mirrors the convention used by :func:`_resolve_ts_table_metadata`
+    (e.g. ``ptag_varchar_1`` for the first varchar primary tag). Returns
+    an empty string when the table has no Primary Tags so the
+    preprocessor falls back to its no-ptag path.
+    """
+    target_db, target_table = _split_qualified_table(fqn)
+    for db in model.ts_dbs:
+        if db.name.lower() != target_db:
+            continue
+        for table in db.tables:
+            if table.name.lower() != target_table:
+                continue
+            if not table.primary_tags:
+                return ""
+            from column_namer.normalize import normalize_type
+            return f"ptag_{normalize_type(table.primary_tags[0].col_type)}_1"
+    raise ValueError(f"time-series table {fqn!r} not found in model")
+
+
+def _build_write_udv(
+    wc: WriteConfig,
+    insert_sql: str,
+    ms_step: int,
+    first_ptag: str,
+) -> Tuple:
+    """Build per-write-ThreadGroup ``<Arguments>`` UDV.
+
+    The prepared-mode Groovy scripts read these UDVs at runtime:
+    ``vars.get("table_name")``, ``vars.get("insert_sql")``,
+    ``vars.get("batch_lines")``, ``vars.get("ms_step")``,
+    ``vars.get("first_ptag")``. Without this UDV the scripts fail
+    with NPE on the first ``.size()`` / lookup call.
+    """
+    fields = {
+        "table_name": wc.tbl_name,
+        "insert_sql": insert_sql,
+        "batch_lines": str(wc.batch_lines),
+        "ms_step": str(ms_step),
+        "first_ptag": first_ptag,
+    }
+    arg_props = []
+    for key, value in fields.items():
+        arg_props.append(
+            element_prop(
+                name=key,
+                element_type="Argument",
+                testname=key,
+                props=[
+                    string_prop("Argument.name", key),
+                    string_prop("Argument.value", value),
+                    string_prop("Argument.metadata", "="),
+                ],
+            )
+        )
+    collection = collection_prop("Arguments.arguments", children=arg_props)
+    # JMeter ignores a ConfigTestElement whose ``enabled`` attribute is
+    # ``false``; explicitly emit ``enabled="true"`` so per-thread UDVs are
+    # actually applied to JMeterVariables before samplers run.
+    return argument_element(
+        name=f"WriteUDV-{wc.tbl_name}",
+        testname=f"[Write UDV] {wc.tbl_name}",
+        guiclass="ArgumentsPanel",
+        testclass="Arguments",
+        props=[collection],
+        attributes={"enabled": "true"},
+    )
+
+
 def _build_direct_insert_components(
     wc: WriteConfig,
     columns: List[str],
@@ -329,7 +427,28 @@ def _build_direct_insert_components(
 # device-number arithmetic (review §"单一设备号计算 helper" 落地).
 _BATCH_PREPARED_PREPROCESSOR_BODY = r"""// JSR223PreProcessor (groovy): batch_prepared 当前批次数据准备
 def tableName = vars.get("table_name")
-def sharedRows = props.get("__SHARED_MEM_${tableName}") as ArrayList<Object[]>
+// Use the global JMeterProperties singleton — JSR223's per-context
+// ``props`` is destroyed when SetupThreadGroup ends, so the SharedMemory
+// loader's per-context writes never reach this thread group.
+// Note: the key has ``_`` (not ``.``) between db and table because
+// JMeter's JMeterProperties splits dotted keys into nested Hashtable
+// paths, making them invisible to subsequent ``get`` calls.
+def sharedRows = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
+    .get("__SHARED_MEM_" + tableName.replace('.', '_')) as ArrayList
+// Column-name list stored alongside the rows (CSV header order minus
+// the leading ts column). The SQL ``INSERT`` template adds ``ts`` as
+// the first column, so the prepared row must follow:
+//   [ts, *columns in CSV order].
+// ``firstPtag`` is the column name to overwrite with the device
+// identifier; the first Primary Tag's name is the same as the first
+// Primary Tag column emitted by ColumnNamer, which we discover by
+// asking the model via a hard-coded convention (the loader does not
+// surface the ptag list directly, so for now the preprocessor relies
+// on the caller-supplied ``first_ptag`` UDV).
+def globalProps = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
+def columnNames = globalProps.get("__SHARED_MEM_" + tableName.replace('.', '_') + "_columns") as ArrayList
+def firstPtag = vars.get("first_ptag") ?: "ptag_varchar_1"
+def ptagIdx = (columnNames == null) ? -1 : columnNames.indexOf(firstPtag)
 
 def batchLines = Integer.parseInt(vars.get("batch_lines") ?: "1")
 def totalRows = sharedRows.size()
@@ -337,7 +456,7 @@ def startIdx = (int)(Math.random() * totalRows)
 
 // 基准时间（每个线程首次执行时一次性获取）
 if (vars.get("base_time") == null) {
-    vars.putLong("base_time", System.currentTimeMillis())
+    vars.put("base_time", String.valueOf(System.currentTimeMillis()))
 }
 def baseTime = Long.parseLong(vars.get("base_time"))
 def batchSeq = Long.parseLong(vars.get("batch_seq") ?: "0")
@@ -352,14 +471,20 @@ def localDeviceStart = calculateLocalDeviceStart(deviceStart, threadNum, deviceP
 def batchRows = new ArrayList<Object[]>()
 for (int i = 0; i < batchLines; i++) {
     def srcRow = sharedRows.get((startIdx + i) % totalRows)
-    def rowCopy = srcRow.clone()
-    // 替换第一个 Primary Tag 占位符为设备标识
-    rowCopy[0] = "device_${localDeviceStart + (i % devicePerThread)}"
-    // 装配时间戳（假设时间戳为 INSERT 的最后一个参数）
+    def rowCopy = srcRow.clone() as Object[]
+    // Overwrite the first Primary Tag cell with the device identifier.
+    if (ptagIdx >= 0) {
+        rowCopy[ptagIdx] = "device_${localDeviceStart + (i % devicePerThread)}".toString()
+    }
+    // Build a [ts, *columns] row matching the SQL ``INSERT`` template
+    // (which prepends ``ts`` to the column list). The CSV row contains
+    // only the non-ts columns in the same order, so the result is
+    // ``[ts, *srcRow]``.
     def ts = new java.sql.Timestamp(baseTime + batchSeq * msStep + (long)(i * msStep / batchLines))
-    rowCopy = Arrays.copyOf(rowCopy, rowCopy.length + 1)
-    rowCopy[rowCopy.length - 1] = ts
-    batchRows.add(rowCopy)
+    def outRow = new Object[rowCopy.length + 1]
+    outRow[0] = ts
+    System.arraycopy(rowCopy, 0, outRow, 1, rowCopy.length)
+    batchRows.add(outRow)
 }
 
 vars.putObject("__BATCH_ROWS_${tableName}", batchRows)
@@ -525,6 +650,29 @@ def generate_write_thread_groups(
 
         timer, timer_hash = generate_write_timer()
 
+        # Per-thread-group UDV: prepared-mode Groovy reads
+        # ``vars.get("table_name"|"insert_sql"|"batch_lines"|"ms_step")``.
+        # Skipping the UDV makes every iteration NPE on the first
+        # ``.size()`` / lookup (see review 2026-07-15 smoke run).
+        #
+        # ``model`` is required to resolve ``ms_step`` (UDV) and the
+        # first Primary Tag's column name. When the caller hasn't
+        # supplied a model (e.g. lightweight unit tests), fall back to
+        # the default ``1000`` ms step and the conventional first-tag
+        # name so the ThreadGroup is still generated.
+        if model is not None:
+            try:
+                ms_step = _resolve_ts_ms_step(model, fqn)
+                first_ptag = _resolve_first_ptag(model, fqn)
+            except ValueError:
+                # table not in model — keep going with defaults
+                ms_step = 1000
+                first_ptag = "ptag_varchar_1"
+        else:
+            ms_step = 1000
+            first_ptag = "ptag_varchar_1"
+        udv, udv_hash = _build_write_udv(wc, template, ms_step, first_ptag)
+
         if sampler_type == "JSR223Sampler":
             # batch_prepared 使用 JSR223Sampler + 预置 Groovy 体（设计文档 §3.6）；
             # 预置体由 strategy 注册表之外的 jmx_skeleton_generator 维护，
@@ -545,6 +693,7 @@ def generate_write_thread_groups(
             # ``children=`` argument — JMeter treats them as group
             # members instead of TestPlan siblings.
             inner_children = [
+                udv, udv_hash,
                 timer, timer_hash,
                 preprocessor, preproc_hash,
                 sampler, samp_hash,
@@ -571,6 +720,7 @@ def generate_write_thread_groups(
                 testname=f"[Write] {wc.tbl_name}",
             )
             inner_children = [
+                udv, udv_hash,
                 timer, timer_hash,
                 sampler, samp_hash,
             ]

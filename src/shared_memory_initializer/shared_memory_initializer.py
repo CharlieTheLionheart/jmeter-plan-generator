@@ -30,10 +30,17 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def _make_key(db: str, table: str) -> str:
-    """Build shared-memory key for a table, replacing special chars with underscores."""
+    """Build shared-memory key for a table, replacing special chars with underscores.
+
+    NOTE: keys must NOT contain ``.`` — JMeter's ``JMeterProperties``
+    overrides ``put``/``get`` to traverse dotted keys as nested
+    Hashtable paths, so ``__SHARED_MEM_db.table`` would be stored at
+    ``__SHARED_MEM_db → table`` and not retrievable from another
+    thread. Use a single underscore as the db/table separator.
+    """
     safe_db = re.sub(r"[^a-zA-Z0-9_]", "_", db)
     safe_table = re.sub(r"[^a-zA-Z0-9_]", "_", table)
-    return f"__SHARED_MEM_{safe_db}.{safe_table}"
+    return f"__SHARED_MEM_{safe_db}_{safe_table}"
 
 
 def _make_columns_key(db: str, table: str) -> str:
@@ -117,6 +124,9 @@ try {{
             }}
             def fields = (line.split(',') as List<String>)
             if (fields != null) {{
+                // Consumers (write_groups preprocessor / sampler) treat
+                // each row as Object[] — store rows as Object[] so
+                // ``row.length`` / array indexing work downstream.
                 def row = fields.collect {{ field ->
                     if (field == null) {{
                         return null
@@ -126,14 +136,18 @@ try {{
                         return null
                     }}
                     return trimmed
-                }}
+                }} as Object[]
                 rows.add(row)
             }}
         }}
     }}
 
-    props.put(colsKey, columns)
-    props.put(rowsKey, rows)
+    // JSR223's per-context ``props`` is destroyed with the SetupThreadGroup
+    // thread, so cross-thread handoff must go through the global
+    // JMeterUtils.getJMeterProperties() singleton.
+    def globalProps = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
+    globalProps.put(colsKey, columns)
+    globalProps.put(rowsKey, rows)
 
     log.info("SharedMemoryLoader: loaded " + rows.size() + " rows for " + rowsKey)
 

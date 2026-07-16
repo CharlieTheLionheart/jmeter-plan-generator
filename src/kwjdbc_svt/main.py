@@ -132,14 +132,25 @@ def _build_columns_by_table(model: TestModelConfig) -> dict[str, List[str]]:
 
     Iterates the relational and time-series databases; primary-tag
     columns are included in the list.
+
+    For time-series tables, ``ts_col`` is prepended to the column list
+    so the generated INSERT template contains the timestamp column —
+    the batch_prepared sampler appends a per-row timestamp to each
+    row, so the template's ``?`` count must match.
     """
     out: dict[str, List[str]] = {}
     for db in list(model.rel_dbs) + list(model.ts_dbs):
         for table in db.tables:
             namer = ColumnNamer(table)
             names, _idx = namer()
+            ts_col_name = getattr(table, "ts_col", None)
+            ts_name = ts_col_name.name if ts_col_name else None
+            column_list: List[str] = []
+            if ts_name:
+                column_list.append(ts_name)
+            column_list.extend(names)
             fqn = f"{db.name}.{table.name}".lower()
-            out[fqn] = list(names)
+            out[fqn] = column_list
     return out
 
 
@@ -184,7 +195,7 @@ def _run_pipeline(
         generator = PreparedInsertTemplateGenerator(
             model, cfg.write_config, columns_by_table
         )
-        prepared_templates = generator.build()
+        prepared_templates = generator.generate()
 
     # JMX
     JMXSkeletonGenerator(

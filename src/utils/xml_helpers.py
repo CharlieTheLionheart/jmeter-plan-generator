@@ -224,6 +224,7 @@ def argument_element(
     testname: Optional[str] = None,
     guiclass: str = "ArgumentsPanel",
     testclass: str = "Arguments",
+    attributes: Optional[dict[str, str]] = None,
 ) -> Tuple[ET.Element, ET.Element]:
     """Create an ``<Arguments>`` element and its paired ``<hashTree>``.
 
@@ -231,10 +232,14 @@ def argument_element(
     -------
     (Arguments element, hashTree element).
     """
+    attribs = {"guiclass": guiclass, "testclass": testclass}
+    if attributes:
+        attribs.update(attributes)
     args = make_element(
         "Arguments",
+        name=name,
         testname=testname or name,
-        attributes={"guiclass": guiclass, "testclass": testclass},
+        attributes=attribs,
         children=props or [],
     )
     return args, empty_hash_tree()

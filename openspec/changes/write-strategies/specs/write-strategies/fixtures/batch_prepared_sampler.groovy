@@ -43,7 +43,8 @@ try {
         .getConnection(dataSource)
     conn.setAutoCommit(false)
     conn.setNetworkTimeout(Runnable::run, connectionTimeoutMs)
-    stmt = conn.prepareStatement(props.get('prep_' + tableKey) as String)
+    stmt = conn.prepareStatement(org.apache.jmeter.util.JMeterUtils
+            .getJMeterProperties().get('prep_' + tableKey) as String)
     int batched = 0
     int totalRows = (vars.get('batch_lines_total') as Integer) ?: batchSizeMax
     for (int r = 0; r < totalRows && batched < batchSizeMax; r++) {

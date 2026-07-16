@@ -393,7 +393,11 @@ def generate_param_binding_script(
         "// JSR223PreProcessor (groovy): 查询参数绑定",
         f"// Table: {table_path}",
         f"def seedDir = vars.get('seed_dir') ?: 'seeds'",
-        f"def tableDir = new File(seedDir + '/{table_path}')",
+        # ``table_path`` is the SQL-qualified ``db.table`` form, but the
+        # seed-data-generator emits per-table CSVs under
+        # ``seeds/<db>/<table>/`` (nested). Convert ``db.table`` →
+        # ``db/table`` so the file lookup actually finds the seed dir.
+        f"def tableDir = new File(seedDir + '/{table_path.replace('.', '/')}')",
         "",
     ]
 

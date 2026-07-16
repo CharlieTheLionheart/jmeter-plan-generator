@@ -51,8 +51,14 @@ class TestGeneratePreprocessorScript:
             table_config=_table_config(),
             device_per_thread=4,
         )
-        assert "'__SHARED_MEM_iot_monitor.t_cnc'" in script
-        assert "props.get(rowsKey)" in script
+        assert "'__SHARED_MEM_iot_monitor_t_cnc'" in script
+        # JSR223's per-context ``props`` is destroyed when SetupThreadGroup
+        # ends; the SharedMemory loader writes through the global
+        # JMeterUtils singleton, so the read here must also go through it.
+        # The rendered script wraps the call across lines (line-broken
+        # ``.get(rowsKey)`` continuation); check the substrings separately.
+        assert "JMeterUtils.getJMeterProperties()" in script
+        assert ".get(rowsKey)" in script
 
     def test_column_order_uses_embedded_list(self):
         # Column order MUST match the SQL column list embedded in the
@@ -200,7 +206,7 @@ class TestGeneratePreprocessorScript:
             table_config=_table_config(table="t_cnc-special"),
             device_per_thread=4,
         )
-        assert "'__SHARED_MEM_iot_monitor.t_cnc_special'" in script
+        assert "'__SHARED_MEM_iot_monitor_t_cnc_special'" in script
 
 
 class TestRelationalInitPreprocessorScript:

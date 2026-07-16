@@ -255,8 +255,16 @@ class DDLGenerator:
             parts.append(f"primary tags ({', '.join(ptag_names)})")
 
         extras: List[str] = []
+        # Per spec §8.2 / §8.2-WITH HASH: KaiwuDB time-series DDL accepts
+        # ``[retentions <dur>] [dict encoding] [comment [=] <text>] [with hash(<n>)]``
+        # — ``retentions`` is bare (no ``with`` prefix and unquoted),
+        # ``comment`` accepts an optional ``=`` between keyword and value,
+        # and ``with hash`` must be LAST. The previous shape
+        # (``with retentions '3d' comment ... with hash(N)``) was rejected
+        # by KaiwuDB because retentions was both over-quoted and
+        # over-prefixed.
         if table.retentions:
-            extras.append(f"with retentions {_single_quote(table.retentions)}")
+            extras.append(f"retentions {table.retentions}")
         if table.comment:
             extras.append(f"comment {_single_quote(table.comment)}")
         if table.with_hash is not None:
