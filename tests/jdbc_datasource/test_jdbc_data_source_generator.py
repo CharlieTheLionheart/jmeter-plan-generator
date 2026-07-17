@@ -115,33 +115,40 @@ class TestGenerate:
         xml = ET.tostring(ds, encoding="unicode")
         assert "${db_username}" in xml
 
-    def test_password_defaults_to_empty_string(self):
+    def test_password_defaults_to_variable_reference(self):
+        """db_password always renders as ``${db_password}`` variable
+        reference; UDV carries the configured value. See
+        :class:`TestDbUrlAlwaysVariableReference` for the rationale."""
         gen = JDBCDataSourceGenerator({"conn_pool_size": 10})
         result = gen.generate()
         ds = result[0]
         xml = ET.tostring(ds, encoding="unicode")
-        # password should default to empty string (self-closing or explicit empty)
-        assert '<stringProp name="password"></stringProp>' in xml or '<stringProp name="password" />' in xml
+        assert "${db_password}" in xml
 
-    def test_username_from_config(self):
+    def test_username_from_config_renders_as_variable_reference(self):
+        """Same ``${db_username}`` enforcement; the literal value lives
+        in the UDV block, not on the JDBCDataSource element."""
         gen = JDBCDataSourceGenerator({
             "conn_pool_size": 10,
-            "db_username": "testuser"
+            "db_username": "testuser",
         })
         result = gen.generate()
         ds = result[0]
         xml = ET.tostring(ds, encoding="unicode")
-        assert "testuser" in xml
+        assert "${db_username}" in xml
+        # Literal must NOT be inlined:
+        assert "testuser" not in xml
 
-    def test_password_from_config(self):
+    def test_password_from_config_renders_as_variable_reference(self):
         gen = JDBCDataSourceGenerator({
             "conn_pool_size": 10,
-            "db_password": "testpass"
+            "db_password": "testpass",
         })
         result = gen.generate()
         ds = result[0]
         xml = ET.tostring(ds, encoding="unicode")
-        assert "testpass" in xml
+        assert "${db_password}" in xml
+        assert "testpass" not in xml
 
     def test_empty_password_is_valid(self):
         # Empty password is a valid configuration
@@ -203,6 +210,45 @@ class TestValidation:
         gen = JDBCDataSourceGenerator()
         with pytest.raises(JmxGenerationError):
             gen.generate()
+
+
+class TestDbUrlAlwaysVariableReference:
+    """Regression (2026-07-17 shig smoke):
+
+    ``JDBCDataSource.dbUrl`` MUST always render as a ``${db_url}``
+    variable reference, never the literal URL from ``conn_config.db_url``.
+    Otherwise ``-Jdb_url=jdbc:...`` operator overrides are silently
+    ignored — JMeter's pool init reads the literal XML value at parse
+    time, before UDV evaluation.
+    """
+
+    @staticmethod
+    def _gen_with_conn(db_url: str) -> str:
+        gen = JDBCDataSourceGenerator(
+            {"conn_pool_size": 10, "db_url": db_url, "db_username": "u", "db_password": "p"}
+        )
+        ds = gen.generate()[0]
+        return ET.tostring(ds, encoding="unicode")
+
+    def test_db_url_with_literal_still_renders_as_variable(self):
+        """Even when caller hands in a literal URL, the XML stays a
+        variable reference. Pre-fix the XML contained the literal."""
+        xml = self._gen_with_conn("jdbc:kaiwudb://10.0.0.5:26257/foo")
+        assert "${db_url}" in xml
+        assert "10.0.0.5" not in xml
+        assert "jdbc:kaiwudb://" not in xml
+
+    def test_db_url_with_variable_already_renders_as_variable(self):
+        xml = self._gen_with_conn("${db_url}")
+        assert xml.count("${db_url}") >= 1
+
+    def test_db_username_and_password_are_always_variable_references(self):
+        """Same enforcement for username/password — operators may
+        override via ``-Jdb_username=...`` / ``-Jdb_password=...``.
+        """
+        xml = self._gen_with_conn("jdbc:kaiwudb://x/y")
+        assert "${db_username}" in xml
+        assert "${db_password}" in xml
 
 
 class TestPositionHint:

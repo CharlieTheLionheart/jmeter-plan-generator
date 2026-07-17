@@ -319,21 +319,39 @@ def generate_relational_init_preprocessor_script(
         )
 
     safe_table = _groovy_str_literal(table_name)
+    # Filesystem subfolder mirrors the seed writer's layout:
+    # ``seeds/<db>/<table>/...`` (with slash separators, not dots). The
+    # table name carries the form ``db.table``; split on ``.`` and join
+    # with ``/`` so the path actually exists.
+    fs_subdir = table_name.replace('.', '/')
+    safe_fs_subdir = _groovy_str_literal(fs_subdir)
     files_groovy = ", ".join(
         _groovy_str_literal(f) for f in rel_col_seed_files
     )
 
+    # Per-table batch index: scope the JMeter variable to this table so
+    # multiple RelInit samplers within the same thread group don't
+    # bleed counter state into each other (the pre-2026-07-17 single-name
+    # ``__rel_batch_idx`` would skip rows after the first sampler). The
+    # table name in the key also has its ``.`` replaced with ``_`` to
+    # avoid JMeter's nested-Hashtable dotted-key quirk (same as the
+    # SharedMemory loader uses).
+    safe_table_key = table_name.replace('.', '_')
+    safe_batch_idx_key = _groovy_str_literal(f"__rel_batch_idx_{safe_table_key}")
+
     script = f"""\
 // -------- relational init: read column seed files --------
 def tableName = {safe_table}
+def fsSubdir = {safe_fs_subdir}
 def seedDir = vars.get('seed_dir') ?: 'seeds'
 def batchLines = {batch_lines}
-def batchIdx = (vars.get('__rel_batch_idx') as Integer) ?: 0
+def batchIdxKey = {safe_batch_idx_key}
+def batchIdx = (vars.get(batchIdxKey) as Integer) ?: 0
 
 def colFiles = vars.get('rel_col_seed_files')?.split(',') ?: [{files_groovy}]
 def colSeeds = []
 colFiles.each {{ filename ->
-    def filepath = seedDir + '/' + tableName + '/' + filename
+    def filepath = seedDir + '/' + fsSubdir + '/' + filename
     def file = new File(filepath)
     if (file.exists()) {{
         colSeeds.add(file.readLines())
@@ -360,7 +378,7 @@ for (int rowIdx = startRow; rowIdx < endRow; rowIdx++) {{
     }}
 }}
 
-vars.put("__rel_batch_idx", String.valueOf(batchIdx + 1))
+vars.put(batchIdxKey, String.valueOf(batchIdx + 1))
 log.info("RelInit: table=" + tableName + " batch=" + batchIdx + " rows " + startRow + "-" + endRow + " params=" + paramIdx)
 """
     return script

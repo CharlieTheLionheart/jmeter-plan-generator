@@ -142,7 +142,9 @@ def _build_columns_by_table(model: TestModelConfig) -> dict[str, List[str]]:
     for db in list(model.rel_dbs) + list(model.ts_dbs):
         for table in db.tables:
             namer = ColumnNamer(table)
-            names, _idx = namer()
+            # ColumnNamer.__call__ now returns (names, types_per_name, index_map)
+            # — only ``names`` is needed here; types/index_map ignored.
+            names, _types, _idx = namer()
             ts_col_name = getattr(table, "ts_col", None)
             ts_name = ts_col_name.name if ts_col_name else None
             column_list: List[str] = []
@@ -157,6 +159,127 @@ def _build_columns_by_table(model: TestModelConfig) -> dict[str, List[str]]:
 def _wants_prepared(cfg: TestConfig) -> bool:
     """True when any write_config entry uses a prepared-statement mode."""
     return requires_prepared_insert_templates(cfg.write_config)
+
+
+def _build_relational_init_specs(
+    model: TestModelConfig,
+) -> List:
+    """Build relational-table init sampler specs.
+
+    For each rel table this returns one spec dict consumable by
+    :func:`jmx_skeleton_generator.generators.ddl_setup
+    .generate_ddl_setup_thread_group`'s ``rel_init_specs`` parameter.
+
+    Each spec derives:
+
+    - ``total_rows`` = ``max(seed_num across columns)`` so the row
+      aggregate never has gaps (rel-table init assembly uses modulo
+      wrap to repeat shorter-seed columns).
+    - ``batch_lines`` = largest divisor of ``total_rows`` up to 100 so
+      the no-tail-batch invariant (``total_rows % batch_lines == 0``)
+      holds by construction.
+    - ``columns`` = ColumnNamer-generated name list, in DDL order
+      (matches the seed writer's ``{index}_{name}.csv`` numbering).
+    - ``rel_col_seed_files`` = ``{index}_{name}.csv`` filenames
+      aligned positionally with ``columns``.
+    - ``column_types`` = JDBC type names (e.g. ``"BIGINT"``,
+      ``"VARCHAR"``) aligned with ``columns``. KaiwuDB's column types
+      (``INT8``/``VARCHAR``/``FLOAT4``/...) are translated via
+      :data:`_JDBC_TYPE_MAP` because the JDBC driver rejects the
+      short form (regression on 2026-07-17).
+
+    Returns ``[]`` when the model declares no relational databases.
+    """
+    from seed_data_generator.reference import iter_table_columns
+
+    specs: List = []
+    for db in model.rel_dbs:
+        for table in db.tables:
+            columns: List[str] = []
+            column_types: List[str] = []
+            seed_nums: List[int] = []
+            col_index: dict[str, int] = {}
+            # ``iter_table_columns`` yields each generated column with
+            # its model entry; each entry's ``seed_num`` applies to all
+            # columns it fans out into. One ``seed_num`` per yielded
+            # column keeps ``max`` semantically correct.
+            for idx, name, col, _group, base_type in iter_table_columns(table):
+                columns.append(name)
+                column_types.append(_to_jdbc_type(base_type))
+                col_index[name] = idx
+                seed_nums.append(col.seed_num)
+
+            if not columns:
+                continue
+
+            total_rows = max(seed_nums) if seed_nums else 0
+            if total_rows <= 0:
+                continue
+            batch_lines = _largest_divisor_le(total_rows, upper=100)
+            rel_col_seed_files = [
+                f"{col_index[name]}_{name}.csv" for name in columns
+            ]
+            specs.append({
+                "table_name": f"{db.name}.{table.name}".lower(),
+                "columns": columns,
+                "total_rows": total_rows,
+                "batch_lines": batch_lines,
+                "rel_col_seed_files": rel_col_seed_files,
+                "column_types": column_types,
+            })
+    return specs
+
+
+# Map KaiwuDB / spec-normalised type names to JDBC ``Types`` strings
+# that the KaiwuDB JDBC driver accepts as
+# ``PreparedStatement.setNull(idx, typeCode-as-string)`` companion
+# values. Without this translation the driver raises
+# ``java.sql.SQLException: Invalid data type: int8`` (and analogous
+# errors for other KaiwuDB short names). New types added to
+# :func:`column_namer.normalize.normalize_type` should extend this map
+# when they ever surface in a relational-table initialisation path.
+_JDBC_TYPE_MAP = {
+    "int8": "BIGINT",
+    "int4": "INTEGER",
+    "int2": "SMALLINT",
+    "int1": "TINYINT",
+    "float4": "REAL",
+    "float8": "DOUBLE",
+    "decimal": "DECIMAL",
+    "numeric": "NUMERIC",
+    "varchar": "VARCHAR",
+    "char": "CHAR",
+    "text": "LONGVARCHAR",
+    "timestamp": "TIMESTAMP",
+    "timestamptz": "TIMESTAMP_WITH_TIMEZONE",
+    "bool": "BOOLEAN",
+    "date": "DATE",
+    "time": "TIME",
+}
+
+
+def _to_jdbc_type(normalised_name: str) -> str:
+    """Translate KaiwuDB type name → JDBC ``Types`` string."""
+    key = normalised_name.strip().lower()
+    return _JDBC_TYPE_MAP.get(key, "VARCHAR")
+
+
+def _largest_divisor_le(n: int, *, upper: int) -> int:
+    """Largest integer 1 ≤ d ≤ ``upper`` that divides ``n`` evenly.
+
+    Helper for relational-init batch sizing: spec §3.6 mandates
+    ``total_rows % batch_lines == 0`` (no residual tail batch), and the
+    cluster-side throughput is more honest when ``batch_lines`` is the
+    largest viable divisor — fewer iterations, larger value tuples.
+    Falls back to ``1`` when ``n`` is 1 (always divides).
+    """
+    if n <= 1:
+        return 1
+    cap = min(upper, n)
+    for d in range(cap, 0, -1):
+        if n % d == 0:
+            return d
+    return 1
 
 
 def _run_pipeline(
@@ -189,6 +312,13 @@ def _run_pipeline(
     # DDL
     ddl_statements = DDLGenerator(model).generate_statements()
 
+    # Relational-table initialisation specs (spec §3.6 关系表初始化采样器).
+    # Each relational table needs a one-shot sampler that batch-inserts
+    # rows from the per-column seed files. Previously the generator
+    # skipped this stage, leaving sub_company / factory / workshop empty
+    # after the test run (smoke regression on 2026-07-17).
+    rel_init_specs = _build_relational_init_specs(model)
+
     # Prepared templates (conditional)
     prepared_templates: dict[str, str] = {}
     if _wants_prepared(cfg):
@@ -205,6 +335,7 @@ def _run_pipeline(
         seed_csv_paths=seed_csv_paths,
         output_dir=str(output_dir),
         model=model,
+        rel_init_specs=rel_init_specs,
     ).generate()
 
 

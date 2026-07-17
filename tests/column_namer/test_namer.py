@@ -122,3 +122,79 @@ def test_large_column_count():
     namer = ColumnNamer(table)
     assert len(namer.names) == 10000
     assert namer.index_map["col_varchar_5000"] == 10000
+
+
+def test_types_per_name_one_entry_many_columns():
+    """Regression (2026-07-17 shig smoke):
+
+    ``data_col_count=8`` with a single float4 entry must still emit
+    per-name types for all 8 columns so downstream ``column_types``
+    UDV lines up. Previously consumers iterated ``table.data_cols``
+    (1 element) which produced a short column_types list and the
+    loader mis-bound float4 cells as VARCHAR.
+    """
+    table = TsTableConfig(
+        name="t_electmeter",
+        data_col_count=8,
+        primary_tag_count=1,
+        regular_tag_count=1,
+        data_cols=[
+            ColTypeConfig(col_type="float4", type_proportion=1.0),
+        ],
+        primary_tags=[
+            PrimaryTagColTypeConfig(col_type="varchar(32)", type_proportion=1.0),
+        ],
+        regular_tags=[
+            ColTypeConfig(col_type="varchar(32)", type_proportion=1.0),
+        ],
+    )
+    namer = ColumnNamer(table)
+    names = namer.names
+    types = namer.types_per_name
+    # Names ordering: data_cols first (8), then primary_tags (1), then
+    # regular_tags (1) → total 10.
+    assert len(names) == len(types) == 10
+    assert all(n.startswith("col_float4_") for n in names[:8])
+    assert all(t == "float4" for t in types[:8])
+    assert all(t == "varchar" for t in types[8:])
+
+
+def test_types_per_name_parity_across_groups():
+    """Mixed groups emit per-name types with the right base_type ordering."""
+    table = TsTableConfig(
+        name="t_mixed",
+        data_col_count=2,
+        primary_tag_count=2,
+        regular_tag_count=1,
+        data_cols=[
+            ColTypeConfig(col_type="int8", type_proportion=0.5),
+            ColTypeConfig(col_type="float4", type_proportion=0.5),
+        ],
+        primary_tags=[
+            PrimaryTagColTypeConfig(col_type="varchar(32)", type_proportion=0.5),
+            PrimaryTagColTypeConfig(col_type="int8", type_proportion=0.5),
+        ],
+        regular_tags=[
+            ColTypeConfig(col_type="varchar(32)", type_proportion=1.0),
+        ],
+    )
+    namer = ColumnNamer(table)
+    names = namer.names
+    types = namer.types_per_name
+    assert len(types) == len(names)
+    # Map name→type and assert the spec convention:
+    #   col_int8_1 → int8, col_float4_1 → float4,
+    #   ptag_varchar_1 → varchar(32), ptag_int8_1 → int8,
+    #   rtag_varchar_1 → varchar(32)
+    expect = {
+        "col_int8_1": "int8",
+        "col_float4_1": "float4",
+        "ptag_varchar_1": "varchar",
+        "ptag_int8_1": "int8",
+        "rtag_varchar_1": "varchar",
+    }
+    name_to_type = dict(zip(names, types))
+    for name, want in expect.items():
+        assert name in name_to_type, f"missing generated name {name}"
+        assert name_to_type[name] == want, \
+            f"{name}: got {name_to_type[name]!r} want {want!r}"

@@ -1,220 +1,199 @@
-# jmx_skeleton_generator 模块实现问题清单
+# 现状与遗留任务（2026-07-17 收尾）
 
-> 来源：对比 `docs/designs/kwdb-svt-test-plan-generator-design.md` 与 `docs/specs/kwdb-svt-test-plan-generator-spec.md`
-> 生成时间：2026-07-08
+## 重启后要重新做的
 
----
+> **关键**：关机重启后工作树里的修改**不会丢**（未 commit 也是 .git/objects 上的 fs），但运行的中间件会丢。
 
-## 🔴 严重（影响功能正确性）
+| 项 | 重启后要做 | 命令 |
+|----|-----------|------|
+| venv | 不需要重装；`source venv/bin/activate` | `source venv/bin/activate` |
+| KaiwuDB Docker 容器 | 容器**已停**（除非 docker restart=on-failure），需要重新拉起 | `docker start kaiwudb-smoke`（或 `docker run -d --name kaiwudb-smoke -p 26257:26257 kaiwudb/kaiwudb:3.2.0 --cluster-name=test-single`） |
+| JMeter | 已结束，可直接复用 | `which jmeter`（应仍在 `/usr/bin/jmeter`） |
+| `/tmp/jmeter-shig/` | **丢了**——重新生成 | `rm -rf /tmp/jmeter-shig && python -m kwjdbc_svt.main tests/kwjdbc_svt/fixtures/test_model_shig.yaml tests/kwjdbc_svt/fixtures/test_cfg_shig.yaml -o /tmp/jmeter-shig` |
+| DB 表行数 | 上次测后**留着**（Docker 持久化 volume），如要重测先清空 | 见下面 §6"待跑命令" |
+| 工作树修改 | **不丢**——`git status` 看是否还在 | `git status`（应有上面 §9 改动清单的 9 文件 dirty） |
 
-### [严重-1] single_insert / batch_insert 模式完全跳过，无写入线程组
-**文件**: `src/jmx_skeleton_generator/generators/write_groups.py:39-41`
-**描述**: `write_groups.py` 中过滤掉了 `single_prepared` / `batch_prepared` 以外的所有模式（single_insert、batch_insert、schemaless），导致时序表在配置这些模式时完全不生成写入线程组。
-**修复方向**: 将所有模式（single_insert、batch_insert、single_prepared、batch_prepared、schemaless）都纳入写入线程组生成逻辑，参考设计文档 §3.7 策略模式实现。
-> **状态（2026-07-13 复核）**: ✅ 已闭环。`write_groups.py` 已合并到 `write_strategies.get_strategy()` 主路径（write_groups.py 的 `if wc.mode not in ("single_prepared", "batch_prepared"): continue` 现在与 `if sampler_type == "JSR223Sampler"` 协议保持一致：单插入/批插入/无模式继续由 SetupThreadGroup 的关系表初始化路径处理，write_groups 仅负责 prepared modes 的写入线程组生成）。`single_insert` / `batch_insert` / `schemaless` 的关系表初始化路径在 `direct_insert_write` 与 SetupThreadGroup 中完全覆盖（48/50 tasks + `/opsx:verify` 通过）。本条不再作为 blocker。
+### 快捷自检脚本（粘贴到新 shell）
 
-严重-1 问题分析
-问题代码：write_groups.py:120-121
+```bash
+cd /home/liujin/workspace/quality-test-pipelines/kwjdbc-svt
+source venv/bin/activate
+docker start kaiwudb-smoke 2>&1 | head -1
+git status --short | head -20
+python -m pytest tests/ 2>&1 | tail -3
+```
 
+期望：
+- `docker start` 输出 `kaiwudb-smoke` / IDs
+- `git status` 应列 8-9 个修改文件
+- `pytest` 输出 `608 passed`
 
-for wc in write_config:
-    if wc.mode not in ("single_prepared", "batch_prepared"):
-        continue  # ← 这里跳过了 single_insert、batch_insert、schemaless
-问题：过滤逻辑只允许 single_prepared 和 batch_prepared 通过，导致其他三种模式的写入线程组完全不生成。
+如果 `git status` 为空（工作树被 reset 过），按下面 §9 从 git reflog 拿回。
 
-修复方向：根据设计文档 §3.7 策略模式，需要将写入逻辑抽象为 5 种策略：
+### 工作树丢了从 reflog 拿回的应急
 
-模式	策略类	实现方式
-single_insert	SingleInsertStrategy	JDBCSampler 单条 INSERT
-batch_insert	BatchInsertStrategy	JDBCSampler batch
-single_prepared	SinglePreparedStrategy	JDBCSampler + 占位符
-batch_prepared	BatchPreparedStrategy	JSR223Sampler + Groovy batch
-schemaless	SchemalessStrategy	JSR223Sampler + LineProtocol
-todolist 说明的依赖链：
+```bash
+git reflog --all | head -20          # 找最近的 dirty HEAD
+git stash list                       # 找之前 stash
+git stash apply stash@{0}            # 或 git checkout <commit> -- <file>
+```
 
+或者最坏情况下重做所有 FIX（按 §"改动文件清单" 重新应用补丁）。
 
-严重-1 修复
-    ↓ 依赖
-write-strategies (严重-5) ✅ 已闭环（2026-07-13）
-    ↓ 依赖
-prepared-insert-template ✅ 已实现
-shared-memory-initializer ✅ 已实现
+## 已修复（未 commit）
 
----
+### 1. parser EOF-on-quote bug（FIXED）
+- 文件：[src/jmx_skeleton_generator/generators/query_groups.py](src/jmx_skeleton_generator/generators/query_groups.py)
+- 现象：SQL 末尾是闭合 `'`（如 `INTERVAL '1 hour'`）被误判为未结束字符串
+- 修法：内层 while 加 `closed` flag，区分闭合 break vs EOF 失效
+- 测试：[tests/jmx_skeleton_generator/test_query_state_machine.py](tests/jmx_skeleton_generator/test_query_state_machine.py) `test_string_literal_ending_at_eof_is_closed` + `test_double_quoted_identifier_ending_at_eof_is_closed`
+- 状态：18 passed
 
-### [严重-2] batch_prepared 应使用 JSR223Sampler 而非 JDBCSampler（已修复）
-**文件**: `src/jmx_skeleton_generator/generators/write_groups.py:63-68`
-**描述**: batch_prepared 模式使用 `JDBCSampler`，但设计文档 §3.6 明确说明该模式需要真正的 JDBC batch（addBatch/executeBatch），必须使用 JSR223Sampler + Groovy 脚本。
-**修复方向**: 参考设计文档 §3.6「JSR223Sampler（batch_prepared）」中的完整 Groovy 脚本，在 batch_prepared 模式下生成 JSR223Sampler 而非 JDBCSampler。
+### 2. ColumnNamer N-aligned types bug（FIXED）
+- 文件：[src/column_namer/namer.py](src/column_namer/namer.py) + [src/jmx_skeleton_generator/generators/write_groups.py](src/jmx_skeleton_generator/generators/write_groups.py)
+- 现象：`data_col_count=8` 单 entry float4 → column_types UDV 仅 1 个 float4 → loader 把 col_float4_2..8 当 VARCHAR → `KSQLException: could not resolve "33519.88" as FLOAT4`
+- 修法：
+  - `ColumnNamer._build` 同步记录 `self._types` per-name
+  - 加 `types_per_name` 属性 + `__call__` 返回 `(names, types_per_name, index_map)`
+  - `write_groups.py` 用 `column_types = [ts] + all_types_per_name`
+- 测试：[tests/column_namer/test_namer.py](tests/column_namer/test_namer.py) `test_types_per_name_one_entry_many_columns` + `test_types_per_name_parity_across_groups`
+- 状态：9 passed
 
----
+### 3. JDBCDataSource 字面 → `${db_url}` 引用（FIXED）
+- 文件：[src/jdbc_datasource/jdbc_data_source_generator.py](src/jdbc_datasource/jdbc_data_source_generator.py)
+- 现象：`dbUrl` 字面 jdbc URL，`-Jdb_url` 完全无效
+- 修法：`db_url = "${db_url}"`、`db_username = "${db_username}"`、`db_password = "${db_password}"`，UDV 走默认 `jdbc:kaiwudb://127.0.0.1:26257/defaultdb`
+- 测试：[tests/jdbc_datasource/test_jdbc_data_source_generator.py](tests/jdbc_datasource/test_jdbc_data_source_generator.py) `TestDbUrlAlwaysVariableReference` + 旧测试改成"default → variable reference"语义
+- 状态：JDBCD 源测试通过
 
-### [严重-3] batch_prepared 缺少 JSR223PreProcessor（已修复）
-**文件**: `src/jmx_skeleton_generator/generators/write_groups.py`
-**描述**: 设计文档 §3.6 明确要求 batch_prepared 模式下 JSR223PreProcessor 负责从共享内存行种子总集随机拷贝连续 batch_lines 行、装配时间戳和第一个 ptag，写入线程变量 `__BATCH_ROWS_${tableName}` 供 JSR223Sampler 读取。当前完全缺失。
-**修复方向**: 参考设计文档 §3.6「JSR223Sampler（batch_prepared）」中的 JSR223PreProcessor 脚本，在写入线程组中为 batch_prepared 模式挂载对应的 PreProcessor。
+### 4. rel-table init sampler 缺发（FIXED）
+- 文件：[src/jmx_skeleton_generator/generators/ddl_setup.py](src/jmx_skeleton_generator/generators/ddl_setup.py)、[src/jmx_skeleton_generator/generators/skeleton.py](src/jmx_skeleton_generator/generators/skeleton.py)、[src/kwjdbc_svt/main.py](src/kwjdbc_svt/main.py)
+- 现象：spec §3.6 要求关表一次 INSERT，生成器漏发 → sub_company/factory/workshop 永远空
+- 修法：
+  - `ddl_setup.py` 增 `_build_rel_init_subtree(spec)`：LoopController + JSR223 PreProcessor + Prepared Update JDBCSampler
+  - `skeleton.py` 加 `rel_init_specs` 透传
+  - `main.py` 加 `_build_relational_init_specs(model)`：每个 rel table 一条 spec，自动算 `total_rows = max(seed_num)`、`batch_lines = largest_divisor_le(100)`、按 `iter_table_columns` 顺序拼 columns + rel_col_seed_files + column_types（JDBC mapped）
+- 状态：pytest 608 passed；smoke 跑通生成
 
----
+### 5. RelInit PreProcessor 子路径 bug（FIXED，调试中发现）
+- 文件：[src/direct_insert_write/preprocessor_generator.py](src/direct_insert_write/preprocessor_generator.py)
+- 现象：path 拼 `seeds/db_shig_rel.sub_company/...`（点当子目录）但实际是 `seeds/db_shig_rel/sub_company/...`（斜杠）
+- 修法：`fs_subdir = table_name.replace('.', '/')`，路径用 `seedDir + '/' + fsSubdir + '/' + filename`
 
-### [严重-4] 缺少"初始化共享内存种子区" SetupThreadGroup
-**文件**: `src/jmx_skeleton_generator/generators/skeleton.py`
-**描述**: 设计文档 §2.2 线程组编排要求两个 SetupThreadGroup：(1) DDL 执行 + 关系表初始化；(2) 初始化共享内存种子区（单线程从列种子文件拼接行种子总集，放入 props 全局共享内存）。当前只实现了第一个。
-**修复方向**: 在 skeleton.py 中添加第二个 SetupThreadGroup，参考设计文档 §5.2 阶段 1 的 Groovy 脚本，装配行种子总集并通过 `props.put("__SHARED_MEM_${tableName}", rows)` 存入全局共享内存。
-> **状态（2026-07-10 复核）**: ✅ 已闭环。`shared-memory-initializer` 模块已实现，`src/jmx_skeleton_generator/generators/shared_memory_setup.py` 中的 `generate_shared_memory_setup_thread_group` 已挂载到 `skeleton.py:104`，行种子总集通过 `props.put("__SHARED_MEM_${tableName}", rows)` 写入全局共享内存。本条不再作为 blocker。
+### 6. `__rel_batch_idx` 表间 bleed-over（FIXED，调试中发现）
+- 现象：第二个 rel init sampler 继承第一 sampler 的 batch_idx，导致空批
+- 修法：key 改为 `__rel_batch_idx_${table.replace('.', '_')}` 每表独立
 
----
+### 7. `int8` 非 JDBC 类型名（FIXED，调试中发现）
+- 现象：`PreparedStatement.setString` 配合 `queryArgumentsTypes="int8,..."` 抛 `Invalid data type: int8`
+- 文件：[src/kwjdbc_svt/main.py](src/kwjdbc_svt/main.py)
+- 修法：加 `_JDBC_TYPE_MAP` 表（int8→BIGINT, varchar→VARCHAR, float4→REAL, ...）和 `_to_jdbc_type()` helper；rel init spec 用 mapped 类型
 
-### [严重-5] strategies/ 策略模式完全不存在
-**文件**: `src/strategies/`（目录不存在）
-**描述**: 设计文档 §3.7 定义了完整的 WriteStrategy 抽象基类和 5 种策略（single_insert、batch_insert、single_prepared、batch_prepared、schemaless），以及 STRATEGY_REGISTRY 注册表。当前 src/strategies/ 目录完全不存在，所有写入逻辑堆在 write_groups.py 一个函数里，无法扩展。
-**修复方向**: 按设计文档 §3.7 创建 strategies/ 目录，实现 WriteStrategy ABC 和 5 种策略，在 write_groups.py 中通过 STRATEGY_REGISTRY 调度。
-> **状态（2026-07-13 复核）**: ✅ 已闭环。模块以 `src/write_strategies/` 落地（命名与 `src/` 目录命名一致的下划线形式而非 `src/strategies/`，路径虽不同但功能完整覆盖）：(1) `WriteStrategy` 抽象基类 + 8 个抽象方法 + `get_config(key, default)` 辅助；(2) `ResolvedTable` / `WriteRuntime` 值对象；(3) `STRATEGY_REGISTRY` 注册表 + `bootstrap` / `get_strategy` / `register_strategy` / `supported_modes` / `UnknownWriteModeError` 防御；(4) 5 种策略全部就绪：single_insert / batch_insert / single_prepared / batch_prepared 已实现，schemaless 为 intentional T2 延后 stub（抛 `NotImplementedError` 二次兜底 + config_parser R-PAR-017 校验拦截）；(5) 8 个测试文件共 821 行单测 + 12 个等价性字节相同 byte-identical 用例；(6) `write_groups.py` 已合并到 `get_strategy()` 主路径（2026-07-13 完成）。本条不再作为 blocker。
+### 8. `iter_table_columns` 重复列名（FIXED，调试中发现）
+- 文件：[src/seed_data_generator/reference.py](src/seed_data_generator/reference.py)
+- 现象：同 `(group, type)` 两个 entry 都用 `start=1` 重复生成 `col_varchar_1`；重复名进入 seed 文件路径 (2_col_varchar_1.csv, 3_col_varchar_1.csv) + INSERT 列名 → `multiple assignments to the same column`
+- 修法：模仿 ColumnNamer 加 `type_counters` keying `(group, base_type)` 累计 start
 
----
+## 当前 Smoke 状态
 
-## 🟠 高（影响测试运行）
+最后一次 smk 跑了 setup DDL + SetupThreadGroup rel init 全部 JDBCSampler，但**还没看到最终行数结果**（用户要求暂停）。在写出文件 `todolist.md` 之前 smoke 完成：
+- RelInit JTL 行：`RelInit_db_shig_rel_sub_company`、`..._factory`、`..._workshop`
+- DB 最终行：未知（需要在继续调试时再查）
 
-### [高-1] throughput 双大括号字面量 bug（已修复）
-**文件**: `src/jmx_skeleton_generator/generators/write_groups.py:58`
-**描述**: `f"${{{{write_throughput}}}}"` 经 Python f-string 格式化后输出为字面字符串 `{{write_throughput}}`，不是有效的 JMeter 变量引用 `${write_throughput}`，导致 ConstantThroughputTimer 无法正常工作。
-**修复方向**: 改为 `f"${{write_throughput}}"`（单层大括号在 f-string 中需双写）。
+## 遗留任务（明天继续）
 
----
+### 9. **[VERIFY] t_cnc 写 0 行（真因未定位）**
+- 现象：t_electmeter 44200 行，t_cnc 0 行，相同 JSR223Sampler Groovy 代码路径
+- 已做过的对照：
+  - 直接 kwbase 插同样 INSERT 进 t_cnc → INSERT 1 OK（DB 层 OK）
+  - 通过 JMeter pipeline → 0 行
+  - JTL 显示 `[Write] db_shig.t_cnc 200 OK` 多条
+- 下一步诊断：
+  1. JSR223Sampler 顶上加 `log.info(prepareStatement returned X, executeBatch returned Y)`
+  2. `withCloseable` 之前 `conn.commit()`
+  3. PreparedStatement 缓存撞 key 排查（与 t_electmeter 并发）
+  4. 检查 `batchRows.size()` 实际值是不是 50
 
-### [高-2] 查询 queryType 用 Select Statement 而非 Prepared Select Statement（已修复）
-**文件**: `src/jmx_skeleton_generator/generators/query_groups.py:59`
-**描述**: 设计文档 §3.6 要求所有查询统一使用 `Prepared Select Statement`，当前代码使用 `Select Statement`。
-**修复方向**: `query_type="Prepared Select Statement"`。
+### 10. **`${param_N}` 空值（查询占位符空绑定）**
+- 现象：Q2/Q3/Q4/Q5 等有 `?` 的查询报 `at or near "EOF": syntax error`，实际 SQL 是 `WHERE ptag_varchar_1 =` 后无值
+- 原因：`?` → `${param_0}` 替换后运行时 JMeter 把 `${param_0}` 求值为空
+- 下一步：
+  1. 检查 `vars.get('rel_col_seed_files')` 与 PreProcessor param_N 设置时机
+  2. 看 query_groups.py 的 PreProcessor Groovy 是否真跑
+  3. 若 PreProcessor 用 `rel_col_seed_files` 找文件，相对路径 `/tmp/jmeter-shig/seeds/...` 是否能 resolve（对比 SharedMemory loader 用 `vars.get('seed_dir')`）
 
----
+### 11. **KaiwuDB 方言不支持 `time_bucket()` 和 `FILTER (WHERE ...)`**
+- 现象：LLM Q9/Q11/Q12 报 `at or near "group": syntax error`（FILTER 解析失败）
+- 用户上次说"实际都支持"，但 3.2 不认
+- 下一步（可选项，非紧急）：
+  - 选项 A：把 LLM Q9/Q11/Q12 改写成 KaiwuDB native（`time_bucket` → 自实现窗口切分；FILTER → `CASE WHEN`）
+  - 选项 B：DCR 加"Dialect token"层，`query_groups` 支持 `time_bucket(...)` → KaiwuDB native 翻译
+  - 选项 C：永久排除
 
-### [高-3] 查询缺少 JSR223PreProcessor 参数绑定（已修复）
-**文件**: `src/jmx_skeleton_generator/generators/query_groups.py`
-**描述**: 设计文档 §3.6 要求每个查询 JDBCSampler 下挂载 JSR223PreProcessor，在运行时从列种子文件随机采样绑定 `?` 占位符。当前只有 JDBCSampler，参数绑定机制完全缺失。
-**根因**: openspec 过程文档（spec.md + tasks.md）与设计文档（design.md §3.6）存在信息传递断层：spec.md 只要求"放 placeholder JDBCSampler"，从未定义 JSR223PreProcessor 参数绑定任务；tasks.md 的 task 6.x 也只规划了骨架。设计文档 §5.3 的 `bind_query_params(sql, tables)` 算法也有缺陷：`QueryConfig` 无 `tbl_name` 字段，但查询 SQL 本身包含 `db.table`，可直接提取。
-**修复**: `query_groups.py` 已添加 `_extract_table_path()`（从 SQL FROM 子句提取 `db.table`）、`_replace_placeholders_with_vars()`（SQL 中 `?` → `${param_N}`）、`_build_query_param_script()`（Groovy 参数绑定脚本，通过 `*_{col_name}.csv` glob 模式定位种子文件）。openspec spec.md 和 tasks.md 亦同步修正，补充了完整的 JSR223PreProcessor 需求和 task 6.4。
+### 12. **`query_groups.py` 占位符提取空绑定的具体根因**
+- 现象（接 #10）：验证了 `?` → `${param_0}` 替换 OK，但 `vars.put("param_0", "")` 在 sampler 跑之前没赋值 / 取到了 `rel_col_seed_files=null`
+- 要进一步查 PreProcessor 里的 `seed_dir` UDV 是否设置
 
----
+### 13. **JUnit 测试覆盖**
+- 已有：column_namer 9 / jmx_skeleton 18+ / jdbc_datasource 全部
+- 缺：
+  - `iter_table_columns` 唯一性回归测
+  - `ddl_setup._build_rel_init_subtree` XML 结构测
+  - `_build_relational_init_specs` spec 字段测
+  - `_largest_divisor_le`（小数边界）测
+  - `preprocessor_generator` 表间隔离、JDBC 类型 fix 回归测
 
-### [高-4] 查询 throughput 除以线程数为设计错误（设计文档已修正）
-**文件**: `docs/designs/kwdb-svt-test-plan-generator-design.md §3.6 ConstantThroughputTimer 小节`
-**描述**: ~~设计文档要求 `throughput = ${throughput} / ${num_threads}`~~。经确认为设计错误：JMeter `ConstantThroughputTimer` 在 `calcMode=0`（Total throughput）下已自动在所有活跃线程间均分吞吐量，每线程独立计算时不需手动除以 `num_threads`。设计文档 §3.6 已修正为直接引用 `${write_throughput}` / `${read_throughput}`，`query_groups.py` 中的实现（直接引用 `${read_throughput}`）已正确，无需修改代码。
+### 14. **Pre-Commit Sanity**
+- `python -m pytest tests/` → 608 passed（已验证）
+- 实 DB smoke → rel init 待再跑一次确认行数
+- write sampler log instrument 是 debug 用，commit 前可去掉
 
----
+## 待跑命令（明天一上来）
 
-### [高-5] 缺少设备号计算逻辑（设计文档已修正职责边界）
-**文件**: `docs/designs/kwdb-svt-test-plan-generator-design.md §3.6「多端设备号计算」小节`
-**描述**: ~~设计文档要求在写入线程组 PreProcessor 中计算 `localDeviceStart = deviceStart + myIndex * devicePerThread`~~。经确认，设备号范围的**多 JMeter 实例间划分**属于调用方流水线的职责，测试计划生成器仅生成单一实例的测试计划。测试计划生成器应暴露 `device_start` / `device_per_thread` / `num_threads` 等 UDV 变量供调用方注入，而**实例内**的设备号计算（`localDeviceStart = deviceStart + threadIndex * devicePerThread`）在写入线程组 JSR223PreProcessor 中实现。
-**修复方向（已修正）**: 设计文档 §3.6「多端设备号计算」小节已更新，明确职责边界：多端划分由调用方负责，实例内设备号计算在 PreProcessor 中实现。`write_groups.py` 中 batch_prepared 的 JSR223PreProcessor 已包含设备号计算逻辑（见 `BATCH_PREPARED_PREPROCESSOR_SCRIPT` 中的 `localDeviceStart` 计算）。
+```bash
+# 0. 环境/状态恢复（先做这个！）
+cd /home/liujin/workspace/quality-test-pipelines/kwjdbc-svt
+source venv/bin/activate
+docker start kaiwudb-smoke 2>&1 | head -1
+git status --short
+python -m pytest tests/ 2>&1 | tail -3   # 期望 608 passed
 
----
+# 1. 重跑 smoke 验证 rel init 真把 row 写进去了（dup-name fix 之后）
+docker exec kaiwudb-smoke ./kwbase sql --insecure -e \
+  "delete from db_shig_rel.sub_company; delete from db_shig_rel.factory; delete from db_shig_rel.workshop;"
+rm -rf /tmp/jmeter-shig
+python -m kwjdbc_svt.main tests/kwjdbc_svt/fixtures/test_model_shig.yaml \
+                      tests/kwjdbc_svt/fixtures/test_cfg_shig.yaml \
+                      -o /tmp/jmeter-shig
+cd /tmp/jmeter-shig && jmeter -n -t test_plan.jmx \
+  -Jtest_duration=2 -Jnum_threads=1 -Jdevice_start=1 -Jdevice_per_thread=2 \
+  -Jdb_url=jdbc:kaiwudb://127.0.0.1:26257/defaultdb \
+  -l /tmp/jmeter-shig/result.jtl -j /tmp/jmeter-shig/jmeter.log
+docker exec kaiwudb-smoke ./kwbase sql --insecure -e \
+  "select 'sub_company' t, count(*) c from db_shig_rel.sub_company union all
+   select 'factory', count(*) from db_shig_rel.factory union all
+   select 'workshop', count(*) from db_shig_rel.workshop;"
 
-## 🟡 中（功能缺失或不一致）
+# 2. 任务 #9 t_cnc 写 0 行 deep dive
+# 3. 任务 #10 ${param_N} 空绑定 deep dive
+# 4. 任务 #11 LLM SQL 方言决策（选项 A/B/C）
+# 5. 任务 #13 加测试
+# 6. 提交：commit 1+2+3+4+5+6+7+8 一起或分批
+```
 
-### [中-1] schemaless 写入模式完全未实现（已修复）
-**文件**: `src/jmx_skeleton_generator/generators/write_groups.py`
-**描述**: schemaless 模式被 continue 跳过（与 single_insert/batch_insert 一样），设计文档 §3.7 给出了完整的 SchemalessWriteStrategy 实现说明。
-**修复方向**: 实现 schemaless 写入策略，使用 JSR223Sampler + Groovy line protocol 格式。
+## 改动文件清单（uncommitted）
 
----
-
-### [中-2] QueryConfig.mode 字段应被移除但仍保留（已修复）
-**文件**: `src/config_parser/models.py:333,343`
-**描述**: 设计文档 v1.4 明确"移除 query_config 的 mode 属性，统一使用 prepared_statement"，但 config_parser/models.py 中 QueryConfig 仍保留 `mode: QueryMode` 字段。
-**修复方向**: 从 QueryConfig 中删除 `mode` 字段及相关校验逻辑。
-
----
-
-### [中-3] username/password 变量在 UDV 中缺失（已修复）
-**文件**: `src/jmx_skeleton_generator/generators/test_plan.py:49-54` + `src/jdbc_datasource/jdbc_data_source_generator.py:81-82`
-**描述**: 设计文档 §3.6 UDV 示例包含 db_username/db_password 两个变量，但 test_plan.py UDV 生成逻辑中未包含；jdbc_data_source_generator.py 中硬编码了 `"${db_user}"` 默认值，而 UDV 中从未定义该变量。
-**修复方向**: (1) 在 UDV 中添加 db_username 和 db_password 字段（需同步修改 ConnConfig 模型）；(2) 或将 jdbc_data_source_generator.py 中的默认值与 UDV 实际生成的变量名对齐。
-
----
-
-### [中-4] hashTree 层级结构与设计存在偏差（已修复）
-**文件**: `src/jmx_skeleton_generator/generators/assembler.py:107-111`
-**描述**: 设计文档 §3.6 给出了严格的 JMX 层级结构（component + hashTree 交替），当前 assemble 方法将所有 elements 平铺在 test_plan_hash 下，JDBCDataSource 自身的 hashTree 未被正确处理。
-**修复方向**: 检查并修正 assemble() 方法中 hashTree 的嵌套关系，确保 JDBCDataSource、SetupThreadGroup、ThreadGroup 等每个组件后都有独立的 hashTree。
-
----
-
-## 📋 修复优先级建议
-
-模块依赖层次图（已实现标记）
-
-第1层（底层基础）:  
-┌─────────────────────────────────────────────────────────────────────────┐
-│  utils ───────────────────────────────────────────────────────────────┐  │
-│  ✅ 已实现                                                            │  │
-│  ├── xml_helpers.py      ✅                                           │  │
-│  └── val_range_parser.py ✅                                           │  │
-└─────────────────────────────────────────────────────────────────────────┘  │
-                                                                         │
-第2层:                                                                    │
-┌─────────────────────────────────────────────────────────────────────────┐  │
-│  config-parser ────────────────────────────────────────────────────┐   │  │
-│  ✅ 已实现  (严重-1 所在模块)                                        │   │  │
-│  ├── models.py  ✅                                                   │   │  │
-│  └── parser.py  ✅                                                   │   │  │
-└─────────────────────────────────────────────────────────────────────────┘   │
-                                                                         │
-第3层:                                                                    │
-┌──────────────┐ ┌──────────────────┐ ┌──────────────────────────────┐    │
-│column-namer  │ │ ddl-generator    │ │ seed-data-generator          │    │
-│✅ 已实现     │ │ ✅ 已实现        │ │ ✅ 已实现                    │    │
-│              │ │ (严重-4, 严重-5) │ │                              │    │
-└──────────────┘ └──────────────────┘ └──────────────────────────────┘    │
-                                                                         │
-第4层（中间层）:                                                          │
-┌──────────────┐ ┌──────────────────┐ ┌────────────────────┐ ┌─────────┐ │
-│shared-      │ │ jdbc-datasource  │ │ prepared-insert-   │ │         │ │
-│memory-      │ │ ✅ 已实现        │ │ template ✅ 已实现 │ │         │ │
-│initializer  │ │                  │ │                    │ │         │ │
-│✅ 已实现     │ │                  │ │                    │ │         │ │
-└──────────────┘ └──────────────────┘ └────────────────────┘ │         │ │
-                                                          │         │ │
-┌──────────────────────────────────────────────────────────┴─────────┴─┐ │
-│  jmx-skeleton-generator ──────────────────────────────────────────┐   │ │
-│  ✅ 已实现 (generators/ 目录存在)                                  │   │ │
-└─────────────────────────────────────────────────────────────────────┘   │
-                                                                         │
-第5层（应用层）:                                                          │
-┌──────────────────┐ ┌──────────────┐ ┌────────────────────┐ ┌─────────┐│
-│ direct-insert-   │ │ write-       │ │ query-             │ │through- ││
-│ write ✅ 已实现  │ │ strategies   │ │ functionality      │ │put-     ││
-│ (48/50 tasks)   │ │ ✅ 已实现    │ │ ✅ 已实现          │ │control  ││
-│ /opsx:verify ✅  │ │ (2026-07-13) │ │ (2026-07-13)       │ │✅ 已实现││
-│                 │ │ review.md    │ │ 851b934 520 passed│ │(2026-  ││
-│                 │ │ §2/§3/§4 ✅  │ │ review §1-§5 全 ✅ │ │07-13)  ││
-│                 │ │              │ │                    │ │542 pass ││
-└──────────────────┘ └──────────────┘ └────────────────────┘ └─────────┘│
-                                        │                                  │
-┌───────────────────────────────────────────────────────────────────────┐│
-│  multi-end-coordination ──────────────────────────────────────────┐ ││
-│  ✅ 已实现 (2026-07-13 merge)                                   │ ││
-│  review §0-§5 全 ✅ ; 556 passed                                │ ││
-│  A: UDV ${__P(...)} ; B: helper 单源 ; C: 流水线 NO-OP 文档化  │ ││
-└───────────────────────────────────────────────────────────────────┘ ││
-                                        │                                   │
-第6层:                         ┌─────────┴─────────┐                        │
-│  main-entry ─────────────────│                   │────────────────────┘  │
-│  ❌ 未实现  ← 下一步，殿后   │                   │                        │
-└──────────────────────────────┴───────────────────┴───────────────────────┘
-汇总
-模块	状态	备注
-utils	✅ 已实现	xml_helpers, val_range_parser
-config-parser	✅ 已实现	严重-1 所在
-column-namer	✅ 已实现	
-ddl-generator	✅ 已实现	(严重-4 + 严重-5 均已闭环)
-seed-data-generator	✅ 已实现	
-shared-memory-initializer	✅ 已实现
-jdbc-datasource	✅ 已实现	
-prepared-insert-template	✅ 已实现	
-jmx-skeleton-generator	✅ 已实现	
-direct-insert-write	✅ 已实现	2026-07-09 /opsx:verify 通过，48/50 tasks	
-write-strategies	✅ 已实现	2026-07-13 /opsx:verify 通过（490 passed），review.md §2/§3/§4 翻 ✅；严重-1 / 严重-5 闭环	
-query-functionality	✅ 已实现	2026-07-13（851b934）；520 passed；review §1-§5 全 ✅；decision 18 改写（throughput_var → throughput-control 字面数值）	
-throughput-control	✅ 已实现	2026-07-13 merge；542 passed；review §1-§5 全 ✅；D1-D5 全部落地（写 UDV ${write_throughput}=120 / 查 字面数值 / 多端 NO-OP / 模块路径 src/throughput_control/ / config_parser 校验 ge=0 → gt=0）	
-multi-end-coordination	✅ 已实现	2026-07-13 merge；556 passed；review §0-§5 全 ✅；A/B/C 全落地（UDV ${__P(...)} / single-source helper / 流水线 NO-OP 文档化 docs/multi-end-pipeline-contract.md）	
-main-entry	✅ 已实现	2026-07-13 merge；583 passed；review §1-§5 全 ✅；CLI/load_configs/map_exception_to_exit_code 三职责；JMXSkeletonGenerator 协作边界；`python -m kwjdbc_svt.main` 入口
+```
+src/jmx_skeleton_generator/generators/query_groups.py        # FIX 1
+src/column_namer/namer.py                                   # FIX 2
+src/jmx_skeleton_generator/generators/write_groups.py       # FIX 2
+src/jdbc_datasource/jdbc_data_source_generator.py           # FIX 3
+src/jmx_skeleton_generator/generators/ddl_setup.py          # FIX 4
+src/jmx_skeleton_generator/generators/skeleton.py           # FIX 4
+src/kwjdbc_svt/main.py                                      # FIX 4, 7
+src/direct_insert_write/preprocessor_generator.py          # FIX 5, 6
+src/seed_data_generator/reference.py                        # FIX 8
+tests/column_namer/test_namer.py                            # FIX 2
+tests/jmx_skeleton_generator/test_query_state_machine.py   # FIX 1
+tests/jdbc_datasource/test_jdbc_data_source_generator.py    # FIX 3
+```

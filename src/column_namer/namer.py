@@ -24,11 +24,12 @@ class ColumnNamer:
     def __init__(self, table_config: TableConfig):
         self.table_config = table_config
         self._names: list[str] = []
+        self._types: list[str] = []
         self._index_map: dict[str, int] = {}
         self._build()
 
     def _build(self) -> None:
-        """Build names and index mapping."""
+        """Build names, per-name types, and index mapping."""
         index = 1
         type_counters: dict[tuple[str, str], int] = {}
 
@@ -53,6 +54,12 @@ class ColumnNamer:
 
                 for name in names:
                     self._names.append(name)
+                    # Per-name type shares the entry's col_type (already
+                    # normalised). When allocating N columns from a single
+                    # entry, every produced name inherits the same JDBC
+                    # type — fix for the N-aligned column_types bug
+                    # surfaced by shig smoke on 2026-07-17.
+                    self._types.append(base_type)
                     self._index_map[name] = index
                     index += 1
 
@@ -62,10 +69,22 @@ class ColumnNamer:
         return list(self._names)
 
     @property
+    def types_per_name(self) -> list[str]:
+        """Return per-name JDBC type list (parallel to :attr:`names`).
+
+        Length always equals ``len(names)``; element ``i`` is the JDBC type
+        (lowercased, normalised) for column ``names[i]``. Useful when
+        downstream code needs per-column type metadata — e.g. building a
+        N-element ``column_types`` UDV to feed into the batch_prepared
+        sampler parameter binder.
+        """
+        return list(self._types)
+
+    @property
     def index_map(self) -> dict[str, int]:
         """Return mapping from column name to 1-based global index."""
         return dict(self._index_map)
 
-    def __call__(self) -> tuple[list[str], dict[str, int]]:
-        """Return names and index map."""
-        return self.names, self.index_map
+    def __call__(self) -> tuple[list[str], list[str], dict[str, int]]:
+        """Return (names, types_per_name, index_map)."""
+        return self.names, self.types_per_name, self.index_map

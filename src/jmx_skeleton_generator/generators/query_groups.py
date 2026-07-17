@@ -100,6 +100,7 @@ def _scan_sql_tokens(sql: str) -> Tuple[List[_SQLToken], str]:
             sq_start = i
             sq_buf = ["'"]
             i += 1
+            closed = False
             while i < n:
                 if sql[i] == "'":
                     if i + 1 < n and sql[i + 1] == "'":
@@ -109,13 +110,14 @@ def _scan_sql_tokens(sql: str) -> Tuple[List[_SQLToken], str]:
                         continue
                     sq_buf.append("'")
                     i += 1
+                    closed = True
                     break
                 sq_buf.append(sql[i])
                 i += 1
             tokens.append(
                 _SQLToken(_KIND_SQ_STRING, sq_start, i, "".join(sq_buf))
             )
-            if i == n:
+            if not closed:
                 final_state = _STATE_SQ_STRING
                 _flush_other(i)
                 return tokens, final_state
@@ -127,6 +129,7 @@ def _scan_sql_tokens(sql: str) -> Tuple[List[_SQLToken], str]:
             dq_start = i
             dq_buf = ['"']
             i += 1
+            closed = False
             while i < n:
                 if sql[i] == '"':
                     if i + 1 < n and sql[i + 1] == '"':
@@ -136,13 +139,14 @@ def _scan_sql_tokens(sql: str) -> Tuple[List[_SQLToken], str]:
                         continue
                     dq_buf.append('"')
                     i += 1
+                    closed = True
                     break
                 dq_buf.append(sql[i])
                 i += 1
             tokens.append(
                 _SQLToken(_KIND_DQ_STRING, dq_start, i, "".join(dq_buf))
             )
-            if i == n:
+            if not closed:
                 final_state = _STATE_DQ_STRING
                 _flush_other(i)
                 return tokens, final_state

@@ -123,6 +123,29 @@ class TestEofHardFail:
             _extract_placeholders(sql)
         assert ei.value.kind == "UNTERMINATED_DQ_STRING"
 
+    def test_string_literal_ending_at_eof_is_closed(self):
+        """SQL ending at a closing ``'`` must NOT be flagged unterminated.
+
+        Regression: 2026-07-17 shig smoke — ``INTERVAL '1 hour'`` at the
+        end of the SQL tripped a false ``UNTERMINATED_SQ_STRING`` because
+        the inner ``while i < n`` exhausted the cursor without
+        distinguishing "ran out of chars mid-string" from "closed at EOF".
+        """
+        sql = "SELECT 1 FROM t WHERE ts > NOW() - INTERVAL '1 hour'"
+        tokens, final_state = _scan_sql_tokens(sql)
+        assert final_state == "NORMAL"
+        sqs = [t for t in tokens if t.kind == "SQ_STRING"]
+        assert len(sqs) == 1
+        assert sqs[0].text == "'1 hour'"
+
+    def test_double_quoted_identifier_ending_at_eof_is_closed(self):
+        sql = 'SELECT * FROM "Foo"'
+        tokens, final_state = _scan_sql_tokens(sql)
+        assert final_state == "NORMAL"
+        dqs = [t for t in tokens if t.kind == "DQ_STRING"]
+        assert len(dqs) == 1
+        assert dqs[0].text == '"Foo"'
+
 
 class TestUnsupportedOperators:
     def test_limit_placeholder_rejected(self):

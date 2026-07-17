@@ -77,9 +77,17 @@ class JDBCDataSourceGenerator:
         """
         self._validate()
 
-        db_url = self._conn_config.get("db_url", "${db_url}")
-        db_username = self._conn_config.get("db_username", "${db_username}")
-        db_password = self._conn_config.get("db_password", "")
+        # Always render as ``${db_url}`` reference so operators can override
+        # per JMeter instance with ``-Jdb_url=...`` (e.g. local smoke against
+        # an unreachable port, or per-end deployment against a different
+        # host/port). The UDV carries the default value defined by
+        # ``ConnConfig.db_url`` in test_cfg.yaml — typically
+        # ``jdbc:kaiwudb://127.0.0.1:26257/defaultdb`` for local debugging.
+        # Pre-2026-07-17 the generator emitted the literal URL into
+        # JDBCDataSource.dbUrl which made ``-Jdb_url`` overrides no-op.
+        db_url = "${db_url}"
+        db_username = "${db_username}"
+        db_password = "${db_password}"
         # poolMax rendered as a literal integer string: JMeter 5.6.3
         # DataSourceElement.initPool runs Integer.parseInt on the raw
         # text BEFORE UDV function evaluation, so a literal ``${var}``

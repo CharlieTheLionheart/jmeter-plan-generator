@@ -45,9 +45,19 @@ def iter_table_columns(
 ) -> Iterable[tuple[int, str, Any, str, str]]:
     """Yield (index, name, col_config, group, base_type) in emission order.
 
-    The emission order matches ``column_namer.ColumnNamer``.
+    The emission order matches ``column_namer.ColumnNamer`` so the
+    downstream seed-file naming and the rel-table initialisation sampler
+    SQL are aligned. Per-type name counters are shared across model
+    entries with the same group+type, mirroring ColumnNamer's
+    ``type_counters`` so two entries of the same ``(group, col_type)``
+    yield ``col_varchar_1`` and ``col_varchar_2`` instead of two
+    duplicate names (regression on 2026-07-17).
     """
+    from column_namer.generate import generate_column_names as _g
+    from column_namer.normalize import normalize_type as _norm
+
     index = 1
+    type_counters: dict[tuple[str, str], int] = {}
     for group in _GROUP_ORDER:
         cols = getattr(table, group, [])
         if not cols:
@@ -60,10 +70,13 @@ def iter_table_columns(
         for col, count in zip(cols, counts):
             if count <= 0:
                 continue
-            base_type = normalize_type(col.col_type)
-            for name in generate_column_names(group, col.col_type, count):
+            base_type = _norm(col.col_type)
+            key = (group, base_type)
+            start = type_counters.get(key, 1)
+            for name in _g(group, col.col_type, count, start=start):
                 yield index, name, col, group, base_type
                 index += 1
+            type_counters[key] = start + count
 
 
 def build_column_registry(

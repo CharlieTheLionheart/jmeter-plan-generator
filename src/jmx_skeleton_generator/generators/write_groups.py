@@ -231,22 +231,18 @@ def _resolve_ts_table_metadata(
                 first_ptag_name = f"ptag_{normalize_type(table.primary_tags[0].col_type)}_1"
             from column_namer import ColumnNamer
             namer = ColumnNamer(table)
-            all_names, _idx = namer()
+            all_names, all_types_per_name, _idx = namer()
             columns: List[str] = [ts_name] + list(all_names)
-            # Build parallel type list aligned with `columns`:
-            # [ts_type, *primary_tag_types, *data_col_types, *regular_tag_types]
-            ptag_types = [pt.col_type.lower() for pt in table.primary_tags]
-            data_types = [c.col_type.lower() for c in table.data_cols]
-            rtag_types = [c.col_type.lower() for c in table.regular_tags]
-            # The ColumnNamer emits names in GROUP_ORDER
-            # ``[data_cols, primary_tags, regular_tags]`` so the type
-            # list must match that order to stay aligned with
-            # ``all_names`` (then prepend ts).
+            # ``all_types_per_name`` is already N-aligned with ``all_names``
+            # because ColumnNamer allocates each entry into N names and
+            # records the entry's base type for every produced name.
+            # Rebuilding per group from ``table.{data_cols,primary_tags,
+            # regular_tags}`` would re-introduce the under-count bug
+            # (regression on 2026-07-17 shig smoke: data_col_count=8,
+            # single float4 entry → only 1 type emitted for 8 names).
             column_types: List[str] = (
                 [(ts_jdbc_type or "timestamp").lower()]
-                + data_types
-                + ptag_types
-                + rtag_types
+                + list(all_types_per_name)
             )
             return columns, first_ptag_name, ts_jdbc_type, column_types
     raise ValueError(f"time-series table {fqn!r} not found in model")

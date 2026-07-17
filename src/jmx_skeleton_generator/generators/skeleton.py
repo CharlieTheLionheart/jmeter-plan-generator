@@ -61,6 +61,7 @@ class JMXSkeletonGenerator:
         seed_csv_paths: Optional[Dict[str, Dict[str, str]]] = None,
         output_dir: str = ".",
         model: Optional[TestModelConfig] = None,
+        rel_init_specs: Optional[List] = None,
     ):
         self.test_config = test_config
         self.ddl_statements = ddl_statements or []
@@ -71,6 +72,11 @@ class JMXSkeletonGenerator:
         # write modes (``single_insert`` / ``batch_insert``). Without it
         # the write-groups generator falls back to skipping those entries.
         self.model = model
+        # Spec entries for relational-table one-time init samplers
+        # (see :func:`jmx_skeleton_generator.generators.ddl_setup
+        # .generate_ddl_setup_thread_group`). Optional — when empty or
+        # ``None`` the SetupThreadGroup only carries DDL JDBCSamplers.
+        self.rel_init_specs = rel_init_specs or []  # type: ignore[assignment]  # forward ref
 
     def generate(self) -> Path:
         """Assemble and write the JMX skeleton.
@@ -101,8 +107,12 @@ class JMXSkeletonGenerator:
         ds_elements = ds_gen.generate()
         assembler.add_many(ds_elements)
 
-        # 3b. DDL SetupThreadGroup (if any DDL statements)
-        ddl_elems = generate_ddl_setup_thread_group(self.ddl_statements)
+        # 3b. DDL SetupThreadGroup (if any DDL statements) + relational
+        # table initialisation samplers (see spec §3.6 关系表初始化采样器)
+        ddl_elems = generate_ddl_setup_thread_group(
+            self.ddl_statements,
+            rel_init_specs=self.rel_init_specs,
+        )
         if ddl_elems:
             assembler.add_many(ddl_elems)
 
