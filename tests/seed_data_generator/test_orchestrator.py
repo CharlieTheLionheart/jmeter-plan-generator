@@ -82,3 +82,43 @@ def test_reference_values_come_from_ref_file(tmp_path: Path):
     ref_values = set(read_column_seed(ref_path))
     tag_values = set(read_column_seed(tag_path))
     assert tag_values <= ref_values
+
+
+def test_pk_column_with_constant_val_range_gets_unique_values(tmp_path: Path):
+    """PK column with val_range '=1', seed_num 1 must auto-expand to 1..N
+    so the row aggregate has unique PKs (one per row). Otherwise every
+    row would get PK=1 and ``INSERT`` would hit ``duplicate key`` on
+    any multi-row table. Regression on 2026-07-20 (shig fixture smoke).
+    """
+    rel_table = RelTableConfig(
+        name="t_factory",
+        primary_key_count=1,
+        data_col_count=1,
+        primary_keys=[
+            ColTypeConfig(col_type="int8", type_proportion=1.0, val_range="=1", seed_num=1),
+        ],
+        data_cols=[
+            ColTypeConfig(
+                col_type="varchar(16)",
+                type_proportion=1.0,
+                val_range="enum:F0,F1,F2,F3,F4",
+                seed_num=5,
+            ),
+        ],
+    )
+    model = TestModelConfig(
+        rel_dbs=[RelDbConfig(name="iot_metadata", tables=[rel_table])],
+    )
+    generate_seeds(model, tmp_path, seed=42)
+
+    pk_path = tmp_path / "iot_metadata" / "t_factory" / "1_pk_int8_1.csv"
+    pk_values = read_column_seed(pk_path)
+    # Auto-expanded to 1..max_seed(5) — not the original 1, 1, 1, 1, 1.
+    assert pk_values == ["1", "2", "3", "4", "5"]
+
+    aggregate = tmp_path / "iot_metadata" / "t_factory.csv"
+    with aggregate.open("r", newline="", encoding="utf-8") as fh:
+        rows = list(csv.reader(fh))
+    # header + 5 data rows; every PK is unique.
+    pks = [r[0] for r in rows[1:]]
+    assert pks == ["1", "2", "3", "4", "5"]

@@ -55,6 +55,17 @@ def _generate_table_seeds(
     first_ptag_seen = False
     first_ptag_info: tuple[int, str] | None = None  # (index, name)
 
+    # Pre-compute the row-aggregate length (= max seed_num across all
+    # columns) so PK columns can be auto-expanded to a unique
+    # 1..N series. Without this, a PK with val_range "=1" and
+    # seed_num 1 produces one value ("1"); the row aggregate then
+    # cyclic-fills and every row gets PK=1 → duplicate key on insert.
+    max_seed = 0
+    for _, _, c, _, _ in iter_table_columns(table):
+        max_seed = max(max_seed, c.seed_num)
+    if max_seed <= 0:
+        max_seed = 1
+
     for index, name, col, group, base_type in iter_table_columns(table):
         target_key = f"{db.name}.{table.name}.{name}"
         ref_path = ref_paths.get(target_key)
@@ -69,6 +80,17 @@ def _generate_table_seeds(
             first_ptag_info = (index, name)
             # Do NOT write a column seed file for first ptag
             # PreProcessor will inject ${device_code} at runtime
+            continue
+
+        # PK columns must be unique across the row aggregate. Override
+        # any constant/short seed (e.g. val_range "=1", seed_num 1) with
+        # a 1..max_seed series so cyclic-fill in build_row_aggregate
+        # produces one distinct PK per row.
+        if group == "primary_keys":
+            values = [str(i) for i in range(1, max_seed + 1)]
+            col_path = table_dir / f"{index}_{name}.csv"
+            write_column_seed(col_path, values)
+            generated.append(col_path)
             continue
 
         if col.val_range and col.val_range.startswith("ref:"):

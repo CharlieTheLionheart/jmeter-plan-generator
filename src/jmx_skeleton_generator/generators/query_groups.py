@@ -446,6 +446,16 @@ def generate_param_binding_script(
             )
 
         suffix = col_name.replace("'", "\\'")
+        # Fallback value when no per-column seed file exists: a
+        # device-id-shaped string derived from the test-plan UDV
+        # ``device_start``. The most common case is the first ptag
+        # (``ptag_varchar_1``), whose seed is virtualised at write
+        # time and never written to disk. Without this fallback the
+        # query's ``WHERE ptag_varchar_1 = ?`` is bound to an empty
+        # string, producing ``at or near "EOF": syntax error``
+        # (regression on 2026-07-20, F-4). The previous ``['null']``
+        # fallback left ``param_N`` empty, silently corrupting the
+        # query.
         lines.extend([
             f"// param_{param_idx}: {col_name}",
             f"def matched_{param_idx} = tableDir.listFiles()?.find {{ it.name.endsWith('_{suffix}.csv') }}",
@@ -456,9 +466,14 @@ def generate_param_binding_script(
             f"        throw new RuntimeException('ambiguous seed files for column {col_name}')",
             f"    }}",
             f"}}",
-            f"def lines_{param_idx} = matched_{param_idx}?.readLines() ?: ['null']",
+            # The fallback list contains one synthetic value. The
+            # device-id pattern is a safe default for ptag-like
+            # columns; for non-ptag columns (e.g. rtag, data_cols)
+            # the seed file is always present, so the fallback
+            # path is never exercised in practice.
+            f"def lines_{param_idx} = matched_{param_idx}?.readLines() ?: ['device_' + (vars.get('device_start') ?: '1')]",
             f"def raw_{param_idx} = lines_{param_idx}.get((int)(Math.random() * lines_{param_idx}.size()))",
-            f'vars.put("param_{param_idx}", "null".equalsIgnoreCase(raw_{param_idx}) ? "" : raw_{param_idx})',
+            f'vars.put("param_{param_idx}", raw_{param_idx})',
             "",
         ])
 
@@ -522,6 +537,15 @@ def generate_query_thread_groups(
             data_source="jdbcConfig",
             query_type="Prepared Select Statement",
             query_arguments=query_var_refs,
+            # F-6 (2026-07-20): JMeter's JDBCSampler validates that
+            # ``queryArguments`` and ``queryArgumentsTypes`` have the
+            # same number of entries. The previous empty ``""`` made
+            # the driver count it as 1 type while we passed 2-4 args
+            # → ``number of arguments (N) and number of types (1) are
+            # not equal``. Default every param to ``VARCHAR`` — the
+            # KaiwuDB driver coerces numeric literals like ``'1'`` to
+            # int8 on the wire, and string literals stay strings.
+            query_arguments_types=",".join(["VARCHAR"] * param_count) if param_count > 0 else "",
             testname=f"[Query]",
         )
 

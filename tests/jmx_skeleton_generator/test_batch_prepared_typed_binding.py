@@ -31,66 +31,127 @@ import pytest
 
 from jmx_skeleton_generator.generators import write_groups
 from jmx_skeleton_generator.generators.write_groups import (
-    BATCH_PREPARED_SAMPLER_SCRIPT,
+    _build_batch_prepared_sampler_body,
 )
 
 
+@pytest.fixture
+def sampler_script() -> str:
+    """A representative batch_prepared sampler body for structure tests.
+
+    The sampler script is now per-Table-generated (F-3 UDV-pollution
+    fix): ``table_name``, ``insert_sql`` and ``column_types`` are
+    baked in by the generator. We pick a representative set of
+    column types so the structural assertions below stay meaningful.
+    """
+    return _build_batch_prepared_sampler_body(
+        table_name="iot_monitor.t_cnc",
+        insert_sql=(
+            "insert into iot_monitor.t_cnc (ts, col_int8_1, col_float4_1, "
+            "ptag_varchar_1, rtag_varchar_1) values (?, ?, ?, ?, ?)"
+        ),
+        column_types=["timestamp", "int8", "float4", "varchar(32)", "varchar(32)"],
+    )
+
+
 class TestBatchPreparedSamplerScriptStructure:
-    """Pin the structure of ``BATCH_PREPARED_SAMPLER_SCRIPT`` for the typed-binding fix."""
+    """Pin the structure of the batch_prepared sampler for the typed-binding fix."""
 
-    def test_uses_column_types_udv(self):
-        """Sampler must read the comma-separated ``column_types`` UDV."""
-        assert "vars.get(\"column_types\")" in BATCH_PREPARED_SAMPLER_SCRIPT, (
-            "sampler must consume column_types UDV — without it we "
-            "can't dispatch to setInt/setDouble/setString"
+    def test_carries_baked_column_types(self, sampler_script: str):
+        """Sampler must carry the comma-separated ``column_types`` baked in.
+
+        F-3 (2026-07-20): reading ``column_types`` from a per-thread UDV
+        was unsafe because the UDV scope is the test plan, not the
+        thread group. The generator now bakes the types into the script.
+        """
+        assert "float4" in sampler_script, (
+            "sampler must carry column_types baked in (F-3 UDV-pollution fix)"
         )
 
-    def test_dispatches_on_type_list(self):
-        """Sampler must split the UDV into a list to index by column index."""
-        # We need to index by ``colIdx``, so the UDV must be split into
-        # an array. Accept either ``.split(',')`` or equivalent.
-        assert ".split(',')" in BATCH_PREPARED_SAMPLER_SCRIPT, (
-            "sampler must split the column_types UDV into a list"
+    def test_dispatches_on_type_list(self, sampler_script: str):
+        """Sampler must split the type list to index by column index."""
+        assert ".split(',')" in sampler_script, (
+            "sampler must split the column_types list"
         )
 
-    def test_uses_typed_setter_for_numeric(self):
+    def test_uses_typed_setter_for_numeric(self, sampler_script: str):
         """Integer / bigint columns must call ``setLong`` (not ``setObject``)."""
-        # The numeric branch should map to ``setLong`` so KaiwuDB
-        # receives a ``long`` and doesn't have to infer the type.
-        assert "setLong" in BATCH_PREPARED_SAMPLER_SCRIPT, (
+        assert "setLong" in sampler_script, (
             "sampler must call setLong for integer-typed columns — "
             "setObject(String) does not let the driver infer INT8"
         )
 
-    def test_uses_typed_setter_for_floating(self):
+    def test_uses_typed_setter_for_floating(self, sampler_script: str):
         """float / float4 / float8 must call ``setDouble``."""
-        assert "setDouble" in BATCH_PREPARED_SAMPLER_SCRIPT, (
+        assert "setDouble" in sampler_script, (
             "sampler must call setDouble for float-typed columns"
         )
 
-    def test_uses_typed_setter_for_timestamp(self):
+    def test_uses_typed_setter_for_timestamp(self, sampler_script: str):
         """timestamp / timestamptz columns must call ``setTimestamp``."""
-        assert "setTimestamp" in BATCH_PREPARED_SAMPLER_SCRIPT, (
+        assert "setTimestamp" in sampler_script, (
             "sampler must call setTimestamp for time-typed columns"
         )
 
-    def test_falls_back_to_set_string(self):
+    def test_falls_back_to_set_string(self, sampler_script: str):
         """VARCHAR / unknown types fall back to ``setString``."""
-        assert "setString" in BATCH_PREPARED_SAMPLER_SCRIPT, (
+        assert "setString" in sampler_script, (
             "sampler must fall back to setString for non-numeric, "
             "non-timestamp columns (varchar, etc.)"
         )
 
-    def test_does_not_call_set_object(self):
-        """The sampler must NOT use ``setObject`` for typed columns.
-
-        ``setObject(String)`` is the original bug — KaiwuDB can't
-        resolve INT8/FLOAT4 from a string. The new dispatch must use
-        explicit ``setXxx`` per JDBC type.
-        """
-        assert "setObject" not in BATCH_PREPARED_SAMPLER_SCRIPT, (
+    def test_does_not_call_set_object(self, sampler_script: str):
+        """The sampler must NOT use ``setObject`` for typed columns."""
+        assert "setObject" not in sampler_script, (
             "sampler must not use setObject — that was the source of "
             "the 'could not resolve \"20\" as INT8 type' failures"
+        )
+
+    def test_bakes_table_name_literal(self, sampler_script: str):
+        """tableName is baked into the script as a string literal (F-3 UDV fix).
+
+        Earlier we tried ``ctx.getThreadGroup().getName()`` but that
+        returns the testname (e.g. ``[Write] db_shig.t_cnc``) instead of
+        the ThreadGroup's ``name`` attribute, so the substring-strip
+        approach left a leading ``] ``. Baking the value at JMX
+        generation time is simpler and matches the per-Table
+        script-template pattern.
+        """
+        assert "iot_monitor.t_cnc" in sampler_script, (
+            "sampler must carry the tableName baked in as a literal"
+        )
+
+    def test_bakes_insert_sql_literal(self, sampler_script: str):
+        """F-3: insert_sql must be baked in, not read from a per-UDV.
+
+        The pre-fix code did ``vars.get("insert_sql")`` which leaked
+        across Write ThreadGroups: the second ThreadGroup's thread
+        saw the first ThreadGroup's INSERT statement. Baking the
+        literal in at JMX generation time removes the dependency.
+        """
+        assert "insert into iot_monitor.t_cnc" in sampler_script, (
+            "sampler must carry insert_sql baked in as a literal (F-3)"
+        )
+
+    def test_no_vars_get_lookup_for_table_name(self, sampler_script: str):
+        """F-3: ``vars.get("table_name")`` is forbidden — it returned
+        the wrong ThreadGroup's value (UDV pollution).
+        """
+        assert 'vars.get("table_name")' not in sampler_script, (
+            "sampler must not read table_name from vars — it leaks "
+            "across Write ThreadGroups (F-3)"
+        )
+
+    def test_no_vars_get_lookup_for_insert_sql(self, sampler_script: str):
+        """F-3: same constraint for insert_sql."""
+        assert 'vars.get("insert_sql")' not in sampler_script, (
+            "sampler must not read insert_sql from vars (F-3)"
+        )
+
+    def test_no_vars_get_lookup_for_column_types(self, sampler_script: str):
+        """F-3: same constraint for column_types."""
+        assert 'vars.get("column_types")' not in sampler_script, (
+            "sampler must not read column_types from vars (F-3)"
         )
 
 

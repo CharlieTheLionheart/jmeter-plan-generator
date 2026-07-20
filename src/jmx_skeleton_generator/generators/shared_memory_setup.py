@@ -60,7 +60,16 @@ def generate_shared_memory_setup_thread_group(
         testname=name,
         num_threads=num_threads,
         ramp_time=1,
-        duration="1",
+        # F-5 (2026-07-20): ``duration=1`` (1 second) was the cause of
+        # the flaky ``null sharedRows.size()`` NPE in the Write
+        # ThreadGroup. With 5+ tables the SetupThreadGroup's single
+        # loop iteration did not finish loading every CSV before the
+        # scheduler cut the thread, so the Write PreProcessor's
+        # ``__SHARED_MEM_{db}_{table}`` lookup returned null. 60s is
+        # comfortably above the worst-case loader time and short
+        # enough to keep the smoke under a minute. ``loops=1`` keeps
+        # the loaders single-shot (no duplicate writes to props).
+        duration="60",
         delay=0,
         loops=1,
         scheduler=True,

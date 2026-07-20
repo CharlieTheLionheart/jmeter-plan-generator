@@ -14,7 +14,10 @@ from write_strategies.models import ResolvedTable, WriteRuntime
 
 class TestSingleSourceHelper:
     def test_batch_prepared_preprocessor_uses_helper(self):
-        script = build_batch_prepared_preprocessor_script()
+        script = build_batch_prepared_preprocessor_script(
+            table_name="db.t", first_ptag="ptag_varchar_1",
+            batch_lines=1, ms_step=1000,
+        )
         # Helper invoked inside the body.
         assert "calculateLocalDeviceStart(" in script
 
@@ -24,7 +27,10 @@ class TestSingleSourceHelper:
         rather than inline the formula. The helper decl itself contains
         ``threadNum * devicePerThread`` — that's expected; we slice off
         the decls prefix and check the body."""
-        script = build_batch_prepared_preprocessor_script()
+        script = build_batch_prepared_preprocessor_script(
+            table_name="db.t", first_ptag="ptag_varchar_1",
+            batch_lines=1, ms_step=1000,
+        )
         body = script.split(
             "// -------- batch_prepared: JSR223Sampler body --------"
         )[-1] if False else script
@@ -64,7 +70,10 @@ class TestSingleSourceHelper:
         assert "calculateLocalDeviceStart(0L, threadNum, devicePerThread)" in single_script
 
         # batch_prepared
-        batch_script = build_batch_prepared_preprocessor_script()
+        batch_script = build_batch_prepared_preprocessor_script(
+            table_name="db.t", first_ptag="ptag_varchar_1",
+            batch_lines=1, ms_step=1000,
+        )
         assert (
             "calculateLocalDeviceStart(deviceStart, threadNum, devicePerThread)"
             in batch_script

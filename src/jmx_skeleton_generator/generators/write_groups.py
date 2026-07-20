@@ -10,6 +10,10 @@ from direct_insert_write import (
     create_jdbc_sampler,
     create_jsr223_preprocessor_for_write,
 )
+from direct_insert_write.preprocessor_generator import (
+    _groovy_str_literal,
+    _safe_key_token,
+)
 from direct_insert_write.sql_generator import (
     generate_batch_insert_sql,
     generate_single_insert_sql,
@@ -430,13 +434,31 @@ def _build_direct_insert_components(
     return sampler, samp_hash, preproc, preproc_hash
 
 
-# Groovy body for batch_prepared JSR223PreProcessor (data preparation).
-# The helper declarations (calculateLocalDeviceStart + others) are
-# prepended by :func:`build_batch_prepared_preprocessor_script` so
-# both this script and single_prepared_strategy share one source of
-# device-number arithmetic (review §"单一设备号计算 helper" 落地).
-_BATCH_PREPARED_PREPROCESSOR_BODY = r"""// JSR223PreProcessor (groovy): batch_prepared 当前批次数据准备
-def tableName = vars.get("table_name")
+def _build_batch_prepared_preprocessor_body(
+    table_name: str,
+    first_ptag: str,
+    batch_lines: int,
+    ms_step: int,
+) -> str:
+    """Compose the Groovy body for the batch_prepared JSR223PreProcessor.
+
+    All per-ThreadGroup values (table_name, first_ptag, batch_lines,
+    ms_step) are baked into the script as Groovy literals so the script
+    never has to read them from ``vars``. Reading them from a per-group
+    ``Arguments`` UDV turned out to be unsafe: JMeter's per-thread
+    ``JMeterVariables`` does NOT scope UDV definitions inside a
+    ThreadGroup, so when two Write ThreadGroups both define
+    ``table_name``/``insert_sql``/``column_types``, the second
+    ThreadGroup's thread sees the first ThreadGroup's value
+    (regression on 2026-07-20, F-3). Deriving ``table_name`` from
+    ``ctx.getThreadGroup().getName()`` and baking the rest in removes
+    the UDV dependency entirely.
+    """
+    # tableName comes from the ThreadGroup's own name (set by the
+    # generator: ``Write-{qualified_table}``). This is the JMeter-side
+    # identity for the running thread and is never shared.
+    return f"""// JSR223PreProcessor (groovy): batch_prepared 当前批次数据准备
+def tableName = {_groovy_str_literal(table_name)}
 // Use the global JMeterProperties singleton — JSR223's per-context
 // ``props`` is destroyed when SetupThreadGroup ends, so the SharedMemory
 // loader's per-context writes never reach this thread group.
@@ -450,27 +472,23 @@ def sharedRows = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
 // the first column, so the prepared row must follow:
 //   [ts, *columns in CSV order].
 // ``firstPtag`` is the column name to overwrite with the device
-// identifier; the first Primary Tag's name is the same as the first
-// Primary Tag column emitted by ColumnNamer, which we discover by
-// asking the model via a hard-coded convention (the loader does not
-// surface the ptag list directly, so for now the preprocessor relies
-// on the caller-supplied ``first_ptag`` UDV).
+// identifier; baked in by the generator (F-3 UDV-pollution fix).
 def globalProps = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
 def columnNames = globalProps.get("__SHARED_MEM_" + tableName.replace('.', '_') + "_columns") as ArrayList
-def firstPtag = vars.get("first_ptag") ?: "ptag_varchar_1"
+def firstPtag = {_groovy_str_literal(first_ptag)}
 def ptagIdx = (columnNames == null) ? -1 : columnNames.indexOf(firstPtag)
 
-def batchLines = Integer.parseInt(vars.get("batch_lines") ?: "1")
+def batchLines = {batch_lines}
 def totalRows = sharedRows.size()
 def startIdx = (int)(Math.random() * totalRows)
 
 // 基准时间（每个线程首次执行时一次性获取）
-if (vars.get("base_time") == null) {
-    vars.put("base_time", String.valueOf(System.currentTimeMillis()))
-}
-def baseTime = Long.parseLong(vars.get("base_time"))
-def batchSeq = Long.parseLong(vars.get("batch_seq") ?: "0")
-def msStep = Long.parseLong(vars.get("ms_step") ?: "1000")
+if (vars.get("base_time_{_safe_key_token(table_name)}") == null) {{
+    vars.put("base_time_{_safe_key_token(table_name)}", String.valueOf(System.currentTimeMillis()))
+}}
+def baseTime = Long.parseLong(vars.get("base_time_{_safe_key_token(table_name)}"))
+def batchSeq = Long.parseLong(vars.get("batch_seq_{_safe_key_token(table_name)}") ?: "0")
+def msStep = {ms_step}L
 
 // 设备号计算（本线程负责的设备范围）
 def threadNum = ctx.getThreadNum()
@@ -479,13 +497,13 @@ def devicePerThread = Integer.parseInt(vars.get("device_per_thread") ?: "1")
 def localDeviceStart = calculateLocalDeviceStart(deviceStart, threadNum, devicePerThread)
 
 def batchRows = new ArrayList<Object[]>()
-for (int i = 0; i < batchLines; i++) {
+for (int i = 0; i < batchLines; i++) {{
     def srcRow = sharedRows.get((startIdx + i) % totalRows)
     def rowCopy = srcRow.clone() as Object[]
     // Overwrite the first Primary Tag cell with the device identifier.
-    if (ptagIdx >= 0) {
-        rowCopy[ptagIdx] = "device_${localDeviceStart + (i % devicePerThread)}".toString()
-    }
+    if (ptagIdx >= 0) {{
+        rowCopy[ptagIdx] = "device_${{localDeviceStart + (i % devicePerThread)}}".toString()
+    }}
     // Build a [ts, *columns] row matching the SQL ``INSERT`` template
     // (which prepends ``ts`` to the column list). The CSV row contains
     // only the non-ts columns in the same order, so the result is
@@ -495,10 +513,10 @@ for (int i = 0; i < batchLines; i++) {
     outRow[0] = ts
     System.arraycopy(rowCopy, 0, outRow, 1, rowCopy.length)
     batchRows.add(outRow)
-}
+}}
 
-vars.putObject("__BATCH_ROWS_${tableName}", batchRows)
-vars.put("batch_seq", String.valueOf(batchSeq + 1))
+vars.putObject("__BATCH_ROWS_${{tableName}}", batchRows)
+vars.put("batch_seq_{_safe_key_token(table_name)}", String.valueOf(batchSeq + 1))
 """
 
 # Groovy scripts for batch_prepared JSR223Sampler (JDBC batch 执行).
@@ -522,68 +540,99 @@ vars.put("batch_seq", String.valueOf(batchSeq + 1))
 # falls back to ``setString`` for every cell so unit tests / lightweight
 # callers that don't supply a model still get a working (varchar-only)
 # sampler. End-to-end smoke callers always supply it via the model.
-BATCH_PREPARED_SAMPLER_SCRIPT = r"""// JSR223Sampler (groovy): batch_prepared JDBC batch 执行
+def _build_batch_prepared_sampler_body(
+    table_name: str,
+    insert_sql: str,
+    column_types: Optional[List[str]] = None,
+) -> str:
+    """Compose the Groovy body for the batch_prepared JSR223Sampler.
+
+    ``table_name`` is derived from ``ctx.getThreadGroup().getName()``;
+    ``insert_sql`` and ``column_types`` are baked in by the generator
+    (F-3 UDV-pollution fix).
+    """
+    column_types_groovy = (
+        _groovy_str_literal(",".join(column_types)) if column_types else "''"
+    )
+    insert_sql_literal = _groovy_str_literal(insert_sql)
+    return f"""// JSR223Sampler (groovy): batch_prepared JDBC batch 执行
 import org.apache.jmeter.protocol.jdbc.config.DataSourceElement
 
-def tableName = vars.get("table_name")
-def insertSql = vars.get("insert_sql")
-def batchRows = vars.getObject("__BATCH_ROWS_${tableName}") as ArrayList<Object[]>
+def tableName = {_groovy_str_literal(table_name)}
+def insertSql = {insert_sql_literal}
+def batchRows = vars.getObject("__BATCH_ROWS_${{tableName}}") as ArrayList<Object[]>
 
 // Comma-separated type list aligned with INSERT column order. When
 // absent, fall back to all-varchar (setString). Numeric cells then
 // still work at the JDBC layer because setString(string) coerces
 // only for some drivers — KaiwuDB does NOT coerce, so the typed
 // list is required for INT8/FLOAT4 columns to resolve.
-def columnTypes = (vars.get("column_types") ?: "").split(',') as List<String>
+def columnTypes = ({column_types_groovy}).split(',') as List<String>
 
 def rowCount = batchRows.size()
-if (rowCount == 0) {
-    log.warn("No batch rows prepared for table ${tableName}")
+if (rowCount == 0) {{
+    log.warn("No batch rows prepared for table ${{tableName}}")
     return
-}
+}}
 
-DataSourceElement.getConnection("jdbcConfig").withCloseable { conn ->
-    conn.prepareStatement(insertSql).withCloseable { pstmt ->
-        for (int rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+DataSourceElement.getConnection("jdbcConfig").withCloseable {{ conn ->
+    conn.prepareStatement(insertSql).withCloseable {{ pstmt ->
+        for (int rowIdx = 0; rowIdx < rowCount; rowIdx++) {{
             def row = batchRows.get(rowIdx)
-            for (int colIdx = 0; colIdx < row.length; colIdx++) {
+            for (int colIdx = 0; colIdx < row.length; colIdx++) {{
                 def value = row[colIdx]
-                if (value == null) {
+                if (value == null) {{
                     pstmt.setNull(colIdx + 1, java.sql.Types.NULL)
                     continue
-                }
+                }}
                 def type = (colIdx < columnTypes.size()) ?
                     (columnTypes.get(colIdx) ?: "").trim().toLowerCase() : ""
-                if (type in ["int", "int2", "int4", "int8", "tinyint", "smallint", "bigint"]) {
+                if (type in ["int", "int2", "int4", "int8", "tinyint", "smallint", "bigint"]) {{
                     pstmt.setLong(colIdx + 1, Long.parseLong(value.toString()))
-                } else if (type in ["float", "float4", "float8", "double", "real", "numeric", "decimal"]) {
+                }} else if (type in ["float", "float4", "float8", "double", "real", "numeric", "decimal"]) {{
                     pstmt.setDouble(colIdx + 1, Double.parseDouble(value.toString()))
-                } else if (type in ["timestamp", "timestamptz"]) {
+                }} else if (type in ["timestamp", "timestamptz"]) {{
                     pstmt.setTimestamp(colIdx + 1, value as java.sql.Timestamp)
-                } else if (type in ["bool", "boolean"]) {
+                }} else if (type in ["bool", "boolean"]) {{
                     pstmt.setBoolean(colIdx + 1, Boolean.parseBoolean(value.toString()))
-                } else {
+                }} else {{
                     // varchar / char / unknown — stringify and bind.
                     pstmt.setString(colIdx + 1, value.toString())
-                }
-            }
+                }}
+            }}
             pstmt.addBatch()
-        }
+        }}
         pstmt.executeBatch()
-    }
-}
+    }}
+}}
 """
 
 
-def build_batch_prepared_preprocessor_script() -> str:
+def build_batch_prepared_preprocessor_script(
+    table_name: str,
+    first_ptag: str,
+    batch_lines: int,
+    ms_step: int,
+) -> str:
     """Compose the Groovy body for the batch_prepared JSR223PreProcessor.
 
     Prepends :func:`utils.preprocessor_helpers.all_groovy_decls` so
     that ``calculateLocalDeviceStart`` and the rest of the shared
     helpers are visible at runtime. Single source of truth for
     device-number arithmetic — see tasks §2.3.
+
+    All per-ThreadGroup values (table_name, first_ptag, batch_lines,
+    ms_step) are baked into the script body so the script does not
+    have to read them from ``vars``. F-3 UDV-pollution fix
+    (regression on 2026-07-20).
     """
-    return f"{all_groovy_decls()}\n{_BATCH_PREPARED_PREPROCESSOR_BODY}"
+    body = _build_batch_prepared_preprocessor_body(
+        table_name=table_name,
+        first_ptag=first_ptag,
+        batch_lines=batch_lines,
+        ms_step=ms_step,
+    )
+    return f"{all_groovy_decls()}\n{body}"
 
 
 def generate_write_thread_groups(
@@ -741,13 +790,22 @@ def generate_write_thread_groups(
             # 体现 write_groups 与 strategy 的协作边界。
             preprocessor, preproc_hash = jsr223_preprocessor_element(
                 name=f"batch_prepared-{wc.tbl_name}-pre",
-                script=build_batch_prepared_preprocessor_script(),
+                script=build_batch_prepared_preprocessor_script(
+                    table_name=wc.tbl_name,
+                    first_ptag=first_ptag,
+                    batch_lines=wc.batch_lines,
+                    ms_step=ms_step,
+                ),
                 script_language=script_language,
                 testname=f"[Write] {wc.tbl_name} - batch_prepared preprocessor",
             )
             sampler, samp_hash = jsr223_sampler_element(
                 name=f"Write-{wc.tbl_name}",
-                script=BATCH_PREPARED_SAMPLER_SCRIPT,
+                script=_build_batch_prepared_sampler_body(
+                    table_name=wc.tbl_name,
+                    insert_sql=template,
+                    column_types=column_types,
+                ),
                 script_language=script_language,
                 testname=f"[Write] {wc.tbl_name}",
             )
