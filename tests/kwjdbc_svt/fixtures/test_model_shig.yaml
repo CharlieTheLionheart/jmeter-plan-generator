@@ -29,7 +29,8 @@ rel_dbs:
     comment: shig 场景关系库（元数据：分公司/厂区/车间）
     tables:
       # -------------------------------------------------------
-      # sub_company：分公司元数据
+      # sub_company：分公司元数据（4 行；生产 192.168.124.51 db_shig_meta）
+      #   id INT2 PK, name VARCHAR(32), region VARCHAR(16)
       # -------------------------------------------------------
       - name: sub_company
         if_not_exists: true
@@ -38,24 +39,25 @@ rel_dbs:
         primary_keys:
           - col_type: int8
             type_proportion: 1.0
-            val_range: "=1"
-            seed_num: 1
+            val_range: "enum:1,2,3,4"
+            seed_num: 4
             nullable: false
         data_col_count: 2
         data_cols:
-          - col_type: varchar(64)
+          - col_type: varchar(32)
             type_proportion: 0.5
-            val_range: "enum:济南分公司"
-            seed_num: 1
+            val_range: "enum:济南分公司,沈阳分公司,武汉分公司,柳州分公司"
+            seed_num: 4
             nullable: false
-          - col_type: varchar(64)
+          - col_type: varchar(16)
             type_proportion: 0.5
-            val_range: "enum:北方大区"
-            seed_num: 1
+            val_range: "enum:北方大区,北方大区,南方大区,南方大区"
+            seed_num: 4
             nullable: false
 
       # -------------------------------------------------------
-      # factory：厂区元数据（5 选 1 enum）
+      # factory：厂区元数据（20 行；每 sub_company 5 个）
+      #   id INT2 PK, name VARCHAR(16), sub_comp_id INT2 NOT NULL → sub_company.id
       # -------------------------------------------------------
       - name: factory
         if_not_exists: true
@@ -64,19 +66,25 @@ rel_dbs:
         primary_keys:
           - col_type: int8
             type_proportion: 1.0
-            val_range: "=1"
-            seed_num: 1
+            val_range: "enum:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20"
+            seed_num: 20
             nullable: false
-        data_col_count: 1
+        data_col_count: 2
         data_cols:
-          - col_type: varchar(64)
-            type_proportion: 1.0
-            val_range: "enum:F0FAC,F1FAC,F2FAC,F3FAC,F4FAC"
-            seed_num: 5
+          - col_type: varchar(16)
+            type_proportion: 0.5
+            val_range: "enum:PFAC,TFCFAC,GUOAEFAC,KZFFAC,TDZCFAC,GBKBIFAC,YMFAC,DONEFAC,YKFAC,JNWQNFAC,LFAC,OFAC,KSFAC,AFAC,RTKFAC,XFAC,SPGIFAC,SJCCFAC,QESMUFAC,ZEJFAC"
+            seed_num: 20
+            nullable: false
+          - col_type: int2
+            type_proportion: 0.5
+            val_range: "ref:db_shig_rel.sub_company.pk_int8_1"
+            seed_num: 20
             nullable: false
 
       # -------------------------------------------------------
-      # workshop：车间元数据（5 选 1 enum）
+      # workshop：车间元数据（20 行；生产 100 行缩到 20 保持 fixture 可读）
+      #   id INT2 PK, name VARCHAR(16), factory_id INT2 NOT NULL → factory.id
       # -------------------------------------------------------
       - name: workshop
         if_not_exists: true
@@ -85,15 +93,20 @@ rel_dbs:
         primary_keys:
           - col_type: int8
             type_proportion: 1.0
-            val_range: "=1"
-            seed_num: 1
+            val_range: "enum:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20"
+            seed_num: 20
             nullable: false
-        data_col_count: 1
+        data_col_count: 2
         data_cols:
-          - col_type: varchar(64)
-            type_proportion: 1.0
-            val_range: "enum:W0WS,W1WS,W2WS,W3WS,W4WS"
-            seed_num: 5
+          - col_type: varchar(16)
+            type_proportion: 0.5
+            val_range: "enum:YRGHWS,BPMJWS,GWS,XWS,KZLQAWS,KRJWS,WRXWS,UTEWS,UKLWS,ODKHTWS,KPWS,BTIZWS,NUWS,NYYWHWS,BWS,HWS,UQVOKIWS,CSRVWS,OTBVWS,XZEWS"
+            seed_num: 20
+            nullable: false
+          - col_type: int2
+            type_proportion: 0.5
+            val_range: "ref:db_shig_rel.factory.pk_int8_1"
+            seed_num: 20
             nullable: false
 
 ts_dbs:
@@ -129,7 +142,25 @@ ts_dbs:
             type_proportion: 0.5
             val_range: "enum:op_group_1,op_group_2,op_group_3,op_group_4"
             seed_num: 4
-        regular_tag_count: 0
+        # 3 个 FK rtag：sub_company_id + factory_id + workshop_id（生产 DDL 三层 FK 关系）
+        # 全部用 ref: 引用关系表 pk，sample 时取对应父表种子保证语义一致
+        regular_tag_count: 3
+        regular_tags:
+          - col_type: smallint
+            type_proportion: 0.34
+            val_range: "ref:db_shig_rel.sub_company.pk_int8_1"
+            seed_num: 20
+            nullable: false
+          - col_type: smallint
+            type_proportion: 0.33
+            val_range: "ref:db_shig_rel.factory.pk_int8_1"
+            seed_num: 20
+            nullable: false
+          - col_type: smallint
+            type_proportion: 0.33
+            val_range: "ref:db_shig_rel.workshop.pk_int8_1"
+            seed_num: 20
+            nullable: false
         data_col_count: 67
         # 列类型比例（基于 develop-2.0 t_cnc 实测 67 列）：
         #   char(30)        17 列  25.4%  ← sp_* / cnc_sw_* / cnc_tol_mem 等
@@ -231,6 +262,10 @@ ts_dbs:
             type_proportion: 1.0
             val_range: "^[A-Z][0-9]{2,4}$"
             seed_num: 50
+        # 1 个 rtag：elect_name (varchar(63) rtag_varchar_1)
+        # 生产 DDL 还有 op_group (varchar(64)) + workshop_id (smallint) + cnc_number (int)，
+        # 本 fixture 用 elect_name 兼容现有 12 query 的 rtag_varchar_1 引用；
+        # workshop_id rtag 等 F-17（2 rtag setString 绑定回归）修后再加。
         regular_tag_count: 1
         regular_tags:
           # col_type 用 varchar(63) 而不是 char(63) 是为了匹配 query

@@ -256,8 +256,11 @@ def test_foreign_key_target_missing(tmp_path: Path) -> None:
 
 def test_foreign_key_target_exists(tmp_path: Path) -> None:
     data = _valid_model()
+    # ref: target uses column_namer-allocated name (pk_int8_1 for an int8 PK),
+    # not col_type — multiple columns with the same type must be addressable
+    # by their generated name.
     data["rel_dbs"][0]["tables"][0]["data_cols"][0]["val_range"] = (
-        "ref:iot_metadata.t_workshop.int8"
+        "ref:iot_metadata.t_workshop.pk_int8_1"
     )
     path = _write_yaml(tmp_path, "test_model.yaml", data)
     model = parse_test_model_yaml(path)

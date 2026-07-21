@@ -443,15 +443,26 @@ def _iter_columns(
 
 
 def validate_foreign_key_refs(model: TestModelConfig) -> None:
-    """Validate that every ref: target exists in the model."""
+    """Validate that every ref: target exists in the model.
+
+    Refs use the same ``db.table.column_name`` format as the
+    seed_data_generator registry (column_namer-allocated names like
+    ``pk_int8_1``), NOT ``col_type`` — multiple columns with the same
+    type must be addressable by their generated name.
+    """
+    from seed_data_generator.reference import iter_table_columns
+
     refs: dict[str, list[str]] = {}
     existing: set[str] = set()
 
-    for db, table, col in _iter_columns(model, include_primary_tags=True):
-        if col.val_range and col.val_range.startswith("ref:"):
-            target = col.val_range[4:]
-            refs.setdefault(target, []).append(f"{db.name}.{table.name}.{col.col_type}")
-        existing.add(f"{db.name}.{table.name}.{col.col_type}")
+    for db in model.rel_dbs + model.ts_dbs:
+        for table in db.tables:
+            for _index, name, col, _group, _base_type in iter_table_columns(table):
+                key = f"{db.name}.{table.name}.{name}"
+                existing.add(key)
+                if col.val_range and col.val_range.startswith("ref:"):
+                    target = col.val_range[4:]
+                    refs.setdefault(target, []).append(key)
 
     if not refs:
         return
