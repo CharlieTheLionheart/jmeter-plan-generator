@@ -343,11 +343,22 @@ class WriteConfig(BaseModel):
 
 
 class QueryConfig(BaseModel):
-    """Query workload configuration."""
+    """Query workload configuration.
+
+    R-2 (2026-07-21, openspec/changes/query-naming): optional ``name``
+    field selects the ThreadGroup testname; when unset, the generator
+    falls back to ``query{N}`` by template order.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     query: str
+    # R-2 (2026-07-21): optional human-readable name for the query
+    # ThreadGroup. When unset, the generator assigns ``query{N}`` based
+    # on template order (1-indexed). Naming failed queries is easier
+    # when the label is ``[Query] query3`` instead of the truncated
+    # SQL text ``[Query] SELECT rtag_varchar_1, count(*)...``.
+    name: Optional[str] = None
     throughput: float = Field(default=100.0, gt=0)
     num_threads: int = Field(default=1, ge=1)
 
@@ -357,6 +368,14 @@ class QueryConfig(BaseModel):
         if not v or not v.strip():
             raise ValueError("query must not be empty")
         return v.strip()
+
+    @field_validator("name")
+    @classmethod
+    def name_normalize(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        v = v.strip()
+        return v or None
 
 
 class TestConfig(BaseModel):

@@ -35,7 +35,7 @@ query_config:
   - query: >-
       SELECT ts, col_float4_1
       FROM db_shig.t_cnc
-      WHERE rtag_varchar_1 = ?
+      WHERE ptag_varchar_2 = ?
         AND ptag_varchar_1 = ?
         AND ts > NOW() - INTERVAL '1 hour'
       ORDER BY ts DESC
@@ -79,7 +79,7 @@ query_config:
       SELECT rtag_varchar_1, count(*) AS cnt
       FROM db_shig.t_electmeter
       WHERE ptag_varchar_1 = ?
-        AND rtag_varchar_1 IN ('NULL','a023','a011')
+        AND rtag_varchar_1 IN ('NIL','a023','a011')
         AND col_float4_7 > 49.8 AND col_float4_7 < 50.2
       GROUP BY rtag_varchar_1
       ORDER BY rtag_varchar_1 ASC

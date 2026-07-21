@@ -510,6 +510,10 @@ def generate_query_thread_groups(
     The ``ConstantThroughputTimer`` for each thread group embeds the
     per-query ``QueryConfig.throughput`` literal (no JMeter UDV).
 
+    R-2 (2026-07-21, openspec/changes/query-naming): ThreadGroup
+    ``name`` / ``testname`` use ``QueryConfig.name`` when set; else
+    ``query{N}`` by template order (1-indexed).
+
     Parameters
     ----------
     query_config:
@@ -529,7 +533,7 @@ def generate_query_thread_groups(
 
     results: List = []
 
-    for qc in query_config:
+    for idx, qc in enumerate(query_config, start=1):
         # F-14 (2026-07-21): keep the SQL with ``?`` placeholders for
         # ``Prepared Select Statement`` mode. Earlier we rewrote each
         # ``?`` to ``${param_N}`` so JMeter would substitute the value
@@ -542,6 +546,15 @@ def generate_query_thread_groups(
         # via queryArguments + VARCHAR types is the correct combo.
         query_with_placeholders, param_count = qc.query, _count_placeholders(qc.query)
         query_var_refs = ",".join(f"${{param_{i}}}" for i in range(param_count))
+
+        # R-2 (2026-07-21): ThreadGroup testname / name come from
+        # ``QueryConfig.name`` if set; otherwise fall back to
+        # ``query{N}`` by template order. Truncated SQL text was hard
+        # to communicate in failure discussions (e.g. ``[Query] SELECT
+        # rtag_varchar_1, count(*...`` → which query?). Naming failed
+        # queries is now ``[Query] query3`` etc., matching the order
+        # in ``test_cfg.yaml``.
+        query_label = qc.name if qc.name else f"query{idx}"
 
         if param_count > 0:
             param_script = generate_param_binding_script(qc.query, seed_dir=seed_dir)
@@ -586,8 +599,8 @@ def generate_query_thread_groups(
             sampler, samp_hash,
         ]
         tg, tg_hash = thread_group_element(
-            name=f"Query-{qc.query[:30]}",
-            testname=f"[Query] {qc.query[:50]}",
+            name=f"Query-{query_label}",
+            testname=f"[Query] {query_label}",
             num_threads=qc.num_threads,
             ramp_time=1,
             duration="${test_duration}",

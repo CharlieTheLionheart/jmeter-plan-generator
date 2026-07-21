@@ -345,3 +345,39 @@ class TestGenerateQueryThreadGroups:
                     "(N) and number of types (1) are not equal')"
                 )
                 break
+
+    def test_query_label_uses_template_order_when_name_unset(self):
+        """R-2 (openspec/changes/query-naming): ThreadGroup testname =
+        ``[Query] query{N}`` by template order.
+
+        Easier to communicate in failure discussion than truncated
+        SQL text (which used to produce labels like ``[Query] SELECT
+        rtag_varchar_1, count(*...``).
+        """
+        cfgs = [
+            QueryConfig(query="SELECT 1 FROM t1", num_threads=1),
+            QueryConfig(query="SELECT 2 FROM t2", num_threads=1),
+            QueryConfig(query="SELECT 3 FROM t3", num_threads=1),
+        ]
+        result = generate_query_thread_groups(cfgs)
+        names = [
+            e.attrib["testname"] for e in result if e.tag.endswith("ThreadGroup")
+        ]
+        assert names == ["[Query] query1", "[Query] query2", "[Query] query3"]
+
+    def test_query_label_uses_explicit_name_when_provided(self):
+        """R-2: ``QueryConfig.name`` overrides the ``query{N}`` fallback."""
+        cfgs = [
+            QueryConfig(query="SELECT 1 FROM t1", num_threads=1, name="foo"),
+            QueryConfig(query="SELECT 2 FROM t2", num_threads=1),
+        ]
+        result = generate_query_thread_groups(cfgs)
+        names = [
+            e.attrib["testname"] for e in result if e.tag.endswith("ThreadGroup")
+        ]
+        assert names == ["[Query] foo", "[Query] query2"]
+
+    def test_query_name_field_round_trip(self):
+        """R-2: ``QueryConfig.name`` is parsed and stripped by the model."""
+        cfg = QueryConfig(query="SELECT 1 FROM t", num_threads=1, name="  hello  ")
+        assert cfg.name == "hello"

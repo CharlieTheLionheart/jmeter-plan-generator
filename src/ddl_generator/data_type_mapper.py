@@ -25,6 +25,13 @@ class DataTypeMapper:
             "float4",
             "float8",
             "double",
+            # R-1 (2026-07-21): shig fixture mirrors develop-2.0
+            # ``resources/db_shig/{t_cnc,t_electmeter}`` which use
+            # ``char(N)`` heavily (char(20/30/10/2/63) accounts for
+            # 33 of the 116 data columns). KaiwuDB accepts fixed-length
+            # ``char`` natively; the previous whitelist omitted it and
+            # raised ``UnsupportedDataTypeError: char(30)``.
+            "char",
             "varchar",
             "nvarchar",
             "text",

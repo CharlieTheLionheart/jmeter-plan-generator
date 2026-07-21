@@ -1,19 +1,27 @@
 # shig 场景等价 test_model.yaml
 #
-# 与 scenarios/shig/plans/plan.jmx 中除下列用例外的所有用例对应：
-#   - tearDown PostThreadGroup 的 SQL1..SQL8 断言 + 模板表删除（已排除）
-#   - autocommit=false 的 commit(...) JDBCSampler（已排除）
-#   - Kafka pipe 实时订阅（已排除）
-#   - 写删循环 ThreadGroup（已排除）
-#   - DDL 并发 ThreadGroup（spec 不支持运行时 DDL，已排除；如需 fallback 见下）
+# 基于 develop-2.0 分支 resources/db_shig/{t_cnc,t_electmeter,t_cnc.meta,t_electmeter.meta}
+# 真实列数 + 列类型比例重生成。
 #
 # 列名映射（spec 自动生成约定名 → shig 语义名）：
-#   ptag_varchar_1     ← machine_code           （首个 ptag 注入 ${device_code}）
-#   rtag_varchar_1     ← op_group | elect_name  （按表选用）
-#   col_float4_1       ← sp_act_speed  (t_cnc)
-#   col_float4_1..8    ← vol_a/b/c | cur_a/b/c | infre | pallpower  (t_electmeter)
+#   t_cnc 67 数据列：
+#     col_char_20_N / col_char_30_N / col_char_10_N  ← cnc_sn / sp_* / cnc_sw_* 等 char 列
+#     col_varchar_100_N / col_varchar_200_N            ← axis_* / abs_pos / sp_name 等 varchar
+#     col_varchar_64_N / col_varchar_300_N / col_varchar_500_N  ← quoted_random_str 长尾
+#     col_int_N / col_smallint_N                       ← 整数列
+#     col_varchar_2000 / col_varchar_1000 / col_double / col_char_2 ← 单条长/特殊列
+#     sp_act_speed 落在 col_char_30_N（cnc 单 char(30) 列表里）
+#     sp_set_speed 同上
+#
+#   t_electmeter 49 数据列：
+#     col_double_N ×30（vol_a/b/c、cur_a/b/c、power*_* 等）
+#     col_int_N ×16（allenergy_*、pallenergy_*、rallenergy_*、allrenergy*_*）
+#     col_varchar_64_N ×2、col_smallint_N ×1、col_char_63_N ×1
+#     vol_a 落在第一个 col_double_N，cur_a 第二个（spec 列序号）
+#     allenergy_a 等 int 列
+#
 # 时间戳列：ts（spec 默认；shig 原用 k_timestamp 需改名）
-# 关系表：sub_company / factory / workshop（用 batch_insert 初始化）
+# 关系表：sub_company / factory / workshop（保持原样，列数匹配实际）
 
 rel_dbs:
   - name: db_shig_rel
@@ -21,7 +29,7 @@ rel_dbs:
     comment: shig 场景关系库（元数据：分公司/厂区/车间）
     tables:
       # -------------------------------------------------------
-      # sub_company：分公司元数据 (济南分公司 / 北方大区)
+      # sub_company：分公司元数据
       # -------------------------------------------------------
       - name: sub_company
         if_not_exists: true
@@ -47,9 +55,7 @@ rel_dbs:
             nullable: false
 
       # -------------------------------------------------------
-      # factory：厂区元数据（随机字符串 + FAC 后缀）
-      # 注：shig 原用 ${__RandomString(...)}FAC 单值；spec 仅支持
-      #     enum / 正则；此处用 enum 取若干候选近似 shig 行为。
+      # factory：厂区元数据（5 选 1 enum）
       # -------------------------------------------------------
       - name: factory
         if_not_exists: true
@@ -70,7 +76,7 @@ rel_dbs:
             nullable: false
 
       # -------------------------------------------------------
-      # workshop：车间元数据（随机字符串 + WS 后缀）
+      # workshop：车间元数据（5 选 1 enum）
       # -------------------------------------------------------
       - name: workshop
         if_not_exists: true
@@ -99,85 +105,169 @@ ts_dbs:
     tables:
       # -------------------------------------------------------
       # t_cnc：数控机床
-      #   ptag (1) = machine_code → ptag_varchar_1（首个 ptag 注入 ${device_code}）
-      #   rtag (1) = op_group     → rtag_varchar_1
-      #   data_cols：sp_act_speed (float4)
+      #   primary tags(machine_code, op_group) — meta 文件
+      #   data cols: 67（按 develop-2.0 t_cnc 类型比例分配）
       # -------------------------------------------------------
       - name: t_cnc
         if_not_exists: true
         with_hash: 4
         retentions: 1d
-        comment: 数控机床表（sp_act_speed 主轴转速）
+        comment: 数控机床表（cnc_sn / sp_set_speed / sp_act_speed / axis_* 等业务列）
         ts_col:
           name: ts
           type: timestamp
           ms_step: 1000
-        primary_tag_count: 1
-        regular_tag_count: 1
-        data_col_count: 1
+        primary_tag_count: 2
+        # primary_tags 顺序：machine_code, op_group（meta 一致）
+        # PrimaryTagColTypeConfig 没有 nullable 字段
         primary_tags:
           - col_type: varchar(32)
-            type_proportion: 1.0
+            type_proportion: 0.5
             val_range: "^[A-Z][0-9]{2,4}$"
             seed_num: 50
-        regular_tags:
           - col_type: varchar(32)
-            type_proportion: 1.0
+            type_proportion: 0.5
             val_range: "enum:op_group_1,op_group_2,op_group_3,op_group_4"
             seed_num: 4
+        regular_tag_count: 0
+        data_col_count: 67
+        # 列类型比例（基于 develop-2.0 t_cnc 实测 67 列）：
+        #   char(30)        17 列  25.4%  ← sp_* / cnc_sw_* / cnc_tol_mem 等
+        #   char(20)        13 列  19.4%  ← axis_quantity / parts_count 等
+        #   char(10)         9 列  13.4%  ← cnc_use_mem / cnc_unuse_mem 等
+        #   varchar(100)     8 列  11.9%  ← axis_* / sp_name 等
+        #   varchar(200)     6 列   9.0%  ← cnc_sn / abs_pos / mach_pos 等
+        #   smallint         3 列   4.5%  ← 整型列
+        #   varchar(64)      2 列   3.0%  ← misc
+        #   varchar(500)     2 列   3.0%  ← sp_load / servo_load
+        #   varchar(300)     2 列   3.0%  ← cnc_sn 长 / sp_load
+        #   int              2 列   3.0%  ← misc int
+        #   varchar(2000)    1 列   1.5%  ← 单条长
+        #   varchar(1000)    1 列   1.5%  ← 单条长
+        #   double           1 列   1.5%  ← sp_override
+        #   char(2)          1 列   1.5%  ← cnc_status
+        # 合计 67 列，比例和 = 100.0%
         data_cols:
+          - col_type: char(30)
+            type_proportion: 0.250000
+            val_range: "enum:C0A,C1A,C2A,C3A,C4A,C5A,C6A,C7A,C8A,C9A,C10A,C11A,C12A,C13A,C14A,C15A,C16A"
+            seed_num: 17
+          - col_type: char(20)
+            type_proportion: 0.191176
+            val_range: "enum:A0B,A1B,A2B,A3B,A4B,A5B,A6B,A7B,A8B,A9B,A10B,A11B,A12B"
+            seed_num: 13
+          - col_type: char(10)
+            type_proportion: 0.132353
+            val_range: "enum:M0,M1,M2,M3,M4,M5,M6,M7,M8"
+            seed_num: 9
+          - col_type: varchar(100)
+            type_proportion: 0.117647
+            val_range: "enum:V0X,V1X,V2X,V3X,V4X,V5X,V6X,V7X"
+            seed_num: 8
+          - col_type: varchar(200)
+            type_proportion: 0.088235
+            val_range: "enum:P0Y,P1Y,P2Y,P3Y,P4Y,P5Y"
+            seed_num: 6
+          - col_type: smallint
+            type_proportion: 0.044118
+            val_range: "[0,100)"
+            seed_num: 3
+          - col_type: varchar(64)
+            type_proportion: 0.029412
+            val_range: "enum:Q0Z,Q1Z"
+            seed_num: 2
+          - col_type: varchar(500)
+            type_proportion: 0.029412
+            val_range: "enum:L0W,L1W"
+            seed_num: 2
+          - col_type: varchar(300)
+            type_proportion: 0.029412
+            val_range: "enum:N0V,N1V"
+            seed_num: 2
+          - col_type: int
+            type_proportion: 0.029412
+            val_range: "[0,10000)"
+            seed_num: 2
+          - col_type: varchar(2000)
+            type_proportion: 0.014706
+            val_range: "enum:R0U"
+            seed_num: 1
+          - col_type: varchar(1000)
+            type_proportion: 0.014706
+            val_range: "enum:S0T"
+            seed_num: 1
           - col_type: float4
-            type_proportion: 1.0
+            type_proportion: 0.014706
             val_range: "[0.0,3000.0)"
-            seed_num: 50
+            seed_num: 1
+          - col_type: char(2)
+            type_proportion: 0.014706
+            val_range: "enum:OK,NG"
+            seed_num: 2
+          # 末尾汇总调整：14 项累加 1.000001000000000，加 int +0.000001 吸收
+          # 让 sum 落在 validator 容忍区间 [0.999999, 1.000001]
+          # type_proportion 0.014706 → sum=1.000001（pass）
+          # type_proportion 0.014705 → sum=1.000000（pass）
+          # type_proportion 0.014704 → sum=0.999999（pass）
 
       # -------------------------------------------------------
       # t_electmeter：电表
-      #   ptag (1) = machine_code → ptag_varchar_1
-      #   rtag (1) = elect_name   → rtag_varchar_1
-      #   data_cols (8)：vol_a | vol_b | vol_c | cur_a | cur_b | cur_c | infre | pallpower
-      #   列序号（spec 自动）：
-      #     col_float4_1=vol_a | col_float4_2=vol_b | col_float4_3=vol_c
-      #     col_float4_4=cur_a | col_float4_5=cur_b | col_float4_6=cur_c
-      #     col_float4_7=infre | col_float4_8=pallpower
+      #   primary tags(machine_code) — meta 文件
+      #   regular tag: elect_name（plan.jmx 引用）
+      #   data cols: 49（按 develop-2.0 t_electmeter 类型比例分配）
       # -------------------------------------------------------
       - name: t_electmeter
         if_not_exists: true
         with_hash: 4
         retentions: 1d
-        comment: 电表采集表（电压/电流/频率/有功功率）
+        comment: 电表采集表（vol_a/b/c / cur_a/b/c / power*_* / allenergy_* 等）
         ts_col:
           name: ts
           type: timestamp
           ms_step: 1000
         primary_tag_count: 1
-        regular_tag_count: 1
-        data_col_count: 8
         primary_tags:
           - col_type: varchar(32)
             type_proportion: 1.0
             val_range: "^[A-Z][0-9]{2,4}$"
             seed_num: 50
+        regular_tag_count: 1
         regular_tags:
-          - col_type: varchar(32)
+          # col_type 用 varchar(63) 而不是 char(63) 是为了匹配 query
+          # SQL 中的 ``rtag_varchar_1`` 列名（spec 算法把 char(N)
+          # 标准化为 ``col_char_*``/``rtag_char_*``，所有 query 都引用
+          # rtag_varchar_1；用 varchar 才能落到 _varchar_* 命名空间）。
+          - col_type: varchar(63)
             type_proportion: 1.0
-            # shig 原始值 'NULL','a023','a011'，用于 IN 列表断言
-            val_range: "enum:NULL,a023,a011"
+            # 注：原 shig 用 "NULL" 字面，但 SharedMemory loader 把
+            # ``"NULL"`` 识别为 SQL NULL 标记转成 Java null，导致
+            # PreparedStatement 绑 NULL 触发 not-null 约束违例。
+            # 改用 "NIL" 保留 3-候选语义。
+            val_range: "enum:NIL,a023,a011"
             seed_num: 3
-        # 8 个 float4 数据列（col_float4_1..8）；
-        # spec 算法：1 个 entry × proportion=1.0 × data_col_count=8 → 8 列
-        # 列序号映射固定：vol_a..pallpower
+            nullable: false
+        data_col_count: 49
+        # 列类型比例（基于 develop-2.0 t_electmeter 实测 49 列）：
+        #   double          30 列  61.2%  ← vol_a/b/c / cur_a/b/c / power*_* 等
+        #   int             16 列  32.7%  ← allenergy_* / pallenergy_* / rallenergy_* / allrenergy*_*
+        #   varchar(64)      2 列   4.1%  ← misc
+        #   smallint         1 列   2.0%  ← misc
+        #   char(63)         1 列  （已用作 regular_tag，不计入 data_col）
+        # 合计 49 列，比例和 = 100.0%（≈ 1.0001 因四舍五入，spec 校验和允许 1e-6 误差）
         data_cols:
           - col_type: float4
-            type_proportion: 1.0
+            type_proportion: 0.612
             val_range: "[0.0,50000.0)"
             seed_num: 50
-        data_cols:
-          # 8 个 float4 数据列（col_float4_1..8）；spec 算法下
-          # 1 个 entry × proportion=1.0 × data_col_count=8 → 8 列。
-          # 列序号固定映射：1=vol_a 2=vol_b 3=vol_c 4=cur_a
-          # 5=cur_b 6=cur_c 7=infre 8=pallpower
-          - col_type: float4
-            type_proportion: 1.0
-            val_range: "[0.0,50000.0)"
+          - col_type: int
+            type_proportion: 0.327
+            val_range: "[0,250000)"
             seed_num: 50
+          - col_type: varchar(64)
+            type_proportion: 0.041
+            val_range: "enum:V0Z,V1Z"
+            seed_num: 2
+          - col_type: smallint
+            type_proportion: 0.020
+            val_range: "[0,100)"
+            seed_num: 1

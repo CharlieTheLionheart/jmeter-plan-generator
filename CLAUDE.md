@@ -58,3 +58,14 @@ These guidelines are working if: fewer unnecessary changes in diffs, fewer rewri
 5. Use venv
 When execute python3 command, always use the python3 under venv directory by sourcing the virtrual environment:
 source venv ./venv/bin/activate && python3 xxx
+
+6. After every change: test first, then smoke
+- **UT first**: `python -m pytest tests/` → must pass before claiming "done".
+- **Smoke second**: invoke the **`kwjdbc-jmx-smoke`** skill (don't roll your own command sequence). The skill owns the canonical `kwjdbc_svt.main` + `jmeter -n` end-to-end run against the real KaiwuDB cluster and reports setup / loader / sampler errors.
+- "Tests pass" alone is not enough — smoke is the ground truth for this repo because the generators emit XML that JMeter executes against a running cluster.
+
+7. After every fix: update @todolist.md
+- Delete the solved entry (move to "已删" section if it was a real-but-wrongly-attributed bug).
+- Keep only pending / unfixed issues under "遗留真问题".
+- New commits get a new F-/L-id appended; completed F-ids move to "已完成" with the commit hash.
+- Stale "已完成" entries get compressed to one line per fix (problem + fix + test + smoke) — not full paragraphs.
