@@ -47,18 +47,32 @@ def generate_user_defined_variables(conn_config: ConnConfig) -> List:
     ValueError
         When a variable name is not a valid JMeter identifier.
     """
+    # F-15 (2026-07-21): operational UDV defaults go through
+    # ``${__P(name,default)}`` so ``-J<name>=value`` on the JMeter CLI
+    # overrides the YAML default. Previously ``test_duration`` was
+    # hardcoded with the YAML value (``str(conn_config.test_duration)``),
+    # so ``-Jtest_duration=60`` was silently ignored (UDV scope beats
+    # JMeter property scope).
+    #
+    # Credentials (``db_url``/``db_username``/``db_password``) are NOT
+    # exposed via ``${__P(...)}`` for two reasons:
+    #   1. ``${__P(name)}`` with no default returns ``"1"`` (literal),
+    #      not empty — so ``db_password = ${__P(db_password,)}`` would
+    #      become the password ``"1"`` and trip cluster auth.
+    #   2. Credentials in plaintext at the CLI surface is a poor
+    #      security posture; CI should bake them into the JMX instead.
     fields = {
         "db_url": str(conn_config.db_url),
         "db_username": str(conn_config.db_username),
         "db_password": str(conn_config.db_password),
-        "conn_pool_size": str(conn_config.conn_pool_size),
+        "conn_pool_size": f"${{__P(conn_pool_size,{conn_config.conn_pool_size})}}",
         # multi-end tasks §1.1+§1.2: device_* fields use ${__P(...)} so that
         # operators can override per JMeter instance via `-Jdevice_start=N`,
         # `-Jdevice_per_thread=N` without editing the JMX file.
         "device_start": "${__P(device_start,1)}",
         "device_per_thread": "${__P(device_per_thread,1)}",
-        "test_duration": str(conn_config.test_duration),
-        "write_throughput": "120",  # default 120 samples/min; overridable via -Jwrite_throughput=N
+        "test_duration": f"${{__P(test_duration,{conn_config.test_duration})}}",
+        "write_throughput": "${__P(write_throughput,120)}",  # default 120 samples/min
     }
 
     arg_props: List = []

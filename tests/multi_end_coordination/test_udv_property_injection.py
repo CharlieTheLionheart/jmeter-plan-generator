@@ -13,6 +13,7 @@ Closes multi-end-coordination review §1 by exercising:
 
 from __future__ import annotations
 
+import pytest
 from xml.etree import ElementTree as ET
 
 from config_parser.models import ConnConfig
@@ -48,17 +49,62 @@ class TestDeviceStartUdv:
         assert props["device_per_thread"] == "${__P(device_per_thread,1)}"
 
 
-class TestWriteThroughputUnchanged:
-    """write_throughput stays a string literal; only device_* fields change."""
+class TestWriteThroughputOverridable:
+    """write_throughput is also exposed via ${__P(...)} per F-15.
 
-    def test_write_throughput_remains_literal_120(self):
-        props = _udv_props(_udv_results())
-        assert props["write_throughput"] == "120"
+    Earlier this field was a hardcoded literal ``"120"`` so
+    ``-Jwrite_throughput=N`` was silently ignored. F-15 (2026-07-21)
+    made every UDV default go through ``${__P(name,default)}`` so
+    CLI ``-J`` overrides take effect.
+    """
 
-    def test_write_throughput_does_not_adopt_property_syntax(self):
-        """Sanity: write_throughput should NOT be wrapped in ${__P(...)}."""
+    def test_write_throughput_default_is_120(self):
+        """Default value baked into the ${__P(...)} reference is 120."""
         props = _udv_props(_udv_results())
-        assert "${__P(write_throughput" not in props["write_throughput"]
+        assert props["write_throughput"] == "${__P(write_throughput,120)}"
+
+    def test_write_throughput_adopts_property_syntax(self):
+        """write_throughput is wrapped in ${__P(...)} like every other UDV."""
+        props = _udv_props(_udv_results())
+        assert "${__P(write_throughput" in props["write_throughput"]
+
+
+class TestAllUdvsAdoptPropertySyntax:
+    """F-15: every UDV default goes through ${__P(name,default)}."""
+
+    @pytest.mark.parametrize(
+        "udv_name",
+        [
+            # F-15: operational params exposed via ${__P(...)}.
+            # db_url/db_username/db_password are NOT exposed — see
+            # test_udv_property_injection.py docstring.
+            "conn_pool_size", "device_start", "device_per_thread",
+            "test_duration", "write_throughput",
+        ],
+    )
+    def test_udv_uses_property_reference(self, udv_name: str):
+        props = _udv_props(_udv_results())
+        assert f"${{__P({udv_name}," in props[udv_name], (
+            f"F-15: UDV '{udv_name}' must default through "
+            f"${{__P(...)}} so -J{udv_name}=... CLI overrides work"
+        )
+
+    @pytest.mark.parametrize(
+        "udv_name", ["db_url", "db_username", "db_password"],
+    )
+    def test_credential_udv_is_literal(self, udv_name: str):
+        """Credentials stay as literal YAML values — no ``${__P(...)}``.
+
+        ``${__P(name)}`` with no default returns the literal ``"1"``,
+        which would replace ``db_password`` with ``"1"`` and break auth.
+        Exposing credentials at the CLI surface is also a poor security
+        posture for a JMX shipped to CI / staging.
+        """
+        props = _udv_props(_udv_results())
+        assert "${__P(" not in props[udv_name], (
+            f"credential UDV '{udv_name}' must stay literal — ${__P()} "
+            f"with empty default becomes '1' and breaks cluster auth"
+        )
 
 
 class TestNoOrchestrationOutput:

@@ -37,8 +37,9 @@ def _render_xml(results) -> str:
 
 class TestUdvWriteThroughput:
     def test_default_injected_at_120(self):
+        """F-15: write_throughput default is baked into ${__P(...,120)}."""
         props = _udv_props(_udv_results())
-        assert props["write_throughput"] == str(int(DEFAULT_WRITE_THROUGHPUT))
+        assert props["write_throughput"] == f"${{__P(write_throughput,{int(DEFAULT_WRITE_THROUGHPUT)})}}"
 
     def test_module_default_constant_is_120(self):
         assert DEFAULT_WRITE_THROUGHPUT == 120.0
@@ -47,8 +48,14 @@ class TestUdvWriteThroughput:
         props = _udv_props(_udv_results())
         assert "query_throughput" not in props
 
-    def test_write_throughput_value_renders_as_literal_in_jmx(self):
-        """UDV value should be exactly ``'120'`` (string), not ``120.0``."""
+    def test_write_throughput_value_renders_as_property_reference(self):
+        """F-15: write_throughput is a ``${__P(name,default)}`` reference.
+
+        Previously this was a literal ``'120'`` and ``-Jwrite_throughput=N``
+        was silently ignored. Now ``-Jwrite_throughput=240`` overrides
+        the YAML default at JMeter CLI time.
+        """
         props = _udv_props(_udv_results())
-        assert props["write_throughput"] == "120"
-        assert "." not in props["write_throughput"]
+        assert "${__P(write_throughput,120)}" in props["write_throughput"]
+        # No literal 120 / 120.0 / 120.5 — must be wrapped.
+        assert props["write_throughput"].count("120") == 1
