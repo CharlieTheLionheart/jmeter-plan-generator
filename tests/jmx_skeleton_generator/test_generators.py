@@ -297,3 +297,51 @@ class TestGenerateQueryThreadGroups:
                 xml = ET.tostring(e, encoding="unicode")
                 assert "Prepared Select Statement" in xml
                 break
+
+    def test_query_keeps_question_mark_placeholders(self):
+        """F-14 (2026-07-21): ``Prepared Select Statement`` binds values
+        positionally into ``?`` slots via ``queryArguments``. Earlier we
+        rewrote each ``?`` to ``${param_N}`` so JMeter would substitute
+        the value before the SQL reached the driver — but that double
+        substitution collided with the prepared statement and the
+        result-set metadata came back empty (``column index out of
+        range: 1, number of columns: 0``). Keep ``?`` in the SQL.
+        """
+        cfg = [QueryConfig(
+            query="SELECT a, b FROM t1 WHERE a = ? AND b = ?",
+            num_threads=1,
+        )]
+        result = generate_query_thread_groups(cfg)
+        for e in result:
+            if e.tag.endswith("JDBCSampler"):
+                xml = ET.tostring(e, encoding="unicode")
+                assert "a = ? AND b = ?" in xml, (
+                    "F-14: SQL must keep ``?`` placeholders so JMeter's "
+                    "Prepared Select Statement binds them positionally"
+                )
+                # The literal ${param_N} substitution path must be
+                # gone — it clashed with the positional bind.
+                assert "${param_0}" not in xml
+                assert "${param_1}" not in xml
+                break
+
+    def test_query_arguments_types_count_matches(self):
+        """F-6 + F-14: ``queryArgumentsTypes`` must have one entry per
+        ``?`` placeholder. JMeter's JDBCSampler validates
+        args-and-types counts at runtime.
+        """
+        cfg = [QueryConfig(
+            query="SELECT a, b FROM t1 WHERE a = ? AND b = ?",
+            num_threads=1,
+        )]
+        result = generate_query_thread_groups(cfg)
+        for e in result:
+            if e.tag.endswith("JDBCSampler"):
+                xml = ET.tostring(e, encoding="unicode")
+                # 2 ?s → 2 VARCHARs.
+                assert ">VARCHAR,VARCHAR<" in xml, (
+                    "F-6/F-14: queryArgumentsTypes must have one entry "
+                    "per ``?`` (got mismatch → 'number of arguments "
+                    "(N) and number of types (1) are not equal')"
+                )
+                break

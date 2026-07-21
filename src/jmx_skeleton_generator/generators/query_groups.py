@@ -186,6 +186,20 @@ def _scan_sql_tokens(sql: str) -> Tuple[List[_SQLToken], str]:
     return tokens, final_state
 
 
+def _count_placeholders(sql: str) -> int:
+    """Count ``?`` placeholders outside string literals.
+
+    Thin wrapper around :func:`_extract_placeholders` used by
+    :func:`generate_query_thread_groups` to size the
+    ``queryArguments`` / ``queryArgumentsTypes`` lists without
+    rewriting the SQL. F-14 (2026-07-21): we now leave ``?`` in place
+    for ``Prepared Select Statement`` mode and bind via
+    ``queryArguments`` positionally — so the caller needs the count,
+    not a rewritten SQL.
+    """
+    return len(_extract_placeholders(sql))
+
+
 def _extract_placeholders(sql: str) -> List[Tuple[int, int]]:
     """Return (start, end) positions of each ``?`` placeholder outside strings.
 
@@ -446,16 +460,16 @@ def generate_param_binding_script(
             )
 
         suffix = col_name.replace("'", "\\'")
-        # Fallback value when no per-column seed file exists: a
-        # device-id-shaped string derived from the test-plan UDV
-        # ``device_start``. The most common case is the first ptag
-        # (``ptag_varchar_1``), whose seed is virtualised at write
-        # time and never written to disk. Without this fallback the
-        # query's ``WHERE ptag_varchar_1 = ?`` is bound to an empty
-        # string, producing ``at or near "EOF": syntax error``
-        # (regression on 2026-07-20, F-4). The previous ``['null']``
-        # fallback left ``param_N`` empty, silently corrupting the
-        # query.
+        # F-4 (2026-07-20): missing seed file → device-id fallback.
+        # F-14 (2026-07-21): the value written to ``vars.put`` must be
+        # the **raw** column value (no SQL literal wrapping). JMeter's
+        # ``Prepared Select Statement`` mode binds the value into the
+        # ``?`` slot positionally — wrapping with single quotes would
+        # turn the bind into ``'''device_1'''`` (literal ``'device_1'``
+        # as a string), which works coincidentally for VARCHAR but
+        # breaks for any non-string type. Also strip the leading/
+        # trailing double quotes that ``csv.QUOTE_ALL`` adds to every
+        # seed-file value.
         lines.extend([
             f"// param_{param_idx}: {col_name}",
             f"def matched_{param_idx} = tableDir.listFiles()?.find {{ it.name.endsWith('_{suffix}.csv') }}",
@@ -466,13 +480,13 @@ def generate_param_binding_script(
             f"        throw new RuntimeException('ambiguous seed files for column {col_name}')",
             f"    }}",
             f"}}",
-            # The fallback list contains one synthetic value. The
-            # device-id pattern is a safe default for ptag-like
-            # columns; for non-ptag columns (e.g. rtag, data_cols)
-            # the seed file is always present, so the fallback
-            # path is never exercised in practice.
             f"def lines_{param_idx} = matched_{param_idx}?.readLines() ?: ['device_' + (vars.get('device_start') ?: '1')]",
-            f"def raw_{param_idx} = lines_{param_idx}.get((int)(Math.random() * lines_{param_idx}.size()))",
+            # Strip QUOTE_ALL's leading/trailing double-quote — the
+            # raw string used to flow verbatim into the prepared
+            # statement and SQL became ``WHERE rtag_varchar_1 =
+            # "op_group_1"`` (double-quoted identifier, not a string
+            # literal). F-14 strips the CSV framing.
+            f"def raw_{param_idx} = lines_{param_idx}.get((int)(Math.random() * lines_{param_idx}.size())).replaceAll('^\"|\"$', '')",
             f'vars.put("param_{param_idx}", raw_{param_idx})',
             "",
         ])
@@ -516,7 +530,17 @@ def generate_query_thread_groups(
     results: List = []
 
     for qc in query_config:
-        query_with_vars, param_count = _replace_placeholders_with_vars(qc.query)
+        # F-14 (2026-07-21): keep the SQL with ``?`` placeholders for
+        # ``Prepared Select Statement`` mode. Earlier we rewrote each
+        # ``?`` to ``${param_N}`` so JMeter would substitute the value
+        # before the SQL reached the JDBC driver — but the JMeter
+        # JDBCSampler with ``Prepared Select Statement`` already
+        # substitutes queryArguments positionally into ``?`` slots.
+        # The two substitutions collided and the result-set metadata
+        # came back empty (``column index out of range: 1, number of
+        # columns: 0``). Leaving ``?`` in place + binding raw values
+        # via queryArguments + VARCHAR types is the correct combo.
+        query_with_placeholders, param_count = qc.query, _count_placeholders(qc.query)
         query_var_refs = ",".join(f"${{param_{i}}}" for i in range(param_count))
 
         if param_count > 0:
@@ -533,7 +557,7 @@ def generate_query_thread_groups(
 
         sampler, samp_hash = jdbc_sampler_element(
             name="Query",
-            query=query_with_vars,
+            query=query_with_placeholders,
             data_source="jdbcConfig",
             query_type="Prepared Select Statement",
             query_arguments=query_var_refs,

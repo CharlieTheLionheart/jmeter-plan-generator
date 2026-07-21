@@ -69,3 +69,25 @@ class TestSeedFileResolution:
             "param binding must write raw_N directly to vars without "
             "the empty-string ternary (F-4)"
         )
+
+    def test_seed_value_strips_quote_all_double_quotes(self):
+        """F-14 regression: csv.QUOTE_ALL writes ``"op_group_1"`` to
+        seed files; the runtime ``raw_N`` must strip the surrounding
+        double quotes. Otherwise the value flows verbatim into the
+        prepared statement bind and SQL becomes ``WHERE
+        rtag_varchar_1 = "op_group_1"`` — a double-quoted identifier,
+        not a string literal.
+        """
+        sql = "SELECT * FROM db.t WHERE col_int8_1 = ?"
+        script = generate_param_binding_script(sql)
+        assert "replaceAll('^\"|\"$', '')" in script, (
+            "raw_N must strip QUOTE_ALL's leading/trailing double-quote "
+            "before binding (F-14)"
+        )
+        # Must NOT re-wrap with single quotes — that breaks
+        # non-string bind targets and turns ``?`` into ``'''val'''``.
+        assert "'\\'\\''" not in script and "'' + raw_" not in script, (
+            "raw_N must NOT be wrapped in SQL string quotes — the JDBC "
+            "Prepared Statement mode binds it positionally and quotes "
+            "it on the wire (F-14)"
+        )
