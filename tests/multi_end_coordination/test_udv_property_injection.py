@@ -75,9 +75,10 @@ class TestAllUdvsAdoptPropertySyntax:
     @pytest.mark.parametrize(
         "udv_name",
         [
-            # F-15: operational params exposed via ${__P(...)}.
-            # db_url/db_username/db_password are NOT exposed — see
-            # test_udv_property_injection.py docstring.
+            # F-15: ALL UDVs (operational + credentials) exposed via
+            # ``${__P(name,default)}`` so CI can re-point the smoke at
+            # a different cluster / credentials via ``-J<name>=...``.
+            "db_url", "db_username", "db_password",
             "conn_pool_size", "device_start", "device_per_thread",
             "test_duration", "write_throughput",
         ],
@@ -89,22 +90,38 @@ class TestAllUdvsAdoptPropertySyntax:
             f"${{__P(...)}} so -J{udv_name}=... CLI overrides work"
         )
 
-    @pytest.mark.parametrize(
-        "udv_name", ["db_url", "db_username", "db_password"],
-    )
-    def test_credential_udv_is_literal(self, udv_name: str):
-        """Credentials stay as literal YAML values — no ``${__P(...)}``.
+    def test_credential_udv_uses_empty_default_when_yaml_empty(self):
+        """``db_password`` with empty YAML default must be
+        ``${__P(db_password,)}`` (empty default between commas), NOT
+        ``${__P(db_password)}`` (no comma at all → default = ``"1"``).
 
-        ``${__P(name)}`` with no default returns the literal ``"1"``,
-        which would replace ``db_password`` with ``"1"`` and break auth.
-        Exposing credentials at the CLI surface is also a poor security
-        posture for a JMX shipped to CI / staging.
+        JMeter's ``__P`` function defaults to the literal ``"1"`` when
+        no second arg is supplied; that would replace ``db_password``
+        with ``"1"`` and trip cluster auth.
         """
         props = _udv_props(_udv_results())
-        assert "${__P(" not in props[udv_name], (
-            f"credential UDV '{udv_name}' must stay literal — ${__P()} "
-            f"with empty default becomes '1' and breaks cluster auth"
+        assert props["db_password"] == "${__P(db_password,)}", (
+            "F-15: db_password default must be ${__P(db_password,)} "
+            "(empty between commas), not ${__P(db_password)} ('1' default)"
         )
+
+    def test_credential_udv_defaults_have_no_quote_wrapping(self):
+        """String defaults are raw literals — NO single-quote wrapping.
+
+        Earlier we wrapped defaults in ``'...'`` per Python ``!r``, which
+        the JMeter ``__P`` function passed through verbatim as the
+        literal three-or-more-char string with apostrophes (the JDBC
+        driver then saw e.g. URL ``'jdbc:.../defaultdb'`` and rejected
+        it). The reference at ``scenarios/shig/plans/plan.jmx`` uses
+        the same raw form: ``${__P(user.db.url,jdbc:.../defaultdb)}``.
+        """
+        for name in ("db_url", "db_username", "db_password"):
+            props = _udv_props(_udv_results())
+            value = props[name]
+            # No surrounding ' characters around the literal default.
+            assert "'" not in value.split("(", 1)[1].rsplit(")", 1)[0], (
+                f"{name} default has stray quote: {value!r}"
+            )
 
 
 class TestNoOrchestrationOutput:

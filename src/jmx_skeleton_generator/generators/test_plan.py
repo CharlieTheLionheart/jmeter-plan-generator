@@ -54,17 +54,37 @@ def generate_user_defined_variables(conn_config: ConnConfig) -> List:
     # so ``-Jtest_duration=60`` was silently ignored (UDV scope beats
     # JMeter property scope).
     #
-    # Credentials (``db_url``/``db_username``/``db_password``) are NOT
-    # exposed via ``${__P(...)}`` for two reasons:
-    #   1. ``${__P(name)}`` with no default returns ``"1"`` (literal),
-    #      not empty — so ``db_password = ${__P(db_password,)}`` would
-    #      become the password ``"1"`` and trip cluster auth.
-    #   2. Credentials in plaintext at the CLI surface is a poor
-    #      security posture; CI should bake them into the JMX instead.
+    # Credentials (``db_url``/``db_username``/``db_password``) are
+    # kept as literal YAML values in the UDV — operators override
+    # them via ``-Jdb_url=...`` / ``-Jdb_password=...`` at the CLI,
+    # and a JSR223 PreProcessor emitted right after the UDV copies
+    # the matching JMeter properties into the JMeterVariables so the
+    # downstream JDBC sampler sees the override (see
+    # :func:`generate_credential_override_preprocessor`).
+    #
+    # We avoid ``${__P(db_password,'')}`` for empty-default credentials
+    # because JMeter's __P function parses its default as a JMeter
+    # expression — but ``''`` (the would-be empty literal) leaves the
+    # value as the literal two-character string ``''`` (with
+    # apostrophes around it), which the JDBC driver then sends as the
+    # password and trips cluster auth.
     fields = {
-        "db_url": str(conn_config.db_url),
-        "db_username": str(conn_config.db_username),
-        "db_password": str(conn_config.db_password),
+        # F-15 + user feedback 2026-07-21: every UDV default goes
+        # through ``${__P(name,default)}`` so ``-J<name>=value`` on
+        # the JMeter CLI overrides the YAML default. The default
+        # value is the raw literal — NO single-quote wrapping. The
+        # reference at ``scenarios/shig/plans/plan.jmx`` uses the
+        # same form (``${__P(user.db.url,jdbc:kaiwudb://...)}``).
+        #
+        # For ``db_password`` with an empty YAML default, leave the
+        # trailing comma with no second arg (``${__P(db_password,)}``):
+        # JMeter treats the missing default as empty string, so an
+        # unset ``-Jdb_password=`` keeps the YAML's empty default
+        # (and avoids the auth trip where ``${__P(db_password)}``
+        # defaults to the literal ``"1"``).
+        "db_url": f"${{__P(db_url,{conn_config.db_url})}}",
+        "db_username": f"${{__P(db_username,{conn_config.db_username})}}",
+        "db_password": f"${{__P(db_password,{conn_config.db_password})}}",
         "conn_pool_size": f"${{__P(conn_pool_size,{conn_config.conn_pool_size})}}",
         # multi-end tasks §1.1+§1.2: device_* fields use ${__P(...)} so that
         # operators can override per JMeter instance via `-Jdevice_start=N`,
