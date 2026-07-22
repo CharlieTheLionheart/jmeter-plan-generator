@@ -1,0 +1,2 @@
+build_command: venv/bin/python -m pytest tests/ -q
+verify_command: venv/bin/python -m pytest tests/ -q
