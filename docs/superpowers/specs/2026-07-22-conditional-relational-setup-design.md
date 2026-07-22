@@ -2,6 +2,8 @@
 comet_change: conditional-relational-setup
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-07-22-conditional-relational-setup
+status: final
 ---
 
 # 条件关系表初始化 — 深度技术设计
@@ -131,3 +133,4 @@ Sparse 4000 列模型走分支 A；现有 shig 走分支 B，行为不变。
 
 - shig canonical smoke 中 `factory` 与 `workshop` 行数为 0，是否需要在后续 DCR 中调整 `LoopController.loops`？本 DCR 不解决。
 - 稀疏 fixture 是否进入主目录成为 fixture 套件？当前仅作为验证输入。
+

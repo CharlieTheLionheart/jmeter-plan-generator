@@ -13,6 +13,8 @@ jmeter.log
 # Comet 流程运行时状态与轨迹
 openspec/changes/*/.comet.yaml
 openspec/changes/*/.comet/
+openspec/changes/archive/*/.comet.yaml
+openspec/changes/archive/*/.comet/
 
 # 临时 JMX 输出与 smoke 产物
 /tmp/jmeter-*/

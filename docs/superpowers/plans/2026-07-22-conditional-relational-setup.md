@@ -2,6 +2,7 @@
 change: conditional-relational-setup
 design-doc: docs/superpowers/specs/2026-07-22-conditional-relational-setup-design.md
 base-ref: c14969f381451543b214335957bef283823d9d84
+archived-with: 2026-07-22-conditional-relational-setup
 ---
 
 # 实施计划 — 条件关系表初始化
@@ -43,3 +44,4 @@ base-ref: c14969f381451543b214335957bef283823d9d84
 
 - 新增断言依赖 JMX XML 序列化属性顺序；用字符串 marker 锁住而非 DOM 结构。
 - 端到端 `_run_pipeline` 测试需要真实 KWDDB 连接，仅做 CLI 解析层面的检查，避免在 CI 中拉起容器。
+
