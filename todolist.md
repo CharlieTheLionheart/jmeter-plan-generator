@@ -45,7 +45,7 @@ shig fixture + smoke 跑过的：关系+时序混合、PK/ptag/rtag、ref: FK、
 - **#2** schemaless 主动报错行为未验。spec §7 要求生成器在 `mode: schemaless` 时拒绝生成。
 
 ### P1：数据生成边界
-- **#3** `nullable=true` + `null_rate>0` 完全未验。shig 全 `nullable: false`，缺 NULL 种子打散 + 计入 seed_num + 随机分散。
+- **#3** `nullable=true` + `null_rate>0` 已验。sparse 4000 列 99% NULL fixture 落 commit `c14969f` / `9333117`，smoke 603 samples / 0 errors，col_smallint_1/col_int_1/col_float4_1 NULL 种子比例 99%，DB 非 NULL 行数符合随机分布。
 - **#4** `enum` 多种子数（`seed_num > len(enum_values)` 时循环填充）未验。shig rtag_varchar 4 值 seed=4 刚好命中，未触发循环分支。
 - **#5** `regex` val_range 未验。shig 全 enum/int range。
 
