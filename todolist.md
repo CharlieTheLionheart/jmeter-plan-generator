@@ -36,12 +36,17 @@
   - 验证：pytest 633 pass + smoke 0 err + 4/20/20 关系表填行 + t_cnc/t_electmeter 3900 行
   - 副作用 F-17：t_electmeter 2 个 rtag 时 `rtag_varchar_1` DB 数据为 `""`（基线 1 rtag 时 NIL/a023 正常）；rtag_smallint_1 仍有值但分布异常（4 个值集中）。CSV/seed/JMX 均正确，疑似 Groovy/JDBC 批处理 + 2 rtag 布局的 setString 绑定回归。**R-3 留 partial fix 状态**，FK 结构 OK 待 F-17 单独修
 
-- **F-17** t_electmeter 2 rtag 时 rtag_varchar_1 setString 绑定失效（待修）
+- **F-17** t_electmeter 2 rtag 时 rtag_varchar_1 setString 绑定失效（**已 root cause，kwdb server bug**）
   - 现象：基线 e33605e（1 rtag）rtag_varchar_1 正常写入 NIL/a023；R-3（2 rtag）后所有行 rtag_varchar_1 = `""`
-  - 已排除：seed 正确（`"NIL"`/`"a023"`/`"a011"`）、CSV header 52 字段含 rtag_varchar_1 at pos 50、CSV row data 含 rtag_varchar_1 at pos 50、JMX INSERT 含 53 列 rtag_varchar_1 at pos 52、columnTypes 53 元素 pos 51 为 varchar、loader `line.split(',')` 正确解析、ptag overwrite 正确（ptag_varchar_1 显示 device_1/device_2）、direct psql insert 走 setString 正常写 `TESTVAL`
-  - 怀疑：JMX batch_prepared 写入路径在 row 长度 52→53、rtag 数量 1→2 时 setString(col=52, "NIL") 被错位 bind 到其他列；或 KaiwuDB JDBC 驱动对 rtag 的 prepared batch 有特殊行为
-  - 调试路径：临时在 JMX sampler 加 `log.info("bind col=52 value=" + row[51] + " type=" + type[51])` 验证 row[51] 实际值
-  - 修法（候选）：先去掉 t_electmeter 第 2 个 rtag 走 R-3 partial 提交流程，rtag 落地的 DB 验证等 F-17 修好再做
+  - 已排除：seed/CSV/INSERT/columnTypes/loader/ptag-overwrite/direct-psql 全部正确
+  - **根因（docs/issues/F17.md + F17Repro.java 完整 repro）**：
+    - kwdb server 在时序表有 2+ rtag（含 varchar + smallint）时，`setLong(smallint col)` 之后紧跟 `setString(varchar rtag)` 会让 server 把 varchar rtag 的 value 静默丢弃为 `""`（kwdb/kwdb:latest），或 container restart 时 `MMapTagColumnTable::push_back` segfault（kwdb-x86_64-master-dbg）
+    - 关键子发现：`setShort(smallint)` 不触发 bug；只有 `setLong` 触发
+    - driver 端 `setString(52, "op_group_3")` 100% 被调用，server 端 silently 忽略
+    - 推测：server 缓存 prior bind 的 JDBC type，setLong on SMALLINT 留下"smallint"type hint，下一个 setString 被绑到 SMALLINT 占位符上（被截断为 0/`""`）而不是 VARCHAR
+  - 修法（client 侧 workaround）：将 JMX batch_prepared 绑 smallint 改用 setShort 替代 setLong，避开 server bug（生产 fix 等 kwdb 服务端按 `parameterType` hint 修）
+  - 已落地：t_electmeter 保持 1 rtag（workshop_id only）；op_group rtag 等 kwdb 修服务端 bug 后再加
+  - 关联：t_cnc 的 3 rtag 全 smallint，无 varchar rtag，无 F-17 风险（验证 t_cnc rtag_smallint_1/2/3 写入正常）
 
 ## 已删（误判 → 真因）
 

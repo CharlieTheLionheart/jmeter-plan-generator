@@ -114,8 +114,8 @@ timeout 30 "$JMETER" -n -t /tmp/jmeter-smoke/out/test_plan.jmx \
 ### 4. （可选）连真 KaiwuDB 跑全链路
 
 ```bash
-docker run -d --name kaiwudb-smoke -p 26257:26257 kaiwudb/kaiwudb:3.2.0 \
-    --cluster-name=test-single
+docker run -d --name kaiwudb-smoke -p 26257:26257 kwdb/kwdb:latest \
+    kwbase start-single-node --insecure --listen-addr=0.0.0.0:26257 --background
 
 "$JMETER" -n -t /tmp/jmeter-smoke/out/test_plan.jmx \
     -Jtest_duration=5 -Jnum_threads=1 \
