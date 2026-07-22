@@ -281,3 +281,71 @@ class TestJMXSkeletonGenerator:
             path = gen.generate()
             xml = path.read_text(encoding="utf-8")
             assert 'xmlns="http://jmeter.apache.org/"' in xml
+
+    def test_rel_init_specs_appears_in_jmx(self):
+        """``JMXSkeletonGenerator(rel_init_specs=[...])`` MUST surface
+        the relational init subtree (LoopController + RelInit_ sampler).
+        """
+        rel_spec = {
+            "table_name": "iot_meta.t_workshop",
+            "columns": ["pk_int8_1"],
+            "total_rows": 100,
+            "batch_lines": 20,
+            "rel_col_seed_files": ["1_pk_int8_1.csv"],
+            "column_types": ["int8"],
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_config = self._make_test_config()
+            gen = JMXSkeletonGenerator(
+                test_config=test_config,
+                ddl_statements=["CREATE DATABASE iot_meta"],
+                prepared_templates={},
+                rel_init_specs=[rel_spec],
+                output_dir=tmpdir,
+            )
+            xml = gen.generate().read_text(encoding="utf-8")
+            assert "RelInit_" in xml
+            assert "relprep" in xml
+            assert "Loop Controller for iot_meta.t_workshop" in xml
+
+    def test_empty_rel_init_specs_emits_no_rel_subtree(self):
+        """``rel_init_specs=[]`` MUST NOT produce any relational init
+        marker, even when DDL statements are present. conditional-
+        relational-setup DCR: pure-ts models stay marker-free.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_config = self._make_test_config()
+            gen = JMXSkeletonGenerator(
+                test_config=test_config,
+                ddl_statements=["CREATE DATABASE iot_meta"],
+                prepared_templates={},
+                rel_init_specs=[],
+                output_dir=tmpdir,
+            )
+            xml = gen.generate().read_text(encoding="utf-8")
+            assert "RelInit_" not in xml
+            assert "relprep" not in xml
+            assert "Loop Controller for" not in xml
+
+    def test_rel_init_loop_count_matches_spec(self):
+        """``LoopController.loops`` MUST equal ``total_rows // batch_lines``."""
+        rel_spec = {
+            "table_name": "iot_meta.t_workshop",
+            "columns": ["pk_int8_1"],
+            "total_rows": 200,
+            "batch_lines": 25,
+            "rel_col_seed_files": ["1_pk_int8_1.csv"],
+            "column_types": ["int8"],
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_config = self._make_test_config()
+            gen = JMXSkeletonGenerator(
+                test_config=test_config,
+                ddl_statements=["CREATE DATABASE iot_meta"],
+                prepared_templates={},
+                rel_init_specs=[rel_spec],
+                output_dir=tmpdir,
+            )
+            xml = gen.generate().read_text(encoding="utf-8")
+            # 200/25 = 8 loops.
+            assert ">8<" in xml

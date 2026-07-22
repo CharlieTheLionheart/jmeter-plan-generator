@@ -348,6 +348,116 @@ class TestEndToEnd:
         assert isinstance(rc, int)
         assert rc == EXIT_OK
 
+    def test_ts_only_model_does_not_emit_rel_init(self, tmp_path: Path):
+        """conditional-relational-setup DCR: a ts-only model MUST NOT
+        emit any relational init subtree (RelInit_/relprep/Loop Controller
+        for). The DDL SetupThreadGroup is still present.
+        """
+        model = _write_yaml(tmp_path, "model.yaml", _minimal_model())
+        cfg = _write_yaml(tmp_path, "cfg.yaml", _minimal_cfg())
+        out = tmp_path / "out"
+
+        rc = cli_main([str(model), str(cfg), "-o", str(out)])
+        assert rc == EXIT_OK
+        xml = (out / "test_plan.jmx").read_text(encoding="utf-8")
+        assert "RelInit_" not in xml
+        assert "relprep" not in xml
+        assert "Loop Controller for" not in xml
+        # The DDL SetupThreadGroup is still emitted for the ts database.
+        assert "SetupThreadGroup" in xml
+        assert "iot_monitor" in xml
+
+    def test_rel_model_emits_loop_controller_per_table(self, tmp_path: Path):
+        """A model that declares a relational database MUST emit one
+        ``Loop Controller for {db}.{table}`` per table, and the
+        ``RelInit_`` sampler for each.
+        """
+        rel_model = {
+            "rel_dbs": [
+                {
+                    "name": "iot_meta",
+                    "tables": [
+                        {
+                            "name": "t_workshop",
+                            "primary_key_count": 1,
+                            "primary_keys": [
+                                {
+                                    "col_type": "int8",
+                                    "type_proportion": 1.0,
+                                    "val_range": "[1,100]",
+                                    "seed_num": 50,
+                                }
+                            ],
+                            "data_col_count": 1,
+                            "data_cols": [
+                                {
+                                    "col_type": "varchar(16)",
+                                    "type_proportion": 1.0,
+                                    "val_range": "enum:A,B",
+                                    "seed_num": 2,
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+            "ts_dbs": [
+                {
+                    "name": "iot_monitor",
+                    "tables": [
+                        {
+                            "name": "t_cnc",
+                            "data_col_count": 1,
+                            "primary_tag_count": 1,
+                            "regular_tag_count": 0,
+                            "data_cols": [
+                                {
+                                    "col_type": "int8",
+                                    "type_proportion": 1.0,
+                                    "val_range": "[0,100]",
+                                }
+                            ],
+                            "primary_tags": [
+                                {"col_type": "int8", "type_proportion": 1.0}
+                            ],
+                            "ts_col": {
+                                "name": "ts",
+                                "type": "timestamp",
+                                "ms_step": 1000,
+                            },
+                        }
+                    ],
+                }
+            ],
+        }
+        cfg = {
+            "conn_config": {
+                "db_url": "jdbc:kaiwudb://localhost:26257/iot",
+                "conn_pool_size": 10,
+                "device_start": 1,
+                "test_duration": 60,
+            },
+            "write_config": [
+                {
+                    "tbl_name": "iot_monitor.t_cnc",
+                    "throughput": 1000.0,
+                    "mode": "single_insert",
+                    "num_threads": 1,
+                }
+            ],
+            "query_config": [],
+        }
+        model = _write_yaml(tmp_path, "model.yaml", rel_model)
+        cfg = _write_yaml(tmp_path, "cfg.yaml", cfg)
+        out = tmp_path / "out"
+
+        rc = cli_main([str(model), str(cfg), "-o", str(out)])
+        assert rc == EXIT_OK
+        xml = (out / "test_plan.jmx").read_text(encoding="utf-8")
+        assert "Loop Controller for iot_meta.t_workshop" in xml
+        assert "RelInit_iot_meta_t_workshop" in xml
+        assert "RelInit_iot_meta_t_workshop_relprep" in xml
+
 
 # ---------------------------------------------------------------------------
 # §7.9 Prepared template generator skipped

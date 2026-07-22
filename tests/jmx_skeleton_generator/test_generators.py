@@ -137,6 +137,67 @@ class TestGenerateDDLSetupThreadGroup:
                 assert "jdbcConfig" in xml
                 break
 
+    def test_rel_init_specs_empty_emits_no_loop_controller(self):
+        """``rel_init_specs=[]`` MUST NOT produce a relational init subtree.
+
+        conditional-relational-setup DCR: a ts-only model must not generate
+        ``RelInit_`` samplers, ``relprep`` preprocessors, or relational
+        ``LoopController`` elements. We use the relational-init-specific
+        markers ``RelInit_`` / ``relprep`` / ``Loop Controller for`` to
+        avoid collision with the ``SetupThreadGroup``'s own
+        ``main_controller`` elementProp.
+        """
+        elems = generate_ddl_setup_thread_group(
+            ["CREATE DATABASE foo"],
+            rel_init_specs=[],
+        )
+        # The generator returns ``[SetupThreadGroup, hashTree]``; serialise
+        # both to capture the entire paired subtree, not just the TG props.
+        xml = "".join(ET.tostring(e, encoding="unicode") for e in elems)
+        assert "RelInit_" not in xml
+        assert "relprep" not in xml
+        assert "Loop Controller for" not in xml
+
+    def test_rel_init_specs_produces_rel_subtree(self):
+        """A single rel init spec produces one ``RelInit_`` subtree and
+        ``LoopController.loops == total_rows // batch_lines``.
+        """
+        spec = {
+            "table_name": "iot_meta.t_workshop",
+            "columns": ["pk_int8_1", "col_varchar_1"],
+            "total_rows": 100,
+            "batch_lines": 20,
+            "rel_col_seed_files": ["1_pk_int8_1.csv", "2_col_varchar_1.csv"],
+            "column_types": ["int8", "varchar(16)"],
+        }
+        elems = generate_ddl_setup_thread_group(
+            ["CREATE DATABASE foo"],
+            rel_init_specs=[spec],
+        )
+        xml = "".join(ET.tostring(e, encoding="unicode") for e in elems)
+        assert xml.count("RelInit_") >= 1
+        assert xml.count("relprep") >= 1
+        # LoopController for the relational subtree iterates 100/20 = 5 times.
+        assert ">5<" in xml
+
+    def test_rel_init_specs_appended_after_ddl(self):
+        """DDL samplers are emitted before the relational init subtree."""
+        spec = {
+            "table_name": "iot_meta.t_workshop",
+            "columns": ["pk_int8_1"],
+            "total_rows": 10,
+            "batch_lines": 5,
+            "rel_col_seed_files": ["1_pk_int8_1.csv"],
+            "column_types": ["int8"],
+        }
+        elems = generate_ddl_setup_thread_group(
+            ["CREATE DATABASE foo", "CREATE TABLE bar"],
+            rel_init_specs=[spec],
+        )
+        xml = "".join(ET.tostring(e, encoding="unicode") for e in elems)
+        assert xml.find("DDL-1") < xml.find("RelInit_")
+        assert xml.find("DDL-2") < xml.find("RelInit_")
+
 
 # ---------------------------------------------------------------------------
 # write_groups

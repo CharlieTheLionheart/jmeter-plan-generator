@@ -174,4 +174,10 @@ def _build_rel_init_subtree(spec: Dict[str, Any]) -> List:
     )
 
     inner = hash_tree(prep, prep_hash, sampler, samp_hash)
-    return [loop_ctrl, inner]  # noqa: F841 — fence is implicit
+    # Mount the prep+sampler subtree as a child of ``loop_ctrl`` so JMeter
+    # honours the loop boundary at runtime. ``make_element`` keeps
+    # ``children`` in document order, so the inner hashTree rides inside
+    # the ``<GenericController>`` rather than as a sibling at the
+    # enclosing SetupThreadGroup hashTree level.
+    loop_ctrl.append(inner)
+    return [loop_ctrl]
