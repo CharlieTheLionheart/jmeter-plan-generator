@@ -21,4 +21,4 @@
 - [x] 4.1 运行相关单元测试和全量 `python -m pytest tests/`
 - [x] 4.2 运行 5 分钟 sparse KaiWuDB smoke，验证 0 error、写入行数和 99% NULL 种子
 - [x] 4.3 运行原 shig canonical smoke，验证 0 error 和关系/时序表预期行数
-- [ ] 4.4 更新 `todolist.md`：将 spec gap #3 移入已完成并记录测试、smoke 证据
+- [x] 4.4 更新 `todolist.md`：将 spec gap #3 移入已完成并记录测试、smoke 证据

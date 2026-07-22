@@ -19,10 +19,11 @@
 - **R-3** (09fa065) shig fixture 关系表 3 层 FK 层级 + t_cnc/t_electmeter rtag→workshop 关联：sub_company 4 行 + factory 20 行 + workshop 20 行（生产 100 缩 20 保持可读），t_cnc 加 3 rtag（sub_company_id + factory_id + workshop_id 全 smallint ref:），t_electmeter 加 2 rtag（op_group varchar + workshop_id smallint ref:），validator 修复（`validate_foreign_key_refs` 改用 column NAME 而非 col_type）。test: 同步更新 test_parser + smoke 0 err。
 - **R-3 续** (8614b90) ddl_generator 加 FK 约束：data_col val_range 为 `ref:db.table.col` 时 DDL 附加 `REFERENCES db.table(col)` 子句；workshop 20→100 行（生产 100 车间名 enum + factory_id ref:）。DDL 实际生成 `CONSTRAINT fk_col_int2_1_ref_factory FOREIGN KEY (col_int2_1) REFERENCES factory(pk_int8_1)`。test: 验 workshop.factory_id=999 / factory.sub_comp_id=999 → SQLSTATE 23503 违反。pytest 633 pass + smoke 0 err + 4/20/100/3900/3900 填行。
 - **F-17** (b3e2c5e / 1c02629 / 2c32c81 / d9c3fa9) kwdb server tag insert bug：在 2+ rtag 时序表（含 varchar + smallint）下，`setLong(smallint col)` 之后紧跟 `setString(varchar rtag)` 会让 server 把 varchar rtag 静默丢弃为 `""`（kwdb/kwdb:latest）或 container restart 时 `MMapTagColumnTable::push_back` segfault（kwdb-x86_64-master-dbg）。docs/issues/F17.md + F17Repro.java 完整 repro。`setShort(smallint)` 不触发；bug 仅限 JDBC `setLong → setString` 序列，原生 `kwbase sql` 不复现。**FIXED in `kwdb-x86_64-master:latest` (nightly 2026-07-22)**：F17Repro 2500 rows + rtag_varchar_1 = op_group_1..4 正确分布；shig smoke 4/20/100/3900/3900 + rtag_varchar_1 = op_group_2/3/4 + rtag_smallint_1 = 13/33/61。FK 完整性验 0 orphans。
+- **#3** (c14969f / 9333117) **条件关系初始化 DCR**：`TestModelConfig` 未声明 `rel_dbs`、空 `rel_dbs` 或所有关系表为空时，生成器不生成任何 `RelInit_` 子树。同步 `batch_prepared` 修复：`setObject(colIdx+1, null)` 替 `setNull`；4000 列 INSERT SQL 按 16KB 分块为 Groovy 多字符串常量并运行时 `[..].join('')`。OpenSpec change `conditional-relational-setup`（proposal/design/review/tasks/delta spec/.openspec.yaml）+ Superpowers Design Doc + 实施 plan。test: pytest 643 passed（新增 8 项条件初始化集成断言 + 1 项 NULL `setObject` 锁定 + 1 项 SQL 拆分）。smoke: 5min sparse KaiwuDB 603 samples/0 errors/t_cnc 600 行 + 99% NULL 种子 + DB 非 NULL 行数符合随机分布；shig canonical smoke 0 errors（factory/workshop=0 属批次循环限制，与本 DCR 无关）。原始 spec §2.0/§2.2/§写入范围说明 与 design §1 决策 3/§3.6/线程组编排节 三处补齐边界。
 
 ## 遗留真问题
 
-无。所有 R-3 + F-17 已落 commit 并验证通过。下一阶段工作见末尾"spec 未验功能点"（19 个待验，按 P1/P2/P3 排序）。
+无。所有 R-3 + F-17 已落 commit 并验证通过；spec gap #3 已落 commit `c14969f` 与 `9333117` 并验证通过。下一阶段工作见末尾"spec 未验功能点"（19 个待验，按 P1/P2/P3 排序）。
 
 ## 已删（误判 → 真因）
 
