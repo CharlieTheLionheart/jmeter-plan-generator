@@ -174,10 +174,10 @@ def _build_rel_init_subtree(spec: Dict[str, Any]) -> List:
     )
 
     inner = hash_tree(prep, prep_hash, sampler, samp_hash)
-    # Mount the prep+sampler subtree as a child of ``loop_ctrl`` so JMeter
-    # honours the loop boundary at runtime. ``make_element`` keeps
-    # ``children`` in document order, so the inner hashTree rides inside
-    # the ``<GenericController>`` rather than as a sibling at the
-    # enclosing SetupThreadGroup hashTree level.
-    loop_ctrl.append(inner)
-    return [loop_ctrl]
+    # Keep ``loop_ctrl`` and ``inner`` as siblings inside the parent
+    # SetupThreadGroup hashTree. JMeter's XStream parser rejects a
+    # ``<hashTree>`` mounted as a child of ``<GenericController>``
+    # (ClassCastException: ListedHashTree → JMeterProperty), so the
+    # loop boundary must ride on a sibling hashTree at the same
+    # hierarchical level.
+    return [loop_ctrl, inner]
