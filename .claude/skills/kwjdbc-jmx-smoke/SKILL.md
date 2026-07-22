@@ -113,9 +113,28 @@ timeout 30 "$JMETER" -n -t /tmp/jmeter-smoke/out/test_plan.jmx \
 
 ### 4. （可选）连真 KaiwuDB 跑全链路
 
+**容器镜像约定**（2026-07-22 确认）：
+
+- 镜像默认 workdir 是 `/`，不是 `/kaiwudb/bin`
+- `kwbase` 二进制在 `/kaiwudb/bin/kwbase`，**不在 `$PATH`**
+- 调用时必须用**绝对路径** `/kaiwudb/bin/kwbase`
+- 推荐镜像（按优先级）：
+  1. `devops.inspur.com:80/isg/zdp/repo/local_repo/daily_svt/kaiwudb/kwdb-x86_64-master:latest`（nightly，F-17 已修）
+  2. `kwdb/kwdb:latest`（F-17 仍触发，varchar rtag 静默丢 `""`）
+- 避免用 `kwdb-x86_64-master-dbg` — F-17 会让 container 在 restart 时 segfault
+
 ```bash
-docker run -d --name kaiwudb-smoke -p 26257:26257 kwdb/kwdb:latest \
-    kwbase start-single-node --insecure --listen-addr=0.0.0.0:26257 --background
+docker run -d --name kaiwudb-smoke -p 26257:26257 -p 8081:8080 \
+    --ulimit nofile=65536 \
+    devops.inspur.com:80/isg/zdp/repo/local_repo/daily_svt/kaiwudb/kwdb-x86_64-master:latest \
+    /kaiwudb/bin/kwbase start-single-node \
+    --insecure --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080
+
+# 等 kwbase ready（端口监听）
+for i in $(seq 1 30); do
+    docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --insecure -e "select 1" >/dev/null 2>&1 && break
+    sleep 1
+done
 
 "$JMETER" -n -t /tmp/jmeter-smoke/out/test_plan.jmx \
     -Jtest_duration=5 -Jnum_threads=1 \
@@ -124,6 +143,14 @@ docker run -d --name kaiwudb-smoke -p 26257:26257 kwdb/kwdb:latest \
     -Jwrite_throughput=120 \
     -j /tmp/jmeter-smoke/jmeter-live.log 2>&1 | tail -10
 ```
+
+**注意**：
+
+- 别用 `docker start kaiwudb-smoke` 复用旧容器 — 老容器可能是 `kwdb/kwdb:latest` 或 `kwdb-x86_64-master-dbg`，仍带 F-17 bug。重建用 `docker rm -f kaiwudb-smoke` + `docker run`
+- 容器内所有 `kwbase sql ...` 调用必须用**绝对路径** `/kaiwudb/bin/kwbase`，因为 `PATH` 里没有
+- HTTP 端口用 8081（避免与本地其他服务冲突），但 JDBC 仍走 26257
+- 容器起来后用 for 循环轮询 `select 1` 等待 kwbase ready（避免 sleep 固定时长误判）
+- F-17 issue 详情见 `docs/issues/F17.md`
 
 预期：setup/write/query 三阶段 `Err: 0 (0.00%)`，`jmeter-live.log`
 加载后无 `ERROR`。
