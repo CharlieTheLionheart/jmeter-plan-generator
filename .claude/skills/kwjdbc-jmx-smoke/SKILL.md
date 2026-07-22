@@ -97,13 +97,11 @@ timeout 30 "$JMETER" -n -t /tmp/jmeter-smoke/out/test_plan.jmx \
 - `Starting setUp ThreadGroup: 2 : SharedMemory Setup`
 - `summary = N in 00:00:0X …`（非零 sample 数 = 测试计划走完）
 
-**真 bug（必须修）**：
+**常见 JMX 加载错误（一般性指导）**：
 
-| log 模式 | 真 bug | 修法 |
+| log 模式 | 含义 | 排查方向 |
 | --- | --- | --- |
-| `NumberFormatException: For input string: "${conn_pool_size}"` | JDBCDataSourceElement.initPool 在 UDV 函数评估**之前** parseInt poolMax | `pool_max = str(int(conn_pool_size))` 在 `jdbc_data_source_generator.py` |
-| `unable to resolve class CSVReader` | shared_memory_initializer Groovy 用 OpenCSV，JMeter lib/ext 无 opencsv.jar | 用 Groovy `line.split(',')` 替 `new CSVReader(...)` |
-| 其他 `unable to resolve class X` | Groovy 引用 JMeter classpath 没有的类 | 改 Groovy 用 JDK 内置类 |
+| `unable to resolve class X` | Groovy 引用 JMeter classpath 没有的类 | 改 Groovy 用 JDK 内置类 |
 | SyntaxError / MultipleCompilation from JSR223 | Groovy 表达式编译失败 | 看 script literal，查不对称大括号/引号转义 |
 | `Cannot resolve external entity` from XML parser | .jmx 引用 `${...}` 在 parse 之前被 resolve | 改 `${__P(...)}` 形式或字面 |
 
@@ -165,22 +163,10 @@ smoke 收尾给结构化总结：
 - Setup 阶段:      DDL pass/fail + SharedMemory pass/fail
 - Sampler 阶段:    write pass/fail/na + query pass/fail/na
 - DB 连接:         跳过/拒绝/连通
-- 真 bug 数:        N
 - 结论:             全绿 / 具体回归
 ```
 
 非全绿时列出每个失败阶段 + 生成器 file:line + 最小修复草图。
-
-## 已知真 bug fixtures（要 catch 的回归）
-
-2026-07-13 smoke 会话抓到的真 bug；任一重新出现 = 回归：
-
-1. `NumberFormatException: For input string: "${conn_pool_size}"`
-   位置：`src/jdbc_datasource/jdbc_data_source_generator.py:84`
-2. `unable to resolve class CSVReader`
-   位置：`src/shared_memory_initializer/shared_memory_initializer.py:118`
-
-回归时查 `git log -p c1b50f7` 看修复。
 
 ## 交叉引用
 
