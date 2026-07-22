@@ -36,7 +36,7 @@
   - 验证：pytest 633 pass + smoke 0 err + 4/20/20 关系表填行 + t_cnc/t_electmeter 3900 行
   - 副作用 F-17：t_electmeter 2 个 rtag 时 `rtag_varchar_1` DB 数据为 `""`（基线 1 rtag 时 NIL/a023 正常）；rtag_smallint_1 仍有值但分布异常（4 个值集中）。CSV/seed/JMX 均正确，疑似 Groovy/JDBC 批处理 + 2 rtag 布局的 setString 绑定回归。**R-3 留 partial fix 状态**，FK 结构 OK 待 F-17 单独修
 
-- **F-17** t_electmeter 2 rtag 时 rtag_varchar_1 setString 绑定失效（**已 root cause，kwdb server bug**）
+- **F-17** t_electmeter 2 rtag 时 rtag_varchar_1 setString 绑定失效（**已 root cause + 已在 nightly master 修**）
   - 现象：基线 e33605e（1 rtag）rtag_varchar_1 正常写入 NIL/a023；R-3（2 rtag）后所有行 rtag_varchar_1 = `""`
   - 已排除：seed/CSV/INSERT/columnTypes/loader/ptag-overwrite/direct-psql 全部正确
   - **根因（docs/issues/F17.md + F17Repro.java 完整 repro）**：
@@ -44,8 +44,11 @@
     - 关键子发现：`setShort(smallint)` 不触发 bug；只有 `setLong` 触发
     - driver 端 `setString(52, "op_group_3")` 100% 被调用，server 端 silently 忽略
     - 推测：server 缓存 prior bind 的 JDBC type，setLong on SMALLINT 留下"smallint"type hint，下一个 setString 被绑到 SMALLINT 占位符上（被截断为 0/`""`）而不是 VARCHAR
-  - 修法（client 侧 workaround）：将 JMX batch_prepared 绑 smallint 改用 setShort 替代 setLong，避开 server bug（生产 fix 等 kwdb 服务端按 `parameterType` hint 修）
-  - 已落地：t_electmeter 保持 1 rtag（workshop_id only）；op_group rtag 等 kwdb 修服务端 bug 后再加
+  - **FIXED in `kwdb-x86_64-master:latest` (nightly 2026-07-22)**：
+    - F17Repro 在 nightly 上：t_2rtag/t_3rtag 各 2500 rows OK + rtag_varchar_1 正确写入 op_group_1..4
+    - shig smoke 在 nightly 上：t_cnc/t_electmeter 各 3900 rows + rtag_varchar_1 = op_group_2/3/4 + rtag_smallint_1 = 13/33/61
+    - container 不再 crash
+  - 已落地：t_electmeter 2 rtag（op_group varchar + workshop_id smallint ref:）恢复；Q4/Q5 改回 rtag_varchar_1 引用
   - 关联：t_cnc 的 3 rtag 全 smallint，无 varchar rtag，无 F-17 风险（验证 t_cnc rtag_smallint_1/2/3 写入正常）
 
 ## 已删（误判 → 真因）

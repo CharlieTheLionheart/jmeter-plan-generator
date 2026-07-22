@@ -60,7 +60,7 @@ query_config:
     throughput: 2.0
     num_threads: 1
 
-  # Q4: max/min/avg cur_a (col_float4_4) + workshop_id rtag filter
+  # Q4: max/min/avg cur_a (col_float4_4) + op_group rtag filter
   - query: >-
       SELECT ptag_varchar_1,
              max(col_float4_4) AS max_cur,
@@ -68,21 +68,21 @@ query_config:
              avg(col_float4_4) AS avg_cur
       FROM db_shig.t_electmeter
       WHERE ptag_varchar_1 = ?
-        AND rtag_smallint_1 = ?
+        AND rtag_varchar_1 = ?
       GROUP BY ptag_varchar_1
       ORDER BY ptag_varchar_1 ASC
     throughput: 1.0
     num_threads: 1
 
-  # Q5: elect_name IN & group (rtag_varchar_1 不存在了，改为 rtag_smallint_1 + col_float4_7 范围)
+  # Q5: op_group IN & group
   - query: >-
-      SELECT rtag_smallint_1, count(*) AS cnt
+      SELECT rtag_varchar_1, count(*) AS cnt
       FROM db_shig.t_electmeter
       WHERE ptag_varchar_1 = ?
-        AND rtag_smallint_1 BETWEEN 1 AND 20
+        AND rtag_varchar_1 IN ('op_group_1','op_group_2','op_group_3','op_group_4')
         AND col_float4_7 > 49.8 AND col_float4_7 < 50.2
-      GROUP BY rtag_smallint_1
-      ORDER BY rtag_smallint_1 ASC
+      GROUP BY rtag_varchar_1
+      ORDER BY rtag_varchar_1 ASC
     throughput: 1.0
     num_threads: 1
 

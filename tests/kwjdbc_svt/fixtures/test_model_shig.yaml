@@ -264,17 +264,21 @@ ts_dbs:
             type_proportion: 1.0
             val_range: "^[A-Z][0-9]{2,4}$"
             seed_num: 50
-        # 1 个 rtag：workshop_id (smallint) — FK → workshop.id
-        # 生产 DDL 实际有 2 个 rtag：op_group (varchar(64)) + workshop_id (smallint)
-        # 但 t_electmeter 2 rtag (varchar+smallint) 在 kwdb 上触发 F-17 server bug：
-        #   - kwdb/kwdb:latest:           setString(varchar rtag) 被静默丢弃为 ""
-        #   - kwdb-x86_64-master-dbg:    container restart 时 MMapTagColumnTable segfault
-        # 详见 docs/issues/F17.md + F17Repro.java
-        # op_group rtag 等 kwdb 修服务端 tag bind bug 后再加。
-        regular_tag_count: 1
+        # 2 个 rtag（生产 192.168.124.51 db_shig_meta DDL）：
+        #   rtag_varchar_1   = op_group (varchar(64))   — 普通 rtag，无 FK
+        #   rtag_smallint_1  = workshop_id (smallint)    — FK → workshop.id
+        # 2026-07-22 在 kwdb-x86_64-master:latest (nightly) 验证 F-17 已修：
+        #   setString(varchar rtag) 不再被静默丢弃，正常写入 op_group_1..4
+        #   容器不再 crash
+        regular_tag_count: 2
         regular_tags:
+          - col_type: varchar(64)
+            type_proportion: 0.5
+            val_range: "enum:op_group_1,op_group_2,op_group_3,op_group_4"
+            seed_num: 4
+            nullable: false
           - col_type: smallint
-            type_proportion: 1.0
+            type_proportion: 0.5
             val_range: "ref:db_shig_rel.workshop.pk_int8_1"
             seed_num: 20
             nullable: false
