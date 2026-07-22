@@ -1,6 +1,8 @@
-# 现状与遗留任务（2026-07-21 收尾）
+# 现状与遗留任务（2026-07-22 收尾）
 
-> 10 个 fix + 2 个 DCR + 1 个 R-3（partial）+ 1 个 R-3 续（FK DDL + workshop 100）：9e285aa + cbc0b8d + ea3dcfe + 3069d9c + e33605e + 09fa065 + R-3 续待提交。smoke：0 err，4/20/100/3900/3900 填行，FK 约束 23503 验证。pytest 633 passed。
+> 10 个 fix + 2 个 DCR + R-3（partial + FK DDL 续）+ F-17（已在 nightly master 修）：9e285aa + cbc0b8d + ea3dcfe + 3069d9c + e33605e + 09fa065 + 8614b90 + b3e2c5e + 1c02629 + 2c32c81 + d9c3fa9 + 87faab9。smoke：0 err，4/20/100/3900/3900 填行，FK 约束 23503 验证，FK 完整性 0 orphans。pytest 633 passed。
+
+遗留：spec gap 19 个未验功能点（按 P1/P2/P3 排序）。
 
 ## 已完成（压缩）
 
@@ -14,42 +16,13 @@
 - **F-16** (3069d9c) 凭证也走 `${__P(...)}`：raw literal 默认（不加 `!r` 引号）。空默认用 `${__P(name,)}`（逗号后留空），不是 `${__P(name)}`（会被 `"1"` 兜底）。test: 2 新断言。smoke: 默认 0 err。
 - **R-1** (e33605e) shig fixture 列数对齐 develop-2.0 db_shig：t_cnc 67 列 + t_electmeter 49 列按真实类型比例分配；副效应 DDL 加 char 类型支持、regular_tag 改 varchar(63)、rtag val_range 改 NIL、Q1 rtag 改 ptag_varchar_2。test: pytest 仍全 pass。smoke: 5/5 表填行。
 - **R-2** (e33605e) query SQL 命名 DCR：`QueryConfig.name` 可选字段；按模板顺序默认命名为 query1/query2/...。openspec/changes/query-naming/ 三件套（proposal/design/tasks）。test: 3 新断言。smoke: JMX testname 显示 query1..query12。
+- **R-3** (09fa065) shig fixture 关系表 3 层 FK 层级 + t_cnc/t_electmeter rtag→workshop 关联：sub_company 4 行 + factory 20 行 + workshop 20 行（生产 100 缩 20 保持可读），t_cnc 加 3 rtag（sub_company_id + factory_id + workshop_id 全 smallint ref:），t_electmeter 加 2 rtag（op_group varchar + workshop_id smallint ref:），validator 修复（`validate_foreign_key_refs` 改用 column NAME 而非 col_type）。test: 同步更新 test_parser + smoke 0 err。
+- **R-3 续** (8614b90) ddl_generator 加 FK 约束：data_col val_range 为 `ref:db.table.col` 时 DDL 附加 `REFERENCES db.table(col)` 子句；workshop 20→100 行（生产 100 车间名 enum + factory_id ref:）。DDL 实际生成 `CONSTRAINT fk_col_int2_1_ref_factory FOREIGN KEY (col_int2_1) REFERENCES factory(pk_int8_1)`。test: 验 workshop.factory_id=999 / factory.sub_comp_id=999 → SQLSTATE 23503 违反。pytest 633 pass + smoke 0 err + 4/20/100/3900/3900 填行。
+- **F-17** (b3e2c5e / 1c02629 / 2c32c81 / d9c3fa9) kwdb server tag insert bug：在 2+ rtag 时序表（含 varchar + smallint）下，`setLong(smallint col)` 之后紧跟 `setString(varchar rtag)` 会让 server 把 varchar rtag 静默丢弃为 `""`（kwdb/kwdb:latest）或 container restart 时 `MMapTagColumnTable::push_back` segfault（kwdb-x86_64-master-dbg）。docs/issues/F17.md + F17Repro.java 完整 repro。`setShort(smallint)` 不触发；bug 仅限 JDBC `setLong → setString` 序列，原生 `kwbase sql` 不复现。**FIXED in `kwdb-x86_64-master:latest` (nightly 2026-07-22)**：F17Repro 2500 rows + rtag_varchar_1 = op_group_1..4 正确分布；shig smoke 4/20/100/3900/3900 + rtag_varchar_1 = op_group_2/3/4 + rtag_smallint_1 = 13/33/61。FK 完整性验 0 orphans。
 
 ## 遗留真问题
 
-- **R-3** shig fixture 关系表未体现 3 层 FK 层级 + t_cnc/t_electmeter rtag→workshop 关联（已落 fixture + validator，rtag 数据见 F-17）
-  - 真因：`test_model_shig.yaml` 把 `sub_company` / `factory` / `workshop` 简化为 1/5/5 行无 FK 列；`t_cnc` `regular_tag_count: 0`、`t_electmeter` 只有 `varchar(63)` elect_name 一个 rtag（实际 DDL 是 `workshop_id smallint` + `op_group`）。
-  - 生产 schema（192.168.124.51 db_shig_meta）：
-    - `sub_company(id INT2 PK, name VARCHAR(32), region VARCHAR(16))` — 4 行（济南/沈阳/武汉/柳州分公司，北方/南方大区）
-    - `factory(id INT2 PK, name VARCHAR(16), sub_comp_id INT2 NOT NULL)` — 20 行（每 sub_company 5 个）
-    - `workshop(id INT2 PK, name VARCHAR(16), factory_id INT2 NOT NULL)` — 100 行（每 factory 5 个）
-    - `t_cnc` rtags: `sub_company_id smallint` + `factory_id smallint` + `workshop_id smallint`
-    - `t_electmeter` rtags: `op_group varchar(64)` + `workshop_id smallint` + `cnc_number int`
-  - plan.jmx L827-829 显式算 hierarchy：`workshop_id = (threadNum-1)*5 + (deviceNum-1)%5 + 1`，`factory_id = (workshop_id+4)/5`，`sub_company_id = (factory_id+4)/5`
-  - 修法（已落地）：
-    - `factory.sub_comp_id: ref:db_shig_rel.sub_company.pk_int8_1` (int2)
-    - `workshop.factory_id: ref:db_shig_rel.factory.pk_int8_1` (int2)
-    - `t_cnc` 加 3 个 smallint rtag: sub_company_id / factory_id / workshop_id（全部 `ref:`）
-    - `t_electmeter` 加 1 个 smallint rtag: workshop_id（`ref:`），保留 elect_name 兼容现有 query 的 rtag_varchar_1 引用
-    - 数据规模：4 sub_company / 20 factory / 20 workshop（生产 4/20/100，workshop 缩 20 保持 fixture 可读）
-  - 副效应：validator 修复（`validate_foreign_key_refs` 改用 `iter_table_columns` 输出 column NAME 而非 col_type，与 `seed_data_generator.reference.build_column_registry` 保持一致；`tests/config_parser/test_parser.py::test_foreign_key_target_exists` 同步更新为 `ref:...pk_int8_1`）
-  - 验证：pytest 633 pass + smoke 0 err + 4/20/20 关系表填行 + t_cnc/t_electmeter 3900 行
-  - 副作用 F-17：t_electmeter 2 个 rtag 时 `rtag_varchar_1` DB 数据为 `""`（基线 1 rtag 时 NIL/a023 正常）；rtag_smallint_1 仍有值但分布异常（4 个值集中）。CSV/seed/JMX 均正确，疑似 Groovy/JDBC 批处理 + 2 rtag 布局的 setString 绑定回归。**R-3 留 partial fix 状态**，FK 结构 OK 待 F-17 单独修
-
-- **F-17** t_electmeter 2 rtag 时 rtag_varchar_1 setString 绑定失效（**已 root cause + 已在 nightly master 修**）
-  - 现象：基线 e33605e（1 rtag）rtag_varchar_1 正常写入 NIL/a023；R-3（2 rtag）后所有行 rtag_varchar_1 = `""`
-  - 已排除：seed/CSV/INSERT/columnTypes/loader/ptag-overwrite/direct-psql 全部正确
-  - **根因（docs/issues/F17.md + F17Repro.java 完整 repro）**：
-    - kwdb server 在时序表有 2+ rtag（含 varchar + smallint）时，`setLong(smallint col)` 之后紧跟 `setString(varchar rtag)` 会让 server 把 varchar rtag 的 value 静默丢弃为 `""`（kwdb/kwdb:latest），或 container restart 时 `MMapTagColumnTable::push_back` segfault（kwdb-x86_64-master-dbg）
-    - 关键子发现：`setShort(smallint)` 不触发 bug；只有 `setLong` 触发
-    - driver 端 `setString(52, "op_group_3")` 100% 被调用，server 端 silently 忽略
-    - 推测：server 缓存 prior bind 的 JDBC type，setLong on SMALLINT 留下"smallint"type hint，下一个 setString 被绑到 SMALLINT 占位符上（被截断为 0/`""`）而不是 VARCHAR
-  - **FIXED in `kwdb-x86_64-master:latest` (nightly 2026-07-22)**：
-    - F17Repro 在 nightly 上：t_2rtag/t_3rtag 各 2500 rows OK + rtag_varchar_1 正确写入 op_group_1..4
-    - shig smoke 在 nightly 上：t_cnc/t_electmeter 各 3900 rows + rtag_varchar_1 = op_group_2/3/4 + rtag_smallint_1 = 13/33/61
-    - container 不再 crash
-  - 已落地：t_electmeter 2 rtag（op_group varchar + workshop_id smallint ref:）恢复；Q4/Q5 改回 rtag_varchar_1 引用
-  - 关联：t_cnc 的 3 rtag 全 smallint，无 varchar rtag，无 F-17 风险（验证 t_cnc rtag_smallint_1/2/3 写入正常）
+无。所有 R-3 + F-17 已落 commit 并验证通过。下一阶段工作见末尾"spec 未验功能点"（19 个待验，按 P1/P2/P3 排序）。
 
 ## 已删（误判 → 真因）
 
@@ -128,14 +101,16 @@ docker exec kaiwudb-smoke ./kwbase sql --insecure -e \
    union all select 't_electmeter', count(*) from db_shig.t_electmeter;"
 ```
 
-期望：0 err；5/5 表填行（R-3 续后：sub_company=4, factory=20, workshop=100, t_cnc=3900, t_electmeter=3900，**rtag_varchar_1 数据异常见 F-17**）；pytest 633 passed。FK 约束 SQLSTATE 23503 已验证。
-任意 UDV 可 `-J<name>=value` 覆盖；ThreadGroup testname 显示为 `query1..query12`。
+期望：0 err；5/5 表填行（sub_company=4, factory=20, workshop=100, t_cnc=3900, t_electmeter=3900）；pytest 633 passed。FK 约束 SQLSTATE 23503 + FK 完整性 0 orphans 验证。任意 UDV 可 `-J<name>=value` 覆盖；ThreadGroup testname 显示为 `query1..query12`。
 
-## 改动文件清单（commit e33605e 终态）
+**容器镜像**：用 `kwdb/kwdb:latest` 或 `devops.inspur.com:80/isg/zdp/repo/local_repo/daily_svt/kaiwudb/kwdb-x86_64-master:latest`（F-17 已修）。`kwdb/kwdb:latest` + `kwdb-x86_64-master-dbg:latest` 仍含 F-17 bug。
+
+## 改动文件清单（R-3 + F-17 收尾后）
 
 ```
-src/config_parser/models.py                                    # R-2: QueryConfig.name
+src/config_parser/models.py                                    # R-2, R-3: QueryConfig.name + validate_foreign_key_refs 用 column NAME
 src/ddl_generator/data_type_mapper.py                         # R-1: add "char"
+src/ddl_generator/generator.py                                # R-3 续: _ColumnSpec.val_range + _build_foreign_key_clause
 src/jmx_skeleton_generator/generators/query_groups.py        # F-11, F-13, F-14, R-2: query_label
 src/jmx_skeleton_generator/generators/shared_memory_setup.py # F-12
 src/jmx_skeleton_generator/generators/test_plan.py           # F-15, F-16
@@ -149,10 +124,13 @@ tests/multi_end_coordination/test_helper_unified.py          # F-10 refactor
 tests/multi_end_coordination/test_udv_property_injection.py # F-15, F-16
 tests/multi_end_coordination/test_udv_integration.py         # F-15
 tests/seed_data_generator/test_orchestrator.py                # F-9
+tests/seed_data_generator/test_reference.py                  # R-3: ref: pregenerate
 tests/throughput_control/test_udv_integration.py             # F-15
-tests/kwjdbc_svt/fixtures/test_cfg_shig.yaml                 # R-1: Q1 rtag→ptag, NIL
-tests/kwjdbc_svt/fixtures/test_model_shig.yaml               # R-1: 67+49 cols 重生成
-openspec/changes/query-naming/proposal.md                    # R-2 DCR
-openspec/changes/query-naming/design.md                      # R-2 DCR
-openspec/changes/query-naming/tasks.md                       # R-2 DCR
+tests/config_parser/test_parser.py                           # R-3: test_foreign_key_target_exists 改用 pk_int8_1
+tests/kwjdbc_svt/fixtures/test_cfg_shig.yaml                 # R-1/R-3/F-17: Q1 rtag→ptag, NIL, Q4/Q5 rtag_varchar_1 引用 op_group_1..4
+tests/kwjdbc_svt/fixtures/test_model_shig.yaml               # R-1/R-3/R-3 续/F-17: 67+49 cols, 3 层 FK, workshop 100 行, t_cnc/t_electmeter 2-3 rtag
+.claude/skills/kwjdbc-jmx-smoke/SKILL.md                     # F-17: 镜像换 kwdb/kwdb:latest + /kaiwudb/bin/kwbase start-single-node
+docs/issues/F17.md                                            # F-17: 完整 issue 报告
+docs/issues/F17Repro.java                                     # F-17: 最小 Java repro
+openspec/changes/query-naming/{proposal,design,tasks}.md    # R-2 DCR
 ```
