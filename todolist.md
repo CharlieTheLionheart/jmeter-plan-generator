@@ -60,6 +60,47 @@
 - ~~R-1 shig fixture 列数严重不足~~ → e33605e 已对齐
 - ~~R-2 query SQL 命名规则 DCR~~ → e33605e 已落地（openspec/changes/query-naming/）
 
+## spec 未验功能点（kwdb-svt-test-plan-generator-spec.md gap 分析 2026-07-22）
+
+shig fixture + smoke 跑过的：关系+时序混合、PK/ptag/rtag、ref: FK、batch_prepared 模式、SetupThreadGroup 共享内存、列名规则、throughput、单 `?` bind、retentions/partition_interval/with_hash、DDL FK 23503 验证。
+
+未验 / 缺口（按优先级排序）：
+
+### P1：写入模式单一
+- **#1** shig 只用 `batch_prepared`（T1）。spec §2.0 列 5 种模式：`single_insert` / `batch_insert`（T0）/ `single_prepared`（T1）/ `batch_prepared`（T1）/ `schemaless`（T2 暂不实现，应主动报错）。3 种未验。
+- **#2** schemaless 主动报错行为未验。spec §7 要求生成器在 `mode: schemaless` 时拒绝生成。
+
+### P1：数据生成边界
+- **#3** `nullable=true` + `null_rate>0` 完全未验。shig 全 `nullable: false`，缺 NULL 种子打散 + 计入 seed_num + 随机分散。
+- **#4** `enum` 多种子数（`seed_num > len(enum_values)` 时循环填充）未验。shig rtag_varchar 4 值 seed=4 刚好命中，未触发循环分支。
+- **#5** `regex` val_range 未验。shig 全 enum/int range。
+
+### P2：跨表/跨 db
+- **#6** `ref:` 跨 db 引用未验。shig 全 db_shig_rel 内部引用，未跨时序库引用关系库。spec §2.0 允许。
+- **#7** 跨 db JOIN 未验。shig Q10 JOIN 是 t_cnc/t_electmeter（同 db）；spec 示例有 iot_monitor + iot_metadata JOIN。
+
+### P2：查询
+- **#8** 多 `?` 占位符独立采样未验。shig Q4/Q5 都只 1 个 `?` bind ptag。
+- **#9** 未关联列的 `?` 报错未验。spec §2.0 备注明确 `LIMIT ?` 等应在生成阶段报错。
+
+### P3：约束/边界
+- **#10** `retentions` 表级覆盖库级未验。shig 全库级 1d。
+- **#11** Tag varchar 上限 128 字节未验。shig rtag varchar(64)。
+- **#12** Primary Tag 上限 4 列 + varchar 128 字节未验。shig 1 ptag。
+- **#13** WITH HASH 必须在 DDL 末尾未对比反例。shig 都是末尾。
+- **#14** WITH HASH 范围 1-50000 + 推荐值表未验。shig 4。
+
+### P3：协同/独立变量
+- **#15** 多端协同（多 JMeter 端 + device_start 分割设备号）未验。shig 单端。
+- **#16** 多表独立 num_threads 未验（spec §1.6 明确当前版本不支持，follow-up）。
+
+### P3：验收/错误
+- **#17** §6.2 配置错误清晰提示未系统测过。
+- **#18** §6.2 代码覆盖率 > 80% 未验（pytest 633 pass 不代表覆盖率达标）。
+- **#19** §6.1 各表数据列类型分布 ±5% 偏差未单独验（smoke 通过不代表分布精度）。
+
+下一步建议：先验 **#1 多种写入模式** + **#3 nullable+null_rate** + **#2 schemaless 报错**。这三个是 P1 且不依赖新 fixture 改写（可用 shig 切 mode 测，或写一个新 fixture）。
+
 ## 跑命令模板（R-1/R-2 之后）
 
 ```bash
