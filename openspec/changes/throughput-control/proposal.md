@@ -7,7 +7,7 @@ KaiwuDB SVT 测试计划生成器需要控制写入和查询的吞吐量。JMete
 - 新增吞吐量控制模块，支持：
   - 为每个写入线程组生成 ConstantThroughputTimer
   - 为每个查询线程组生成 ConstantThroughputTimer
-  - 计算 per-thread 吞吐量（`throughput / num_threads`）
+  - 写入 / 查询吞吐量配置值即为每线程目标（**不**做 `throughput / num_threads` 除法，配置值直接作为 `ConstantThroughputTimer.throughput` 引用）
   - 设置 `calcMode=0`（This thread only）
   - 支持 JMeter 变量引用（`${write_throughput}`、`${query_throughput}`）
   - 多端协同时每端使用相同的 throughput

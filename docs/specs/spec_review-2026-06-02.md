@@ -149,7 +149,7 @@ iot_monitor 库有 retentions: 3d，t_cnc 表也有 retentions: 3d。如果两�
 
 15. throughput 在 JMeter 中是全局目标还是每线程目标。建议明确 ConstantThroughputTimer 的 CalculateThroughputBasedOn 设置（如 all active threads）。（已解决）
 
-**解决措施**：ConstantThroughputTimer 的 `calcMode` 固定为 `0`（This thread only），每个线程独立计算目标吞吐量。`throughput` 参数值为该线程组总吞吐量除以线程数（`${throughput} / ${num_threads}`），每个线程承担均分后的吞吐量目标。已在规格书 2.2 节中补充配置示例。
+**解决措施**：ConstantThroughputTimer 的 `calcMode` 固定为 `0`（This thread only），每个线程独立计算并达到配置中 `throughput` 数值的目标吞吐量（**不**除以 num_threads）。线程组总吞吐量 = `throughput × num_threads`，集群总吞吐量 = `throughput × num_threads × 端数`。配置值即每线程目标，不存在均分。已在规格书 §2.2 中补充配置示例。
 
 16. conn_pool_size 在多个 JDBC Connection Configuration 间如何共享。建议明确每个线程组独立配置连接池还是共享连接池。（已解决）
 

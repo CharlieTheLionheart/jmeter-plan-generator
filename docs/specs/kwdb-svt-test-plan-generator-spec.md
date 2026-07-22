@@ -127,7 +127,7 @@
 **写入配置（`write_config`）**
 
 - `tbl_name`：表名，`all` 表示所有表使用相同的写入配置，每张表生成独立的写入线程组；若不同表需要不同的写入参数，则需分条目指定表名，每张表可独立配置
-- `throughput`：单端目标写入吞吐量，单位次/分钟。每张表的写入线程组独立挂载 ConstantThroughputTimer，Timer 仅对该线程组生效
+- `throughput`：每个写入线程的目标吞吐量，单位次/分钟。`ConstantThroughputTimer` 配 `calcMode=0`（This thread only），每个线程独立达到该目标；线程组总吞吐量为 `throughput × num_threads`，集群总吞吐量为 `throughput × num_threads × 端数`。每张表的写入线程组独立挂载 ConstantThroughputTimer，Timer 仅对该线程组生效
 - `mode`：数据写入模式
   - `single_insert`：单条直接 INSERT 写入（T0）
   - `batch_insert`：批量直接 INSERT 写入（T0）
@@ -145,7 +145,7 @@
 **查询配置（`query_config`）**
 
 - `query`：查询 SQL 模板。SQL 中的列名（包括 SELECT、WHERE、JOIN、GROUP BY 等子句中的列）必须使用按**列名生成规则**生成的约定列名（如 `col_int8_1`、`ptag_varchar_1`、`rtag_float4_2`、`pk_int8_1` 等），不允许使用任意自定义名称。查询中的占位符 `?` 在测试运行时由生成器从对应列的**种子缓存文件**中读取并随机采样赋值；多参数查询时每个 `?` 从其关联列的种子缓存中独立均匀随机采样
-- `throughput`：单端目标查询吞吐量，单位次/分钟。每个查询生成独立的查询线程组并独立挂载 ConstantThroughputTimer
+- `throughput`：每个查询线程的目标吞吐量，单位次/分钟。`ConstantThroughputTimer` 配 `calcMode=0`（This thread only），每个线程独立达到该目标；查询线程组通常 `num_threads=1`，所以组总吞吐量等于 `throughput` 本身。每个查询生成独立的查询线程组并独立挂载 ConstantThroughputTimer
 - `num_threads`：查询线程并发数，不显式声明时默认值为 1
 
 > **备注**：查询统一使用 PreparedStatement 执行，参数通过 SQL 中的 `?` 占位符绑定。生成阶段解析 `列名=?` 或 `表名.列名=?` 模式建立占位符与列种子缓存的映射；运行时由 `JSR223 PreProcessor` 从对应列的种子缓存中随机采样并注入 `queryArguments`。若占位符无法关联到具体列（如 `LIMIT ?`），生成器在生成阶段直接报错，拒绝生成测试计划。
@@ -318,14 +318,14 @@ query_config:
   - 在本地拷贝出的 batch 上**装配时间戳**（时间戳 = 基准时间 + n × ms_step），然后提交写入。
 - **查询线程组**：`query_config` 中的每个查询条目生成独立的查询线程组，各自挂载独立的 ConstantThroughputTimer，以满足不同查询的不同频率需求。
 - **Timer 作用范围**：ConstantThroughputTimer 挂载在线程组级别，仅对该线程组生效，不参与跨线程组的吞吐量分配
-- **Timer 配置**：`calcMode` 固定为 `0`（This thread only），即每个线程独立计算目标吞吐量。`throughput` 参数值为该线程组总吞吐量除以线程数（`${throughput} / ${num_threads}`），每个线程承担均分后的吞吐量目标。示例如下：
+- **Timer 配置**：`calcMode` 固定为 `0`（This thread only），即每个线程独立计算目标吞吐量。`throughput` 参数值直接使用配置中的数值，**不除以 num_threads**——配置值本身就是每个线程的目标。线程组总吞吐量 = `throughput × num_threads`，集群总吞吐量 = `throughput × num_threads × 端数`。示例如下：
   ```xml
   <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-    <stringProp name="throughput">${__BeanShell(${write_throughput} / ${num_threads},)}</stringProp>
+    <stringProp name="throughput">${write_throughput}</stringProp>
     <intProp name="calcMode">0</intProp>
   </ConstantThroughputTimer>
   ```
-- **多端协同**：多 JMeter 端协同发压时，各端使用相同的测试计划（包括 throughput 配置），仅通过 `device_start` 参数划分各自负责的写入设备范围，实现横向扩展。单端 throughput 目标值不变，集群总吞吐量为单端吞吐量 × 端数。每张表独立计算设备范围：表 T 的下一发压端起始设备号 = 本端起始设备号 + 表 T 的 `num_threads` × 表 T 的 `device_per_thread`。不同表之间的设备范围可以重叠（数据相互独立），同一表在不同端之间保证不重叠。
+- **多端协同**：多 JMeter 端协同发压时，各端使用相同的测试计划（包括 throughput 配置），仅通过 `device_start` 参数划分各自负责的写入设备范围，实现横向扩展。每端每个线程独立达到 throughput 目标，集群总吞吐量为 `throughput × num_threads × 端数`。每张表独立计算设备范围：表 T 的下一发压端起始设备号 = 本端起始设备号 + 表 T 的 `num_threads` × 表 T 的 `device_per_thread`。不同表之间的设备范围可以重叠（数据相互独立），同一表在不同端之间保证不重叠。
 
 > **多表写入线程数约定**：当前版本多张时序表的写入线程组共用全局 `${num_threads}` 变量，因此 `write_config` 分条目配置时各表 `num_threads` 必须相同。后续版本支持按表独立指定 `num_threads` 后，生成器将为每张表生成独立的变量名（如 `${t_cnc_num_threads}`）或在线程组内使用常量值，避免全局变量冲突。
 
