@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, List
+from typing import Any, List, Optional
 
 from column_namer import allocate_columns
 from config_parser.models import (
@@ -60,6 +60,28 @@ def _validate_identifier(name: str) -> None:
         raise DdlGenerationError(f"reserved keyword cannot be used as identifier: {name}")
 
 
+def _build_foreign_key_clause(val_range: Optional[str]) -> Optional[str]:
+    """Return a ``REFERENCES db.table(col)`` clause when ``val_range`` is a ref.
+
+    The fixture encodes the FK target as ``ref:<db>.<table>.<col>`` in
+    val_range; this function translates that into a KaiwuDB REFERENCES
+    fragment that the DDL generator appends to the column definition.
+    Returns None when val_range is not a ref.
+    """
+    if not val_range or not val_range.startswith("ref:"):
+        return None
+    target = val_range[4:].strip()
+    parts = target.split(".")
+    if len(parts) != 3:
+        raise DdlGenerationError(
+            f"ref: target must be db.table.col, got {target!r}"
+        )
+    ref_db, ref_table, ref_col = parts
+    for ident in (ref_db, ref_table, ref_col):
+        _validate_identifier(ident)
+    return f"references {ref_db}.{ref_table}({ref_col})"
+
+
 def _single_quote(value: str) -> str:
     """Wrap a string in single quotes, escaping internal single quotes."""
     return "'" + value.replace("'", "''") + "'"
@@ -74,11 +96,13 @@ class _ColumnSpec:
         ddl_type: str,
         nullable: bool,
         group: str,
+        val_range: Optional[str] = None,
     ):
         self.name = name
         self.ddl_type = ddl_type
         self.nullable = nullable
         self.group = group
+        self.val_range = val_range
 
 
 def _allocate_group(
@@ -103,8 +127,9 @@ def _allocate_group(
         except UnsupportedDataTypeError as exc:
             raise DdlGenerationError(str(exc)) from exc
         nullable = _nullable_for_group(group, col)
+        val_range = getattr(col, "val_range", None)
         for name in names:
-            specs.append(_ColumnSpec(name, ddl_type, nullable, group))
+            specs.append(_ColumnSpec(name, ddl_type, nullable, group, val_range))
     return specs
 
 
@@ -173,7 +198,18 @@ class DDLGenerator:
                 f"table {db_name}.{table.name} has no columns"
             )
 
-        defs = self._column_definitions(pk_specs + data_specs)
+        # When a data_col carries a ``ref:db.table.col`` val_range, the
+        # generated DDL column must declare a foreign key to the target.
+        # Tag columns (regular_tags/primary_tags) are not supported here —
+        # KaiwuDB does not accept cross-table REFERENCES inside ``tags(...)``
+        # clauses, so the logical relationship is recorded only in the
+        # seed data, not in DDL constraints.
+        all_specs = pk_specs + data_specs
+        defs = self._column_definitions(all_specs)
+        for spec in all_specs:
+            fk_clause = _build_foreign_key_clause(spec.val_range)
+            if fk_clause:
+                defs[all_specs.index(spec)] += f" {fk_clause}"
         pk_names = [spec.name for spec in pk_specs]
         if pk_names:
             defs.append(f"primary key ({', '.join(pk_names)})")

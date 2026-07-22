@@ -1,6 +1,6 @@
 # 现状与遗留任务（2026-07-21 收尾）
 
-> 10 个 fix + 2 个 DCR + 1 个 R-3 部分落地（FK 结构 OK，rtag 数据见 F-17）：9e285aa + cbc0b8d + ea3dcfe + 3069d9c + e33605e + R-3 待提交。smoke：0 err，4/20/20/3900/3900 填行。pytest 633 passed。
+> 10 个 fix + 2 个 DCR + 1 个 R-3（partial）+ 1 个 R-3 续（FK DDL + workshop 100）：9e285aa + cbc0b8d + ea3dcfe + 3069d9c + e33605e + 09fa065 + R-3 续待提交。smoke：0 err，4/20/100/3900/3900 填行，FK 约束 23503 验证。pytest 633 passed。
 
 ## 已完成（压缩）
 
@@ -79,7 +79,7 @@ docker exec kaiwudb-smoke ./kwbase sql --insecure -e \
    union all select 't_electmeter', count(*) from db_shig.t_electmeter;"
 ```
 
-期望：0 err；5/5 表填行（R-3 后：sub_company=4, factory=20, workshop=20, t_cnc=3900, t_electmeter=3900，**rtag_varchar_1 数据异常见 F-17**）；pytest 633 passed。
+期望：0 err；5/5 表填行（R-3 续后：sub_company=4, factory=20, workshop=100, t_cnc=3900, t_electmeter=3900，**rtag_varchar_1 数据异常见 F-17**）；pytest 633 passed。FK 约束 SQLSTATE 23503 已验证。
 任意 UDV 可 `-J<name>=value` 覆盖；ThreadGroup testname 显示为 `query1..query12`。
 
 ## 改动文件清单（commit e33605e 终态）
