@@ -554,7 +554,11 @@ def _build_batch_prepared_sampler_body(
     column_types_groovy = (
         _groovy_str_literal(",".join(column_types)) if column_types else "''"
     )
-    insert_sql_literal = _groovy_str_literal(insert_sql)
+    insert_sql_chunks = [
+        _groovy_str_literal(insert_sql[start : start + 16_000])
+        for start in range(0, len(insert_sql), 16_000)
+    ]
+    insert_sql_literal = "[\n        " + ",\n        ".join(insert_sql_chunks) + "\n    ].join('')"
     return f"""// JSR223Sampler (groovy): batch_prepared JDBC batch 执行
 import org.apache.jmeter.protocol.jdbc.config.DataSourceElement
 
@@ -582,7 +586,7 @@ DataSourceElement.getConnection("jdbcConfig").withCloseable {{ conn ->
             for (int colIdx = 0; colIdx < row.length; colIdx++) {{
                 def value = row[colIdx]
                 if (value == null) {{
-                    pstmt.setNull(colIdx + 1, java.sql.Types.NULL)
+                    pstmt.setObject(colIdx + 1, null)
                     continue
                 }}
                 def type = (colIdx < columnTypes.size()) ?

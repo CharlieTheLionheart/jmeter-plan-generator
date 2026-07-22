@@ -301,6 +301,8 @@ query_config:
 
 > **写入范围说明**：关系表（`rel_dbs`）作为元数据表，仅在 `SetupThreadGroup` 中初始化写入一次（预生成全部种子数据后批量写入），不参与 `write_config` 中配置的持续发压；时序表（`ts_dbs`）为主要的性能测试对象，按照 `write_config` 配置持续写入。
 
+> **关系表初始化按实际关系表存在性生成**：`TestModelConfig` 未声明 `rel_dbs`、`rel_dbs` 为空、或所有 `rel_dbs[*].tables` 均为空时，生成器 MUST 不生成任何关系表初始化 `LoopController`、`JSR223PreProcessor` 或 `JDBCSampler`，且 MUST 不因缺少关系表初始化而报错。此时 DDL `SetupThreadGroup` 仍按 `ts_dbs` 内容正常输出时序库 DDL，共享内存初始化与写入/查询线程组 MUST 继续按 `ts_dbs` 生成。该边界使纯时序模型成为合法用法，并避免维护者误把稀疏宽表 smoke 视作缺失关系初始化。
+
 ### 2.1 数据列类型占比
 
 数据列类型占比由配置中的 `type_proportion` 定义，表示某类型在对应列组（`primary_keys`、`data_cols`、`primary_tags`、`regular_tags`）总数中的占比。例如某表 `data_col_count` 为 4000，`data_cols` 中某类型的 `type_proportion` 为 0.25，则该类型实际生成 1000 列。各列组下所有类型的 `type_proportion` 之和应等于 `1.0`。该占比在生成 `test_model.yaml` 模板时由设计者或自动化工具（如 LLM skill）根据业务场景需求确定，生成器仅按配置精确实现。

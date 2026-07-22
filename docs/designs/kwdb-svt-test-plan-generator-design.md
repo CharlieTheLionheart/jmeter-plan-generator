@@ -159,6 +159,8 @@ class JB orchestrator;
 
 3. **关系表与时序表职责分离**：关系表（`rel_dbs`）作为元数据表，仅在测试启动阶段初始化写入一次，不参与 `write_config` 的持续发压；时序表（`ts_dbs`）为性能测试主对象，按 `write_config` 配置持续写入。关系表的列种子生成方式与时序库表相同，行种子数据总集在 `SetupThreadGroup (DDL 执行)` 中由 `JSR223PreProcessor` 完成装配：行数取该表所有列 `seed_num` 的最大值，`seed_num` 较小的列按自身种子顺序循环填充，不进行笛卡尔积对齐；装配后的数据通过 `batch_insert` 策略由 `JDBCSampler` 一次性批量写入关系表。
 
+   > **条件关系表初始化（conditional-relational-setup）**：当 `TestModelConfig` 未声明 `rel_dbs`、`rel_dbs` 为空，或所有 `rel_dbs[*].tables` 均为空时，`_build_relational_init_specs(model)` MUST 返回空列表；`JMXSkeletonGenerator` 在 `rel_init_specs=[]` 时 MUST 不创建任何 `RelInit_*` `LoopController` / `JSR223PreProcessor` / `JDBCSampler`。DDL `SetupThreadGroup` 仅承载 `ts_dbs` 的建库/建表 sampler，共享内存、写入和查询线程组继续按 `ts_dbs` 生成。判定仅以"实际关系表数量"为唯一条件，避免依赖字段显式声明。
+
 4. **列名约定化与行种子总集**：所有 SQL（DDL、写入、查询）中的列名必须遵循 `{前缀}_{类型}_{序号}` 的固定格式（如 `col_int8_1`、`ptag_varchar_1`）。写入时不再按列独立随机采样，而是在 `SetupThreadGroup` 中一次性从列种子文件拼接出**行种子数据总集**并放入共享内存；所有写入线程共享同一块内存，每次写入随机拷贝连续 `batch_lines` 行，列间按表中列顺序绑定，不保持笛卡尔积对齐；`primary_tags` 的笛卡尔积仅用于设备唯一标识，不约束数据列的取值。
 
 5. **多端协同设备隔离**：多 JMeter 端发压时，各端使用完全相同的测试计划（含 throughput），仅通过 `device_start` 参数划分设备范围。每张表独立计算：下一发压端起始设备号 = 本端起始设备号 + `num_threads` × `device_per_thread`。同一表在不同端之间设备号不重叠，不同表之间可重叠。
@@ -649,7 +651,8 @@ Test Plan
  ├── JDBCDataSource(连接池初始化)
  ├── SetupThreadGroup (DDL 执行)
  │    ├── JDBCSampler: 执行建库建表 DDL
- │    └── JDBCSampler: 初始化关系库下的元数据表（batch_insert，前置 JSR223PreProcessor 组装数据）
+ │    ├── (仅当存在关系表时) JDBCSampler: 初始化关系库下的元数据表（batch_insert，前置 JSR223PreProcessor 组装数据；每张关系表额外包一层 LoopController）
+ │    └── (否则) 直接进入共享内存初始化
  ├── SetupThreadGroup: 初始化共享内存种子区
  │    └── JSR223Sampler: 从列种子文件拼接各表行种子总集并创建共享内存
  ├── ThreadGroup: 写入 t_cnc
@@ -1012,6 +1015,8 @@ DataSourceElement.getConnection("jdbcConfig").withCloseable { conn ->
 通过 `props.put("__SHARED_MEM_{db}.{table}", rows)` 与 `props.put("__SHARED_MEM_{db}.{table}_columns", columns)` 全局保存。
 
 ##### 关系表初始化采样器
+
+> 当 `TestModelConfig` 未声明 `rel_dbs`、`rel_dbs` 为空，或所有 `rel_dbs[*].tables` 均为空时，本节所有关系表初始化采样器 MUST 不出现在生成的 JMX 中。该边界使纯时序模型成为合法用法，详细规则见 §1 决策 3。
 
 关系表（`rel_dbs`）在 `SetupThreadGroup (DDL 执行)` 中完成一次性初始化写入。其列种子文件生成规则与时序库表完全一致（见 §3.4），行种子数据总集的装配逻辑也与时序库表相同：
 

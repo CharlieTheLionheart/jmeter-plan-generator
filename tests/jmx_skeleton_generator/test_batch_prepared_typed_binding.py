@@ -100,12 +100,34 @@ class TestBatchPreparedSamplerScriptStructure:
             "non-timestamp columns (varchar, etc.)"
         )
 
-    def test_does_not_call_set_object(self, sampler_script: str):
-        """The sampler must NOT use ``setObject`` for typed columns."""
-        assert "setObject" not in sampler_script, (
-            "sampler must not use setObject — that was the source of "
+    def test_null_uses_set_object(self, sampler_script: str):
+        """Nullable cells must bind SQL NULL through ``setObject``."""
+        assert "setObject(colIdx + 1, null)" in sampler_script, (
+            "sampler must bind nullable cells with setObject(index, null)"
+        )
+
+    def test_does_not_call_set_object_for_non_null_values(self, sampler_script: str):
+        """Non-null typed columns must not use generic ``setObject(value)``."""
+        assert "setObject(colIdx + 1, value)" not in sampler_script, (
+            "sampler must not use setObject(value) — that was the source of "
             "the 'could not resolve \"20\" as INT8 type' failures"
         )
+
+    def test_large_insert_sql_is_split_into_safe_literals(self):
+        """Groovy 单个字符串常量不得超过 class-file 65535 字节限制。"""
+        columns = ", ".join(f"col_varchar_2000_{i}" for i in range(1, 4001))
+        placeholders = ", ".join("?" for _ in range(4000))
+        insert_sql = f"insert into db_sparse.t_cnc ({columns}) values ({placeholders})"
+
+        script = _build_batch_prepared_sampler_body(
+            table_name="db_sparse.t_cnc",
+            insert_sql=insert_sql,
+            column_types=["varchar(2000)"] * 4000,
+        )
+
+        assert "def insertSql = [" in script
+        assert "].join('')" in script
+        assert max(len(line) for line in script.splitlines()) < 60_000
 
     def test_bakes_table_name_literal(self, sampler_script: str):
         """tableName is baked into the script as a string literal (F-3 UDV fix).
