@@ -18,3 +18,6 @@ openspec/changes/archive/*/.comet/
 
 # 临时 JMX 输出与 smoke 产物
 /tmp/jmeter-*/
+
+# Worktree 隔离工作区
+.worktrees/
