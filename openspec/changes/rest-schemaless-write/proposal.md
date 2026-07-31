@@ -8,7 +8,7 @@
 
 - 新增 mode `schemaless_influxdb`：在 `kwjdbc_svt/main.py` mode 路由中并列 JDBC 三种写入模式；`mode=schemaless_influxdb` 时组装 HTTP Request sampler（`POST /restapi/influxdb`）替代 JDBC sampler。
 - 新增 SetupTG 双职责：(1) `GET /restapi/login` 拿长效 token，写入 JMeter property `${__property(rest_token)}`；(2) 当 `rest_api.pre_create_tables=true` 时遍历 `test_model.yaml` 的每个 measurement 调用 `POST /restapi/ddl` 预建表（ptag / tag / field 名与 InfluxDB Line tag_set / field_set 一一对齐）。
-- 新增 `test_cfg.yaml` `rest_api` 配置段：`https_mode: insecure | tls`、`ca_cert_path`、`http_port`、`login_user/password`、`*_url_path`、`default_db`、`timezone`、`pre_create_tables`。
+- 新增 `test_cfg.yaml` `rest_api` 配置段：`https_mode: tls`（**唯一**，2026-07-27 起 insecure 移除）、`ca_cert_path`（必填）、`http_port`、`login_user/password`（非空）、`*_url_path`、`default_db`、`timezone`、`pre_create_tables`。
 - 新增 `utils/xml_helpers.py::http_request_sampler_element(method, path, headers, body, ssl_context)`：通用 HTTP Request sampler XML 构造器，供 SetupTG Login / DDL pre-create / 写入 TG / Query round-trip TG 共用。
 - 新增 `jmx_skeleton_generator/generators/ddl_setup.py::generate_ddl_setup_http_thread_group(ddl_statements, *, name, num_threads, rest_api_config)`：与现有 `generate_ddl_setup_thread_group(...)` 同签名同入参（`ddl_statements: List[str]` 由现有 `DDLGenerator.generate(...)` 产出），函数体复用 `setup_thread_group_element`，只把 `jdbc_sampler_element` 换成 `http_request_sampler_element`。
 - 新增 `jmx_skeleton_generator/generators/rest_write_groups.py`：写入 TG 装配（HTTP POST + token 头 + InfluxDB Line body + 可选 ssl_context）。
@@ -21,7 +21,7 @@
 
 ### New Capabilities
 
-- `rest-schemaless-write`：覆盖 HTTP Request sampler 构造、SetupTG token + DDL pre-create 装配、写入 TG 装配、Query round-trip TG 装配、`test_cfg.yaml` `rest_api` 配置段、insecure / TLS 模式切换。
+- `rest-schemaless-write`：覆盖 HTTP Request sampler 构造、SetupTG token + DDL pre-create 装配、写入 TG 装配、Query round-trip TG 装配、`test_cfg.yaml` `rest_api` 配置段、**TLS 唯一**（2026-07-27 起 insecure 移除）。
 
 ### Modified Capabilities
 

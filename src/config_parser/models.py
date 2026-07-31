@@ -8,6 +8,7 @@ from typing import Any, Iterator, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from utils.val_range_parser import ValRange, ValRangeType, parse_val_range
+from utils.rest_errors import RestConfigError
 
 
 class ConfigParserError(Exception):
@@ -309,6 +310,37 @@ WriteMode = Literal[
 ]
 
 
+class RestApiConfig(BaseModel):
+    """KaiwuDB RESTful API connection configuration.
+
+    Note (2026-07-27): schemaless Login 强制非空密码用户，非空密码用户只能
+    通过安全模式（TLS）创建；因此 ``https_mode`` 不再支持 ``insecure``，
+    必须为 ``"tls"``。字段保留仅为显式记录 TLS 模式与历史兼容入口；
+    新代码可省略该字段（默认 ``tls``）。
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    https_mode: Literal["tls"] = "tls"
+    ca_cert_path: Optional[str] = None
+    http_port: int = Field(default=8080, ge=1, le=65535)
+    login_user: str
+    login_password: str = ""
+    login_url_path: str = "/restapi/login"
+    ddl_url_path: str = "/restapi/ddl"
+    write_url_path: str = "/restapi/influxdb"
+    query_url_path: str = "/restapi/query"
+    default_db: str = "defaultdb"
+    timezone: Optional[str] = None
+    pre_create_tables: bool = True
+
+    @model_validator(mode="after")
+    def check_tls_requires_ca_cert(self) -> "RestApiConfig":
+        if not self.ca_cert_path:
+            raise RestConfigError.missing_ca_cert()
+        return self
+
+
 class WriteConfig(BaseModel):
     """Write workload configuration."""
 
@@ -328,16 +360,6 @@ class WriteConfig(BaseModel):
             raise ValueError(
                 f"single_insert mode requires batch_lines=1, "
                 f"but got batch_lines={self.batch_lines}"
-            )
-        return self
-
-    @model_validator(mode="after")
-    def reject_schemaless(self) -> "WriteConfig":
-        """R-PAR-017: schemaless write mode is deferred (T2), rejected at parse."""
-        if self.mode == "schemaless":
-            raise ValueError(
-                "schemaless write mode is not yet implemented (deferred to T2); "
-                "a future DCR will drive its design and implementation"
             )
         return self
 
@@ -386,6 +408,7 @@ class TestConfig(BaseModel):
     conn_config: ConnConfig
     write_config: list[WriteConfig] = Field(default_factory=list)
     query_config: list[QueryConfig] = Field(default_factory=list)
+    rest_api_config: Optional[RestApiConfig] = None
 
     @model_validator(mode="after")
     def check_write_num_threads_consistency(self) -> "TestConfig":

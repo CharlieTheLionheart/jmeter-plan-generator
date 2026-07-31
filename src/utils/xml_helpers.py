@@ -728,6 +728,138 @@ def constant_throughput_timer_element(
 
 
 # ---------------------------------------------------------------------------
+# HTTP sampler helper (REST 线程组基础构造器)
+# ---------------------------------------------------------------------------
+
+def http_request_sampler_element(
+    method: str,
+    path: str,
+    headers: dict[str, str],
+    body: str,
+    ssl_context: Optional[str] = None,
+    *,
+    name: str,
+    testname: str,
+    follow_redirects: bool = True,
+) -> Tuple[ET.Element, ET.Element]:
+    """构造 ``<HTTPSamplerProxy>`` 元素及其配对 ``<hashTree>``。
+
+    面向 REST（schemaless / InfluxDB line protocol）写入与查询线程组的
+    基础 sampler 构造器，Task 2/3/4 均复用本函数。
+
+    Parameters
+    ----------
+    method:
+        HTTP 方法，``"GET" | "POST" | "PUT"``。
+    path:
+        请求路径，通常是 JMeter 变量引用，如 ``"${rest_api.write_url_path}"``。
+    headers:
+        已解析好的请求头 ``{名: 值}`` 字典（含 ``Authorization``，不要传模板占位）。
+        每个键值对生成 HeaderManager 里的一个 ``Header`` 节点。
+    body:
+        原始请求体字符串；空串表示无请求体，此时不写 ``postBodyRaw``、
+        也不产出 ``Argument.value`` 节点。非空 body 原样写入，
+        JMeter 变量（如 ``${request_body}``）在运行时展开。
+    ssl_context:
+        CA 证书路径字符串；非空时写入两个属性
+        （``HTTPSampler.customizedSslContext`` 与 ``ssl.keystore.file``），
+        ``None`` 时不产出任何 ssl 节点。
+    name:
+        sampler 名称。
+    testname:
+        JMeter 树中的显示名（当前调用方与 ``name`` 相同）。
+    follow_redirects:
+        是否跟随重定向；``auto_redirects`` 恒为 ``false``。
+
+    Returns
+    -------
+    ``(HTTPSamplerProxy 元素, hashTree 元素)``。HeaderManager 位于配对
+    hashTree 内，并紧跟其自身的空 hashTree 兄弟节点。
+
+    Notes
+    -----
+    ``protocol`` / ``port`` / ``domain`` 由调用方在 sampler properties
+    子树里写入（沿用现有 ``HTTPSampler.protocol`` 约定），本函数不产出
+    这三项，避免与调用方重复。
+    """
+    # Arguments 子树：body 非空时塞入一个 HTTPArgument 承载原始请求体。
+    arg_props: List[ET.Element] = []
+    if body:
+        arg_props.append(
+            element_prop(
+                name="",
+                element_type="HTTPArgument",
+                props=[
+                    bool_prop("HTTPArgument.always_encode", "false"),
+                    string_prop("Argument.value", body),
+                    string_prop("Argument.metadata", "="),
+                ],
+            )
+        )
+    arguments = element_prop(
+        name="HTTPsampler.Arguments",
+        element_type="Arguments",
+        testname="User Defined Variables",
+        props=[collection_prop("Arguments.arguments", children=arg_props)],
+    )
+
+    sampler_props: List[ET.Element] = [
+        arguments,
+        string_prop("HTTPSampler.path", path),
+        string_prop("HTTPSampler.method", method),
+        bool_prop("HTTPSampler.follow_redirects", "true" if follow_redirects else "false"),
+        bool_prop("HTTPSampler.auto_redirects", "false"),
+        bool_prop("HTTPSampler.use_keepalive", "true"),
+        bool_prop("HTTPSampler.DO_MULTIPART_POST", "false"),
+        bool_prop("HTTPSampler.BROWSER_COMPATIBLE_MULTIPART", "false"),
+    ]
+    if body:
+        sampler_props.append(bool_prop("HTTPSampler.postBodyRaw", "true"))
+    if ssl_context:
+        sampler_props.append(string_prop("HTTPSampler.customizedSslContext", ssl_context))
+        sampler_props.append(string_prop("ssl.keystore.file", ssl_context))
+
+    sampler = make_element(
+        "HTTPSamplerProxy",
+        name=name,
+        testname=testname,
+        attributes={
+            "guiclass": "HttpTestSampleGui",
+            "testclass": "HTTPSamplerProxy",
+            "enabled": "true",
+        },
+        children=sampler_props,
+    )
+
+    # HeaderManager：每个 header 生成一个 Header 节点。
+    header_props = [
+        element_prop(
+            name=hname,
+            element_type="Header",
+            props=[
+                string_prop("Header.name", hname),
+                string_prop("Header.value", hvalue),
+            ],
+        )
+        for hname, hvalue in headers.items()
+    ]
+    header_manager = make_element(
+        "HeaderManager",
+        name="HTTP Header Manager",
+        testname="HTTP Header Manager",
+        attributes={
+            "guiclass": "HeaderPanel",
+            "testclass": "HeaderManager",
+            "enabled": "true",
+        },
+        children=[collection_prop("HeaderManager.headers", children=header_props)],
+    )
+
+    sampler_hash = hash_tree(header_manager, empty_hash_tree())
+    return sampler, sampler_hash
+
+
+# ---------------------------------------------------------------------------
 # Serialisation helpers
 # ---------------------------------------------------------------------------
 

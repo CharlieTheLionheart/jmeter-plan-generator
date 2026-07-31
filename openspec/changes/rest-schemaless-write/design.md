@@ -2,10 +2,10 @@
 
 ## Context
 
-当前 `kwjdbc-svt` 仅覆盖 JDBC 写入路径（`PreparedStatement INSERT`）。KaiwuDB 官方同时提供 RESTful 无模式写入通道 `POST /restapi/influxdb`，允许以 InfluxDB Line Protocol 直接写入服务端自动建表 / 扩列 / 调宽 VARCHAR。本仓库无法对该通道做端到端场景测试，也无 SetupTG token 初始化、DDL pre-create、insecure / TLS 切换能力。
+当前 `kwjdbc-svt` 仅覆盖 JDBC 写入路径（`PreparedStatement INSERT`）。KaiwuDB 官方同时提供 RESTful 无模式写入通道 `POST /restapi/influxdb`，允许以 InfluxDB Line Protocol 直接写入服务端自动建表 / 扩列 / 调宽 VARCHAR。本仓库无法对该通道做端到端场景测试，也无 SetupTG token 初始化、DDL pre-create、TLS 通道接入能力。
 
 约束：
-- KaiwuDB 服务端默认 HTTP 端口 `8080` 同时支持 HTTP 与 HTTPS（同端口双协议）；`insecure` 与 `tls` 共用同一端口，仅协议切换。
+- KaiwuDB 服务端默认 HTTP 端口 `8080` 同时支持 HTTP 与 HTTPS（同端口双协议）。2026-07-27 行为变更：schemaless Login 强制非空密码用户，非空密码用户只能通过安全模式创建，因此 `https_mode` 仅接受 `tls`（insecure 路径移除）。
 - 服务端生成的 `primary_tag VARCHAR(64)` 主标签值算法是黑盒（hash），不应进入业务断言。
 - 现有 `DDLGenerator.generate(...)` 输出对 JDBC 路径已是稳定源；REST 路径**必须**复用而非重写。
 
@@ -15,7 +15,7 @@
 - 在 `kwjdbc_svt/main.py` mode 路由新增 `schemaless_influxdb` 分支；与 JDBC 三模式并列。
 - SetupTG 承担 Login + DDL pre-create 双职责；token 通过 JMeter property `${__property(rest_token)}` 在 TG 间共享。
 - 写入 TG 用 HTTP Request sampler 走 `POST /restapi/influxdb`；Query round-trip TG 走 `POST /restapi/query`。
-- `test_cfg.yaml` 新增 `rest_api` 配置段，覆盖 `https_mode` (`insecure` / `tls`) / `ca_cert_path` / `http_port` / 凭证 / 各 endpoint 路径 / `default_db` / `timezone` / `pre_create_tables`。
+- `test_cfg.yaml` 新增 `rest_api` 配置段，覆盖 `https_mode` (`tls` 唯一) / `ca_cert_path`（必填）/ `http_port` / 凭证 / 各 endpoint 路径 / `default_db` / `timezone` / `pre_create_tables`。
 - 复用现有 `DDLGenerator.generate(...)` 输出与 `setup_thread_group_element(...)` XML 外壳，零 SQL 重写。
 
 **Non-Goals：**
@@ -32,9 +32,13 @@
 
 **备选**：在 `ddl_generator/` 下新增 `RestDdlGenerator` 子类，专门为 DDL API 生成简化版 DDL（去掉 `IF NOT EXISTS` 等 JDBC 驱动特定语法）。**否决**：DDL API 与 SQL DDL 语法一致；新建分支会引入两套 DDL 真源，长久分裂。
 
-### Decision 2：`https_mode` 配置项控制 HTTP / HTTPS 切换，ca_cert_path 缺省时 fail-fast
+### Decision 2：`RestApiConfig.https_mode` 恒为 `tls`（2026-07-27 起 insecure 移除），`ca_cert_path` 缺省时 fail-fast
 
-**选择**：`test_cfg.yaml::rest_api.https_mode` ∈ {`insecure`, `tls`}。`insecure` 时 sampler `protocol=http`、无 `customizedSslContext`；`tls` 时 `protocol=https` + `customizedSslContext` 指向 `${__P(rest_api.ca_cert_path)}`。`tls` 但 `ca_cert_path` 缺失时生成器抛 `RestConfigError`。
+**范围说明**：本 Decision 约束**仅限 schemaless 写入路径**（`RestApiConfig` 是 schemaless 专属配置段）。JDBC 路径（`mode: batch_prepared` 等）**不受影响**，`.claude/skills/kwjdbc-jmx-smoke/SKILL.md` §1-§5 仍可走 insecure 容器跑 smoke（无 `rest_api_config` 字段）。
+
+**选择**：`test_cfg.yaml::rest_api.https_mode` ∈ {`tls`}（insecure 不再被 Pydantic Literal 接受）。sampler `protocol=https` + `customizedSslContext` 指向 `${__P(rest_api.ca_cert_path)}`。`ca_cert_path` 缺失时生成器抛 `RestConfigError`。
+
+**变更动机**（2026-07-27）：经与测试确认，schemaless Login 要求非空密码用户；`--insecure` 启动的容器不支持 `ALTER USER ... PASSWORD`（SQLSTATE 28P01 "setting or updating a password is not supported in insecure mode"），REST Login 始终回 `{"code":-1,"desc":"the provided username and password did not match any credentials on the server."}`。非空密码用户只能通过安全模式（`--certs-dir=<dir>` + `CREATE USER root WITH PASSWORD '<pwd>'`）创建，因此 insecure 路径无解。
 
 **备选**：始终启用 HTTPS 证书校验，对开发环境用 `javax.net.ssl.trustStore` 系统属性绕过。**否决**：JMeter 5.6+ 通过 `HTTPSampler.customizedSslContext` 已原生支持证书配置，再叠系统属性会让 fixture 配置与 JMeter 内部状态耦合。
 

@@ -294,13 +294,17 @@ def test_write_num_threads_inconsistent(tmp_path: Path) -> None:
         parse_test_cfg_yaml(path)
 
 
-def test_schemaless_mode_rejected(tmp_path: Path) -> None:
-    """R-PAR-017: schemaless write mode is deferred and rejected at parse."""
+def test_schemaless_mode_accepted(tmp_path: Path) -> None:
+    """rest-schemaless-write §A: ``schemaless`` is now a valid mode value;
+    the previously-deferred reject_schemaless validator was removed in §5.
+    Parser must accept mode=schemaless without raising. The HTTP path
+    dispatch + rest_api_config missing check live in JMXSkeletonGenerator.
+    """
     data = _valid_cfg()
     data["write_config"][0]["mode"] = "schemaless"
     path = _write_yaml(tmp_path, "test_cfg.yaml", data)
-    with pytest.raises(ConfigParserError, match="not yet implemented"):
-        parse_test_cfg_yaml(path)
+    cfg = parse_test_cfg_yaml(path)
+    assert cfg.write_config[0].mode == "schemaless"
 
 
 def test_query_placeholder_unbound(tmp_path: Path) -> None:

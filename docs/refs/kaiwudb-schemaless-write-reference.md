@@ -13,7 +13,7 @@
 | 支持协议 | **InfluxDB Line**（`POST /restapi/influxdb`） | OpenTSDB JSON、OpenTSDB Telnet |
 | 认证方式 | **Token 认证**（`GET /restapi/login` 拿长效 token） | Basic Auth（每次临时令牌） |
 | Token 生命周期 | Setup ThreadGroup 调用 `/restapi/login` 一次，写入共享变量；后续 ThreadGroup 共享；过期前重取 | — |
-| HTTPS 模式 | **insecure**（HTTP 明文，跳过证书校验）/ **TLS**（HTTPS + CA 证书），由 `test_cfg.yaml` 配置项切换 | mTLS |
+| HTTPS 模式 | **TLS 唯一**（HTTPS + CA 证书）。2026-07-27 起 schemaless Login 强制非空密码用户，非空密码用户只能通过安全模式创建，insecure 路径移除。 | mTLS |
 | 接入入口 | `POST /restapi/influxdb?db=<db_name>` | 其他端点 |
 | 时序表类型 | 普通时序表（服务端默认） | 稀疏时序表 |
 
@@ -26,6 +26,18 @@
 1. 按协议解析得到 **表名 / 标签列 / 数据列 / 数据值 / 类型**。
 2. 生成对应 SQL。
 3. 执行 `INSERT`。表不存在就自动 `CREATE TABLE`，列/标签缺失就 `ALTER TABLE ... ADD COLUMN / ADD TAG`，VARCHAR 宽度不足自动补齐。
+
+> **§2.0 数据库类型约束（关键，2026-07-31 落定）**：
+>
+> 1. **无模式写入仅作用于时序表（TS table）**，**不能**写关系表。
+> 2. **时序表必须建在时序库（TS database）里**；**KaiwuDB 不允许在关系库里创建时序表**。
+> 3. 系统默认库 `defaultdb` / `postgres` / `system` **全是关系库**（`engine_type=RELATIONAL`，`SHOW DATABASES` 可见）；若 schemaless 写到 `defaultdb.<measurement>`，服务端拒：
+>
+>    ```text
+>    {"code":-1,"desc":["pq: can not create timeseries table in relational database \"defaultdb\""]}
+>    ```
+>
+> 4. **P0 强制要求**：SetupThreadGroup 第一条 DDL 必须 `CREATE TS DATABASE IF NOT EXISTS <tsdb>`（典型 `iot_monitor`），后续 DDL `CREATE TABLE <tsdb>.<measurement>`，写请求 URL `?db=<tsdb>`，查询 `<tsdb>.<measurement>`。
 
 写入范围与边界：
 
@@ -55,8 +67,8 @@ URL 格式：`https://<hostname>:<port>/<endpoint>?[tz=<timezone>][db=<db_name>]
 - `hostname`：KaiwuDB 节点 IP / FQDN。
 - `port`：HTTP 服务端口，默认 `8080`。
 - `tz`：可选。优先用请求时区，否则回退到集群参数 `server.restful_service.default_request_timezone`。
-- `db`：可选。目标时序库。省略时落到 `defaultdb`。库名解析时双引号包裹。
-- HTTPS：默认所有请求走 HTTPS；并发连接数 ≤ 150。**insecure 模式** 见 §6.3。
+- `db`：可选。目标时序库。省略时落到 session 当前库（**典型场景是关系库 `defaultdb`**，**不能**在关系库里建时序表，详见下方 §2.0 约束）。库名解析时双引号包裹。
+- HTTPS：默认所有请求走 HTTPS；并发连接数 ≤ 150。schemaless Login 强制 TLS（2026-07-27 起 insecure 路径移除，详见 §6.3）。
 
 | 接口 | 用途 | Method | Endpoint | DCR 阶段 |
 |------|------|--------|----------|----------|
@@ -284,27 +296,35 @@ Authorization: dTE6a3dkYnBhc3N3b3Jk
 
 响应字段：`code`（0 成功 / -1 失败）、`token`（成功时返回）、`desc`（失败时返回错误描述）。
 
-### 6.3 HTTPS 模式：insecure / TLS（**P0 配置项**）
+### 6.3 HTTPS 模式：**TLS 唯一**（**P0 配置项**）
 
-由 `test_cfg.yaml` 顶层新增配置项 `rest_https_mode` 切换：
+> **2026-07-27 行为变更**：schemaless Login 强制非空密码用户，非空密码用户只能
+> 通过安全模式（TLS）创建；insecure 路径移除。`https_mode='insecure'` 不再被
+> `RestApiConfig` Literal 接受（`pydantic.ValidationError`），`ca_cert_path`
+> 始终必填。
+
+由 `test_cfg.yaml` 顶层新增配置项 `rest_https_mode` 指定 TLS 模式：
 
 | 配置值 | 含义 | JMeter HTTP Request 实现 | curl 对照 |
 |--------|------|--------------------------|-----------|
-| `insecure` | HTTP 明文，**不**启用 TLS，跳过证书校验 | `Protocol: http`、端口 `-Jrest_http_port=8080`（明文端口）、不留 `HTTPSampler.customizedSslContext` | `curl http://host:8080/...` |
-| `tls` | HTTPS + CA 证书校验 | `Protocol: https`、端口 `-Jrest_https_port=8080`（HTTPS 端口）、`HTTPSampler.customizedSslContext` 指向 CA 证书文件 | `curl --cacert ca.crt https://host:8080/...` |
+| `tls`（唯一） | HTTPS + CA 证书校验 | `Protocol: https`、端口 `-Jrest_http_port=8080`、`HTTPSampler.customizedSslContext` 指向 CA 证书文件 | `curl --cacert ca.crt https://host:8080/...` |
 
-> **注意**：KaiwuDB 默认 HTTP 服务端口 `8080` 同时支持 HTTP 与 HTTPS；insecure 模式下也应使用同一端口（HTTP 模式走明文），不要换端口。
+> **注意**：KaiwuDB 默认 HTTP 服务端口 `8080` 同时支持 HTTP 与 HTTPS，但
+> schemaless Login 仅在 TLS 模式下可用（insecure 模式 `--insecure` 启动
+> 的容器 `ALTER USER ... PASSWORD` 不支持，Login 必报 "username and
+> password did not match"）。容器必须以 `--certs-dir=<dir>` + `CREATE USER
+> root WITH PASSWORD '<pwd>'` 重建。
 
 **`test_cfg.yaml` 新增配置项**（示例）：
 
 ```yaml
 # KaiwuDB RESTful API 连接配置（无模式写入 P0）
 rest_api:
-  https_mode: insecure        # insecure | tls
-  ca_cert_path: null          # 仅 https_mode=tls 时必填；指向 PEM 格式 CA 证书
-  http_port: 8080             # insecure 与 tls 共用端口；KaiwuDB 同端口双协议
+  https_mode: tls             # tls（唯一，2026-07-27 起 insecure 移除）
+  ca_cert_path: /etc/kaiwudb/certs/ca.crt  # 必填；指向 PEM 格式 CA 证书
+  http_port: 8080             # KaiwuDB 同端口双协议，但只走 HTTPS
   login_user: root            # 用于 SetupTG 登录的用户名
-  login_password: ""          # 用于 SetupTG 登录的密码（默认 root 无密码）
+  login_password: "<non-empty>"  # TLS 模式要求非空密码
   login_url_path: /restapi/login
   ddl_url_path: /restapi/ddl  # SetupTG 用于预建表的 DDL 接口
   write_url_path: /restapi/influxdb
@@ -318,14 +338,14 @@ rest_api:
 
 | `test_cfg.yaml` | JMeter 属性 |
 |-----------------|-------------|
-| `rest_api.https_mode` | `HTTPSampler.protocol`（`http` 或 `https`） |
+| `rest_api.https_mode` | `HTTPSampler.protocol`（恒为 `https`） |
 | `rest_api.http_port` | `HTTPSampler.port` |
-| `rest_api.ca_cert_path` | `HTTPSampler.customizedSslContext` 与 `JMeterproperty: ssl.keystore.file`（仅 `tls` 模式） |
+| `rest_api.ca_cert_path` | `HTTPSampler.customizedSslContext` 与 `JMeterproperty: ssl.keystore.file` |
 | `rest_api.login_url_path` | SetupTG Login sampler 的 `HTTPSampler.path` |
 | `rest_api.ddl_url_path` | SetupTG DDL pre-create sampler 的 `HTTPSampler.path` |
 | `rest_api.write_url_path` | 写入 TG 的 `HTTPSampler.path`（`/restapi/influxdb?db=${default_db}`） |
 | `rest_api.query_url_path` | Query round-trip TG 的 `HTTPSampler.path` |
-| `rest_api.ca_cert_path` 不存在但 `https_mode=tls` | 生成器**主动报错**（fail-fast，SetupTG 启动前） |
+| `rest_api.ca_cert_path` 缺失 | 生成器**主动报错**（fail-fast，SetupTG 启动前） |
 
 ### 6.4 服务端证书
 
@@ -430,22 +450,30 @@ JMeter 计划启动顺序（**`SetupTG` 必须最先跑，且 `num_threads=1`**�
 | Body | InfluxDB Line（由 `seed_data_generator` 烘焙） |
 | customizedSslContext | 仅 `https_mode=tls` 时填 `${__P(rest_api.ca_cert_path)}` |
 
+**时间戳生成（P0 实现）**：每个写入 TG 的 `JSR223PreProcessor` 用 Groovy `System.nanoTime()` 生成 `k_timestamp` 纳秒值附在行尾。这意味着**客户端时钟**决定落库时间，多端协同时各端时钟漂移会反映在 `k_timestamp` 上。spec §9.3 fixture 默认按行数 + 列值断言（不依赖时间窗口），所以本 DCR 主线不受影响。
+
+**P1+ — 时间戳生成策略扩展**：未来 DCR 可支持以下策略（**本 DCR 不实现**）：
+- 省略 `<ts>` 字段（让 KaiwuDB 服务端用 `NOW()` 落库）—— 最简但失去客户端控制
+- 用 `ptag` 第 1 列当时间戳（如设备开机时间）—— 业务层语义化
+- 用 `System.currentTimeMillis() * 1_000_000` —— 标准 InfluxDB 客户端行为
+
+策略选择应在 `test_cfg.yaml` 的 `rest_api.ts_strategy` 字段（`client_nanos` / `server_now` / `ptag_first` / `client_millis`）暴露，由调用方按业务需要切换。
+
 ### 9.3 P0 DCR 候选 fixture 用例
 
 默认 `pre_create_tables=true`：SetupTG 先用 `POST /restapi/ddl` 建好与 `test_model.yaml` 同构的表，再走 `POST /restapi/influxdb` 写入（tag key 与 ptag 同名 → 业务列可断言）。
 
-- **行 #1**（insecure + DDL 预建）：单 measurement、双 tag 与 ptag 对齐（device_id + location）、三 field → 验 DDL 建表 + InfluxDB 写入业务 ptag/device_id 列、非 NULL 断言可命中具体列。
-- **行 #2**（insecure + DDL 预建）：先发 measurement=A、再发 measurement=B（两者均在 SetupTG 预建） → 验证多 measurement 并行填行 + Query `column_meta` 列名稳定。
-- **行 #3**（insecure + DDL 预建）：第二次写带新增 field（如 DDL 未列、InfluxDB Line 多写一列）→ 验证服务端 `ALTER TABLE ADD COLUMN` 自动扩列 + 自动调宽 VARCHAR。
-- **行 #4**（insecure + DDL 预建）：类型不匹配（VARCHAR 列写 Float 字面量）→ 服务端报错，HTTP 200 但 `code=-1`，断言落 `desc`。
-- **行 #5**（insecure + DDL 预建）：空 tag_set（`meters current=17.01,...`）→ 验服务端最小请求边界。
-- **行 #6**（insecure + DDL 预建）：401 token 失效（手动改 `rest_token` 为非法值）→ `code=-1, desc="Incorrect authentication token"`。
-- **行 #7**（TLS + DDL 预建）：同 #1 但 `https_mode=tls`、`ca_cert_path` 指向真实证书 → HTTPS 通道建表 + 写入。
-- **行 #8**（TLS + DDL 预建）：`https_mode=tls` 但 `ca_cert_path` 不存在 → 生成器 fail-fast；SetupTG 启动前报错。
-- **行 #9**（insecure + TLS 切换）：同一 fixture 跑两次，第一次 `https_mode=insecure`、第二次 `tls`，对比落库行数 + ptag 值一致。
-- **行 #10**（insecure + DDL 预建，`pre_create_tables=false` 对照）：**关闭** 预建，全部交给服务端 auto-create，验 `primary_tag VARCHAR(64)` 黑盒列出现、`SHOW CREATE TABLE` 含 `primary_tag`。用于复现 §9.4 #1 描述的「无 ptag 用户」场景以暴露 hash 行为。
-- **行 #11**（insecure + DDL 预建 + Query round-trip）：写入完成后用 `POST /restapi/query` 拉刚写入的 measurement，按命名 ptag / field 做行数 + 列值断言。
-- **行 #12**（insecure + 写后扩列）：前 N 行写入后再扩 ptag（如 fixture 元数据新增一个 tag，SetupTG 调整建表 SQL 后重跑）→ 验 `ALTER TABLE ADD TAG` 路径 + 不丢历史数据。
+- **行 #1**（TLS + DDL 预建）：单 measurement、双 tag 与 ptag 对齐（device_id + location）、三 field → 验 DDL 建表 + InfluxDB 写入业务 ptag/device_id 列、非 NULL 断言可命中具体列。
+- **行 #2**（TLS + DDL 预建）：先发 measurement=A、再发 measurement=B（两者均在 SetupTG 预建） → 验证多 measurement 并行填行 + Query `column_meta` 列名稳定。
+- **行 #3**（TLS + DDL 预建）：第二次写带新增 field（如 DDL 未列、InfluxDB Line 多写一列）→ 验证服务端 `ALTER TABLE ADD COLUMN` 自动扩列 + 自动调宽 VARCHAR。
+- **行 #4**（TLS + DDL 预建）：类型不匹配（VARCHAR 列写 Float 字面量）→ 服务端报错，HTTP 200 但 `code=-1`，断言落 `desc`。
+- **行 #5**（TLS + DDL 预建）：空 tag_set（`meters current=17.01,...`）→ 验服务端最小请求边界。
+- **行 #6**（TLS + DDL 预建）：401 token 失效（手动改 `rest_token` 为非法值）→ `code=-1, desc="Incorrect authentication token"`。
+- **行 #7**（TLS + DDL 预建）：同 #1 但走 TLS 通道（2026-07-27 起 only TLS，移除 insecure 对照）。
+- **行 #8**（TLS + DDL 预建）：`ca_cert_path` 不存在 → 生成器 fail-fast；SetupTG 启动前报错。
+- **行 #9**（TLS + DDL 预建，`pre_create_tables=false` 对照）：**关闭** 预建，全部交给服务端 auto-create，验 `primary_tag VARCHAR(64)` 黑盒列出现、`SHOW CREATE TABLE` 含 `primary_tag`。用于复现 §9.4 #1 描述的「无 ptag 用户」场景以暴露 hash 行为。
+- **行 #10**（TLS + DDL 预建 + Query round-trip）：写入完成后用 `POST /restapi/query` 拉刚写入的 measurement，按命名 ptag / field 做行数 + 列值断言。
+- **行 #11**（TLS + 写后扩列）：前 N 行写入后再扩 ptag（如 fixture 元数据新增一个 tag，SetupTG 调整建表 SQL 后重跑）→ 验 `ALTER TABLE ADD TAG` 路径 + 不丢历史数据。
 
 ### 9.4 P0 边界澄清结果
 
@@ -454,6 +482,32 @@ JMeter 计划启动顺序（**`SetupTG` 必须最先跑，且 `num_threads=1`**�
 | 1 | 服务端生成的 `primary_tag VARCHAR(64) NOT NULL` 黑盒主标签值算法 | **已解决** | 研发确认该 hash 是为「无 ptag 概念的用户业务」准备的兜底。**P0 策略：SetupTG 先用 `POST /restapi/ddl` 预建含明确 ptag 的表，再走 `POST /restapi/influxdb` 写入，InfluxDB tag key 与 ptag 列名对齐时服务端把 tag 值写入 ptag 列而非生成 primary_tag**。业务断言基于命名 ptag / field 列。`pre_create_tables=false` 作为对照 fixture 保留（见 §9.3 行 #10），用于复现无 ptag 场景以暴露服务端行为，但不参与 P0 主线断言。 |
 | 2 | 自动 `ALTER TABLE ADD TAG / ADD COLUMN` 是否触发 schema change 限流 | **已解决（非问题）** | 该限流由部署服务器规格 + 实际写入负载决定，**不在本场景测试范围内**。本 DCR 的核心目标正是探究无模式写入条件下的写入性能并提出改进建议，限流被暴露反而是有价值的产物（可触发改进需求）。P0 不主动构造限流场景，但通过 §9.3 行 #3 / #12 的扩列路径，让服务端按实际写入行为自然暴露限流。 |
 | 3 | token 60 分钟有效期 vs 长 test_duration 的处理策略 | **已解决（非场景测试范围）** | token 续期由**功能测试**专项覆盖（涉及 `SET CLUSTER SETTING server.rest.timeout` / 刷新机制 / 并发 token 池等）。**场景测试只模拟真实写入场景**，不需要专门验续期。P0 默认 `test_duration` 远小于 60 分钟（参考 shig canonical smoke `test_duration=60`），无续期触发风险。 |
+
+### 9.5 实测性能基线（TLS 唯一）
+
+> §6.5 落地状态（2026-07-27）：**TLS only**。2026-07-27 行为变更：insecure
+> 路径移除（schemaless Login 强制非空密码用户 → 仅 TLS）。容器需以
+> `--certs-dir=<dir>` + `CREATE USER root WITH PASSWORD '<pwd>'` 重建
+> 后才能跑 end-to-end TLS smoke；QPS / latency 基线待容器就绪后回填。
+
+#### 9.5.1 当前阻塞项（待后续修复）
+
+| 阻塞 | 详情 | 建议修复 |
+|------|------|----------|
+| §5 generator bug: SetupTG (REST) DDL Login / DDL samplers 缺 `HTTPSampler.domain` + `HTTPSampler.port` | `src/jmx_skeleton_generator/generators/ddl_setup.py::generate_ddl_setup_http_thread_group` 调 `http_request_sampler_element(...)` 后没像 `rest_write_groups.py:283-284` / `rest_query_groups.py:219-220` 那样补 `sampler.insert(0, string_prop("HTTPSampler.domain", "${__P(rest_api.hostname)}"))` + `sampler.insert(0, string_prop("HTTPSampler.port", "${__P(rest_api.http_port)}"))`。JMeter 解析 `/restapi/ddl` 时报 `URI does not specify a valid host name: http:/restapi/ddl` | 在 `ddl_setup.py` Login/DDL sampler 构造后插入同两条 `string_prop`（与 rest_write_groups / rest_query_groups 对齐） |
+| §5 generator bug: `REST Token Set Property` JSR223 PostProcessor 用 `${__setProperty(...)}` 作为 script text | JMeter 把 `__setProperty` 函数当 Groovy 脚本执行 → 报 `Both script file and script text are empty`；应改用 `Property.set(...)` 或抽到 JSR223 PreProcessor with `props.set("rest_token", vars.get("token"))` Groovy | `ddl_setup.py` 把 `setprop_script` 改成可执行 Groovy，例如 `props.put("rest_token", vars.get("token"))`，并把 JSR223 PostProcessor 改用 Groovy 而非函数表达式 |
+| §6.5 TLS smoke BLOCKED: 容器无 ca.crt | `kaiwudb-smoke` 用 `--insecure` 启动，`/etc/kaiwudb/certs/ca.crt` 不存在；`docker cp` 无文件可拷。TLS fixture yaml 已交付但 smoke 无法跑 | 重建容器启用 TLS（`--certs-dir=/kaiwudb/lib/security` 启动 kwbase）→ `docker cp` 真实 ca.crt |
+
+#### 9.5.2 insecure vs TLS QPS / latency 对比表
+
+| 维度 | insecure | TLS | 差值 | 阈值 |
+|------|----------|-----|------|------|
+| 写入 TG QPS（Effective QPS，`summary +`） | **TBD** | **TBD** | — | 差 > 10% 标 concern |
+| 写入 TG p95 latency（ms） | **TBD** | **TBD** | — | 差 > 10% 标 concern |
+| Query round-trip latency（ms） | **TBD** | **TBD** | — | 差 > 10% 标 concern |
+| DB `count(*) from meters`（30s） | **TBD** | **TBD** | — | 行数差 = 写入丢失信号 |
+
+> 待 §5 generator bug 修后 + 容器重建启用 TLS 后重跑 §6.3 + §6.5 smoke，回填本表。
 
 ## 10. 引用
 

@@ -57,7 +57,27 @@ These guidelines are working if: fewer unnecessary changes in diffs, fewer rewri
 
 5. Use venv
 When execute python3 command, always use the python3 under venv directory by sourcing the virtrual environment:
-source venv ./venv/bin/activate && python3 xxx
+
+**每个 worktree 独立建 `.venv/`**（worktree 隔离依赖版本互不污染）。首次进 worktree 必须：
+
+```bash
+# 1. 创建 venv（只在 worktree 首次落地时做一次）
+python -m venv .venv
+
+# 2. 激活 + 安装核心 + dev 依赖（pytest 在 dev 组）
+source .venv/bin/activate && pip install -e ".[dev]"
+```
+
+跑测试 / main 时一律：
+
+```bash
+source .venv/bin/activate && python -m pytest tests/
+source .venv/bin/activate && python -m kwjdbc_svt.main ...
+```
+
+不要从父 repo 的 `venv/` 借 — 那是另一分支（`refactor/generic-test-plan`），import 会指向错代码。
+
+`.venv/` 已加 .gitignore 屏蔽；不要 commit。
 
 6. After every change: test first, then smoke
 - **UT first**: `python -m pytest tests/` → must pass before claiming "done".

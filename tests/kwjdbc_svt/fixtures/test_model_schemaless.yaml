@@ -1,0 +1,52 @@
+# schemaless 端到端 fixture（insecure）
+#
+# 锁 B（task-6-brief.md §B）意图：单 measurement `meters`，ptag `device_id`，
+# 双 regular tag `location` + `factory_id`，三 field `current/voltage/phase`。
+# 对齐 kaiwudb-schemaless-write-reference.md §9.3 行 #1 + §5.1 InfluxDB Line 示例。
+#
+# 实际 Pydantic schema（TsTableConfig）要求 col_type + type_proportion，
+# 不是 brief §B 例里的 name/type/length。两者语义等价（col_type="varchar(64)"
+# 即 ptag 列宽 64 字节），保留锁 B 的列宽意图。
+#
+# OpenSpec §6.1 字面 `mode: schemaless_influxdb` 已对齐锁定 enum `mode: schemaless`
+# （§5 A1 锁定；commit message body 注明）。
+
+ts_dbs:
+  - name: iot_monitor
+    if_not_exists: true
+    retentions: 1d
+    comment: schemaless smoke 时序库（meters measurement）
+    tables:
+      - name: meters
+        if_not_exists: true
+        retentions: 1d
+        primary_tag_count: 1
+        primary_tags:
+          - col_type: varchar(64)
+            type_proportion: 1.0
+            val_range: "^[a-z]+_[0-9]+$"
+            seed_num: 5
+        regular_tag_count: 2
+        regular_tags:
+          - col_type: varchar(32)
+            type_proportion: 0.5
+            val_range: "enum:Beijing,Shanghai,Shenzhen,Guangzhou,Hangzhou"
+            seed_num: 5
+          - col_type: varchar(32)
+            type_proportion: 0.5
+            val_range: "enum:F01,F02,F03,F04,F05"
+            seed_num: 5
+        data_col_count: 3
+        data_cols:
+          - col_type: float4
+            type_proportion: 0.34
+            val_range: "[0.0,1000.0)"
+            seed_num: 10
+          - col_type: float4
+            type_proportion: 0.33
+            val_range: "[0.0,500.0)"
+            seed_num: 10
+          - col_type: float4
+            type_proportion: 0.33
+            val_range: "[0.0,1.0)"
+            seed_num: 10

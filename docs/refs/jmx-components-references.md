@@ -419,6 +419,166 @@ SampleResult.setIgnore()</stringProp>
 
 ---
 
+### HTTPSamplerProxy
+
+发送 HTTP / HTTPS 请求的采样器（JMeter GUI 中名为 "HTTP Request"）。属性完整参考见 [`jmeter-testplan-reference.md` §18.1 HTTP Request](jmeter-testplan-reference.md#http-request)。
+
+**关键属性（helper 实际产出，P0 锁定）：**
+
+| Property | 类型 | helper 行为 | 说明 |
+|----------|------|------------|------|
+| `HTTPSampler.domain` | string | **不产**（caller 写） | 必填（除非 HTTP Request Defaults 兜底） |
+| `HTTPSampler.port` | int | **不产**（caller 写） | 监听端口 |
+| `HTTPSampler.protocol` | enum | **不产**（caller 写） | `http` / `https` / `file` |
+| `HTTPSampler.method` | enum | 总是产 | P0 仅 `GET`（Login）/ `POST`（其他） |
+| `HTTPSampler.path` | string | 总是产 | URL 路径（`?db=` / `?tz=` 等 query string 拼在此） |
+| `HTTPSampler.follow_redirects` | bool | 总是产 `true` | 是否跟随重定向（`follow_redirects=True` kwarg） |
+| `HTTPSampler.auto_redirects` | bool | **总是产** `false` | JMeter 默认 false，写出仅为与 GUI 行为对齐 |
+| `HTTPSampler.use_keepalive` | bool | 总是产 `true` | 设置 `Connection: keep-alive` |
+| `HTTPSampler.DO_MULTIPART_POST` | bool | **总是产** `false` | P0 body 走 `text/plain`，不勾 multipart |
+| `HTTPSampler.BROWSER_COMPATIBLE_MULTIPART` | bool | **总是产** `false` | multipart 时抑制 Content-Type 头，P0 不用 |
+| `HTTPSampler.postBodyRaw` | bool | **条件产**：body 非空 `true`，body 空**省略** | body 是否走原始字节流 |
+| `HTTPSampler.customizedSslContext` | string | **条件产**：`ssl_context` 非空 | TLS 客户端证书 keystore 路径 |
+
+**helper 不产的 stringProp**（用 JMeter 默认值）：
+
+- `HTTPSampler.connect_timeout` / `response_timeout`：JMeter 默认 0 = 无超时；与仓库现有 JDBC sampler 行为一致。
+- `HTTPSampler.contentEncoding`：JMeter 默认空 = 不强制编码。
+
+**HeaderManager 作为子 hashTree：**
+
+HTTPSamplerProxy 通常与 `HeaderManager` 配对使用（每个 header 一个 `<elementProp name="" elementType="Header">` 含 `Header.name` + `Header.value`），位于 sampler 的**配对 hashTree 内**（即 `<HTTPSamplerProxy>` 之后紧跟的 `<hashTree>` 块内），这是 JMeter 5.x 解析时识别「这个 HeaderManager 配对给哪个 sampler」的依据。
+
+**⚠ 关键约定（本仓库 P0 锁定）**：
+
+1. Header **禁止**写成 `HTTPSampler.*` 顶层 stringProp（如 `HTTPSampler.contentType`）——JMeter 5.x 解析时会忽略。Header **必须**走 HeaderManager 子节点。
+2. HeaderManager **必带** `<stringProp name="TestPlan.comments"></stringProp>` 节点（即使为空），匹配 JMeter 5.6.3 GUI 默认行为。
+3. HTTPSamplerProxy **不**写 `<stringProp name="TestPlan.comments">`（与 HeaderManager 行为不同）。
+4. helper **总是写** `HTTPSampler.auto_redirects` / `DO_MULTIPART_POST` / `BROWSER_COMPATIBLE_MULTIPART` 三个 boolProp 值 `false`（JMeter 默认等价；不优化）。
+5. helper **不**写 `HTTPSampler.connect_timeout` / `response_timeout` / `contentEncoding` stringProp（JMeter 默认无超时 + 无编码；与仓库现有 JDBC sampler 行为一致）。
+6. helper **条件写** `HTTPSampler.postBodyRaw`（body 非空时 `true`，body 空时省略该 boolProp）。
+7. helper **条件写** `HTTPSampler.customizedSslContext` + `ssl.keystore.file`（`ssl_context` 参数非空时）。
+
+**P0 形态 A — GET + 无 body + HeaderManager**（用于 `GET /restapi/login`）：
+
+`HTTPsampler.Arguments` 整节点**省略**（既无 body 也无 Parameters 表）；helper 不产 `postBodyRaw`（body 空）。`HTTPSampler.domain` / `port` / `protocol` 由调用方在 sampler properties 子树里插入（helper 不产）。
+
+```xml
+<HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="${testname}" enabled="true">
+  <stringProp name="HTTPSampler.domain">${domain}</stringProp>
+  <stringProp name="HTTPSampler.port">${port}</stringProp>
+  <stringProp name="HTTPSampler.protocol">${protocol}</stringProp>
+  <stringProp name="HTTPSampler.path">${path}</stringProp>
+  <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+  <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+  <stringProp name="HTTPSampler.method">GET</stringProp>
+  <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+  <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+  <boolProp name="HTTPSampler.BROWSER_COMPATIBLE_MULTIPART">false</boolProp>
+</HTTPSamplerProxy>
+<hashTree>
+  <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="${testname}" enabled="true">
+    <collectionProp name="HeaderManager.headers">
+      <elementProp name="" elementType="Header">
+        <stringProp name="Header.name">${name}</stringProp>
+        <stringProp name="Header.value">${value}</stringProp>
+      </elementProp>
+      <elementProp name="" elementType="Header">
+        <stringProp name="Header.name">${name2}</stringProp>
+        <stringProp name="Header.value">${value2}</stringProp>
+      </elementProp>
+      <!-- 多个 header 重复上 elementProp 块 -->
+    </collectionProp>
+    <stringProp name="TestPlan.comments"></stringProp>
+  </HeaderManager>
+  <hashTree/>
+</hashTree>
+```
+
+**P0 形态 B — POST + raw body + HeaderManager**（用于 `POST /restapi/ddl` / `POST /restapi/influxdb?db=...` / `POST /restapi/query`）：
+
+`postBodyRaw=true`；`HTTPsampler.Arguments` 节点无 `guiclass`/`testclass`/`testname`（raw body 模式，GUI 不显示 Key/Value 表）；单条 `HTTPArgument` `name=""` + `always_encode=false` + `Argument.value=${body}` + `Argument.metadata==`。
+
+```xml
+<HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="${testname}" enabled="true">
+  <stringProp name="HTTPSampler.domain">${domain}</stringProp>
+  <stringProp name="HTTPSampler.port">${port}</stringProp>
+  <stringProp name="HTTPSampler.protocol">${protocol}</stringProp>
+  <stringProp name="HTTPSampler.path">${path}</stringProp>
+  <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+  <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+  <stringProp name="HTTPSampler.method">POST</stringProp>
+  <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+  <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+  <boolProp name="HTTPSampler.BROWSER_COMPATIBLE_MULTIPART">false</boolProp>
+  <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+  <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+    <collectionProp name="Arguments.arguments">
+      <elementProp name="" elementType="HTTPArgument">
+        <boolProp name="HTTPArgument.always_encode">false</boolProp>
+        <stringProp name="Argument.value">${body}</stringProp>
+        <stringProp name="Argument.metadata">=</stringProp>
+      </elementProp>
+    </collectionProp>
+  </elementProp>
+</HTTPSamplerProxy>
+<hashTree>
+  <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="${testname}" enabled="true">
+    <collectionProp name="HeaderManager.headers">
+      <elementProp name="" elementType="Header">
+        <stringProp name="Header.name">${name}</stringProp>
+        <stringProp name="Header.value">${value}</stringProp>
+      </elementProp>
+    </collectionProp>
+    <stringProp name="TestPlan.comments"></stringProp>
+  </HeaderManager>
+  <hashTree/>
+</hashTree>
+```
+
+**P0 形态 C — TLS 变体**（`https_mode=tls` 时使用）：
+
+在 P0 形态 B 基础上加：
+
+1. `<stringProp name="HTTPSampler.protocol">https</stringProp>`
+2. HTTPSamplerProxy 内追加：
+   ```xml
+   <stringProp name="HTTPSampler.customizedSslContext">${ca_cert_path}</stringProp>
+   ```
+3. **JMeter property**（在 JMX `<elementProp name="TestPlan.user_defined_variables">` 之外、通过 `-J` 或 JMX 根 properties 注入）：
+   ```
+   ssl.keystore.file = ${ca_cert_path}
+   ```
+   P0 通过 `kwjdbc_svt/main.py` 启动时 `-Jssl.keystore.file=${ca_cert_path}` 传 JMeter CLI；不在 JMX 节点里写。
+
+**辅助函数**（`src/utils/xml_helpers.py`）：
+
+- `http_request_sampler_element(method: str, path: str, headers: Dict[str, str], body: str, ssl_context: Optional[str] = None, *, name: str, testname: str, follow_redirects: bool = True) -> Tuple[Element, Element]`：返回 `(sampler, hashTree)` 元组；hashTree 已含一个 HeaderManager 子节点（若 `headers` 非空）。`headers` 是 `{header_name: header_value}` 字典（Python 3.7+ 字典迭代顺序稳定，XML 序列化确定性）。`body=""` 时不写 `HTTPsampler.Arguments` 整节点（适用 P0 形态 A）且不产 `HTTPSampler.postBodyRaw` boolProp。`ssl_context` 非空时在 sampler 内追加 `HTTPSampler.customizedSslContext` + `ssl.keystore.file` 两个 stringProp。**调用方**必须在 sampler properties 子树里手动插入 `HTTPSampler.domain` / `port` / `protocol`（helper 不产）。调用方需把返回的 `(sampler, hashTree)` 顺序追加到父 hashTree。
+- `header_manager_element(headers: Dict[str, str], testname: str) -> Element`：生成 HeaderManager 元素；**自带**空 `<stringProp name="TestPlan.comments">` 节点；调用方需自己配对一个 `<hashTree/>` 兄弟节点。
+
+**P0 用途表**（KaiwuDB 无模式写入 — 见 `kaiwudb-schemaless-write-reference.md`）：
+
+| 用途 | method | path | 必填 headers | body | 形态 |
+|------|--------|------|-------------|------|------|
+| Login | `GET` | `/restapi/login?tz=${tz}`（tz 可选） | `Content-Type: text/plain`、`Accept: application/json`、`Authorization: Basic base64(${user}:${pass})` | 空 | P0-A |
+| DDL pre-create | `POST` | `/restapi/ddl` | `Content-Type: text/plain`、`Accept: application/json`、`Authorization: Basic ${rest_token}` | 单条 `CREATE TABLE` SQL | P0-B |
+| InfluxDB write | `POST` | `/restapi/influxdb?db=${db}` | 同上 | 单行 / 多行 InfluxDB Line protocol | P0-B |
+| Query round-trip | `POST` | `/restapi/query` | 同上 | `SELECT` / `SHOW` SQL | P0-B |
+
+**CDATA 约定：** JMeter 默认**不**使用 CDATA 包裹 body——`Argument.value` 直接以 stringProp 文本写入，ElementTree / lxml 在序列化时会按需对 `<` / `>` / `&` 做实体转义，JMeter 解析时反转义回原字符。本仓库 JMX 沿用此形式（与 JDBC Sampler 一致），无 `<![CDATA[…]]>`。
+
+---
+
+**P1+ 参考 — POST + Parameters tab**（`/restapi/opentsdbjson` 等表单端点；P0 不用）
+
+与 P0-B 区别：`HTTPsampler.Arguments` 顶层 elementProp 带 `guiclass="HTTPArgumentsPanel"` + `testclass="Arguments"` + `testname="User Defined Variables"`；每个 `HTTPArgument` 带 `name` + `use_equals=true` + `content_type=text/plain`，`always_encode=true`。
+
+**P1+ 参考 — POST + multipart**（文件上传端点；P0 不用）
+
+在 P0-B 基础上加 `<boolProp name="HTTPSampler.DO_MULTIPART_POST">true</boolProp>` + `<boolProp name="HTTPSampler.BROWSER_COMPATIBLE_MULTIPART">true</boolProp>`；每个 `HTTPArgument` 自带 `<stringProp name="HTTPArgument.content_type">${mime}</stringProp>`。
+
+---
+
 ### ResponseAssertion
 
 响应断言，用于验证采样器结果。

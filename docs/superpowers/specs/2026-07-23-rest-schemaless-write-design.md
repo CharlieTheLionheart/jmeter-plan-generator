@@ -238,10 +238,10 @@ def http_request_sampler_element(
 
 实现要点：
 
-- 产出 `HTTPSamplerProxy` 元素（JMeter 5.6+ 标准 HTTP Request sampler 类），属性 `HTTPSampler.method`、`HTTPSampler.path`、`HTTPSampler.protocol=${__P(rest_api.protocol)}`、`HTTPSampler.port=${__P(rest_api.http_port)}`、`HTTPSampler.follow_redirects=auto`、`HTTPSampler.postBodyRaw=true`（当 body 非空）。
+- 产出 `HTTPSamplerProxy` 元素（JMeter 5.6+ 标准 HTTP Request sampler 类），属性 `HTTPSampler.method`、`HTTPSampler.path`、`HTTPSampler.follow_redirects=auto`、`HTTPSampler.use_keepalive=true`、`HTTPSampler.postBodyRaw=true`（当 body 非空）；`protocol` / `port` / `domain` 由 caller 在 sampler properties 子树显式注入（沿用 `HTTPSampler.protocol` / `.port` / `.domain` 三种 stringProp 约定），函数本体不写。详见 `docs/refs/jmx-components-references.md` §HTTPSamplerProxy 与 `docs/refs/jmeter-testplan-reference.md` §18.1 HTTP Request。
 - HeaderManager 作为子 `hashTree`，每行 header 一个 `HeaderManager.header` 元素。
 - `ssl_context` 非空时产出 `HTTPSampler.customizedSslContext=${ssl_context}` 与 `JMeterproperty: ssl.keystore.file=${ssl_context}`（JMeter 5.6+ 同时需要两个属性才能正确加载证书）。
-- body 非空时产出 `HTTPSampler.postBodyRaw=true` + `<![CDATA[${body}]]>` 在 `Arguments` 子树中。
+- body 非空时产出 `HTTPSampler.postBodyRaw=true` + `<stringProp name="Argument.value">${body}</stringProp>` 在 `Arguments` 子树中（**JMeter 默认无 CDATA 包裹**，与 JDBC Sampler 写法一致；详见 `docs/refs/jmx-components-references.md` §HTTPSamplerProxy）。
 - 当 body 是 Groovy 变量引用（如 `${request_body}`）时，JMeter 运行时自动展开，无需生成阶段求值。
 
 ### 4.2 `generate_ddl_setup_http_thread_group`（`jmx_skeleton_generator/generators/ddl_setup.py` 新增）

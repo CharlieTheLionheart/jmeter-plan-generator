@@ -1,7 +1,9 @@
 ---
-change: rest-schemaless-write
+comet_change: rest-schemaless-write
 design-doc: docs/superpowers/specs/2026-07-23-rest-schemaless-write-design.md
 base-ref: db7a9f841343da1ea28ed5fc6c646e98f294dcd0
+role: technical-design
+canonical_spec: openspec
 ---
 
 # 实施计划 — rest-schemaless-write
@@ -55,9 +57,10 @@ base-ref: db7a9f841343da1ea28ed5fc6c646e98f294dcd0
 
 - 1.1 在 `src/utils/rest_errors.py` 新增 `RestConfigError(ValueError)`，定义 message 模板覆盖三种 fail-fast 场景。
 - 1.2 在 `src/utils/xml_helpers.py` 新增 `http_request_sampler_element(method, path, headers, body, ssl_context=None, *, name, testname, follow_redirects=True)` 返回 `(HTTPSamplerProxy Element, hashTree)`：
-  - `HTTPSampler.method` / `path` / `protocol=${__P(rest_api.protocol)}` / `port=${__P(rest_api.http_port)}` / `follow_redirects=auto` / `postBodyRaw=true`（body 非空时）
+  - 与 JMeter GUI 默认输出一致：`HTTPSampler.method` / `HTTPSampler.path` / `HTTPSampler.follow_redirects=true` / `HTTPSampler.use_keepalive=true` / `HTTPSampler.postBodyRaw=true`（body 非空时）+ `<Arguments>` 子树（body 以 `stringProp` 名 `Argument.value` 写入，JMeter GUI 默认即此形式，**不**用 CDATA 包裹）
+  - `protocol` / `port` / `domain` **不**由本函数产出——JMeter 不写这三项时取默认 `http/80/空`；对当前用例（HTTP/HTTPS 8080 @127.0.0.1）必须由 caller 在 sampler properties 子树显式注入（沿用 `HTTPSampler.protocol` / `.port` / `.domain` 三种 stringProp 约定），函数保持通用 HTTP sampler 语义
   - HeaderManager 子 hashTree；`ssl_context` 非空时设 `HTTPSampler.customizedSslContext=${ssl_context}` 与 `JMeterproperty: ssl.keystore.file=${ssl_context}`
-  - body 注入 `<![CDATA[${body}]]>` 到 `Arguments` 子树
+  - body 写入 `<stringProp name="Argument.value">${body}</stringProp>`（JMeter 默认形式，无 CDATA；详见 `docs/refs/jmx-components-references.md` §HTTPSamplerProxy）
 - 1.3 新增 `tests/utils/test_http_request_sampler_element.py`：覆盖 (a) GET/POST/PUT 切换；(b) HeaderManager 节点；(c) `ssl_context` 写入两属性；(d) `ssl_context=None` 不产出 ssl 节点；(e) `body="${request_body}"` 字面量保留（JMeter 运行时展开）；(f) `(sampler, hashTree)` 配对正确。
 - 1.4 新增 `tests/utils/test_rest_errors.py`：三种 fail-fast 触发场景的 message 验证。
 

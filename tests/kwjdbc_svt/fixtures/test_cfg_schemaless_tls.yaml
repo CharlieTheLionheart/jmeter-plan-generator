@@ -1,0 +1,58 @@
+# schemaless 端到端 fixture cfg（TLS）
+#
+# 锁 D（task-6-brief.md §D）：https_mode=tls + ca_cert_path 指向 PEM CA 证书。
+# 2026-07-27 行为变更：schemaless Login 强制 TLS（insecure 路径移除 —
+# 非空密码用户只能通过安全模式创建），insecure fixture
+# ``test_cfg_schemaless.yaml`` 已删除，本 fixture 为唯一 schemaless smoke 入口。
+#
+# login_password 必须非空（容器重建时 ``kwbase sql --certs-dir=<certs>
+# -e "CREATE USER root WITH PASSWORD '<pwd>'"``）。占位密码 ``root123``
+# 仅供本地 smoke，重建容器时与 ``ALTER USER root WITH PASSWORD 'root123'``
+# 配对使用。
+#
+# 容器重建参考（task-6-brief.md §6.5 前置）：
+#   docker rm -f kaiwudb-smoke
+#   docker run -d --name kaiwudb-smoke -p 26257:26257 -p 8081:8080 \
+#     --ulimit nofile=65536 \
+#     devops.inspur.com:80/isg/zdp/repo/local_repo/daily_svt/kaiwudb/kwdb-x86_64-master:latest \
+#     /kaiwudb/bin/kwbase start-single-node \
+#     --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 \
+#     --certs-dir=/kaiwudb/certs
+#   docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
+#     -e "CREATE USER root WITH PASSWORD 'root123'"
+#   docker cp kaiwudb-smoke:/kaiwudb/certs/ca.crt tests/kwjdbc_svt/fixtures/ca.crt
+
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 4
+  device_start: 1
+  test_duration: 30
+
+rest_api_config:
+  https_mode: tls
+  ca_cert_path: tests/kwjdbc_svt/fixtures/ca.crt
+  http_port: 8081
+  login_user: root
+  login_password: root123
+  login_url_path: /restapi/login
+  ddl_url_path: /restapi/ddl
+  write_url_path: /restapi/influxdb
+  query_url_path: /restapi/query
+  default_db: iot_monitor
+  timezone: null
+  pre_create_tables: true
+
+write_config:
+  - tbl_name: iot_monitor.meters
+    throughput: 60.0
+    mode: schemaless
+    batch_lines: 1
+    device_per_thread: 5
+    num_threads: 2
+
+query_config:
+  - query: "select count(*) from iot_monitor.meters;"
+    throughput: 1.0
+    num_threads: 1
