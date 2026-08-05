@@ -2,7 +2,7 @@
 
 > 10 个 fix + 2 个 DCR + R-3（partial + FK DDL 续）+ F-17 + 条件关系初始化 + §1-§5 + §6 insecure-removal + §6 UDV/skill + §6.4 调试填充 + §6.4.2 全修 + B1/B3/B5：稳定基线 `c876acc` / `27b8aec` / `4351c99` / `d461e40`（squash merge of `fee6986`+`a6d079a`+`12e5238`+`ddb0329`）。pytest 701/701。§6.3 (a)-(e) smoke 全绿（SetupTG 3/3 + Write 10/10 + Query 1/1）。
 
-遗留：spec gap 19 个未验功能点（按 P1/P2/P3 排序）+ §6.5 insecure↔TLS 切换流程。
+遗留：spec gap 19 个未验功能点（按 P1/P2/P3 排序）。
 
 ## 已完成（压缩）
 
@@ -16,7 +16,7 @@
 
 ## 遗留真问题
 
-- §6.5 insecure ↔ TLS 切换流程尚未落地（容器 cert 导出 / dbs 备份 / 容器销毁重建 / 旧 fixture 清理）。SKILL.md 暂无 §6.5 节。
+（无）
 
 ## 已删（误判 → 真因）
 
