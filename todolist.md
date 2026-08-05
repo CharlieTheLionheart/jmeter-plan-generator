@@ -1,8 +1,8 @@
-# 现状与遗留任务（2026-07-29 checkpoint）
+# 现状与遗留任务（2026-07-31 checkpoint）
 
-> 10 个 fix + 2 个 DCR + R-3（partial + FK DDL 续）+ F-17 + 条件关系初始化 + §1-§5 + §6 insecure-removal + §6 UDV/skill + §6.4 调试填充：上一个稳定基线 `c876acc` / `27b8aec` / `4351c99`。pytest 694/694。本基线新增 2 份 docs/refs + SKILL.md §6.4 4 条调试条目。
+> 10 个 fix + 2 个 DCR + R-3（partial + FK DDL 续）+ F-17 + 条件关系初始化 + §1-§5 + §6 insecure-removal + §6 UDV/skill + §6.4 调试填充 + §6.4.2 全修 + B1/B3/B5：稳定基线 `c876acc` / `27b8aec` / `4351c99` / `d461e40`（squash merge of `fee6986`+`a6d079a`+`12e5238`+`ddb0329`）。pytest 701/701。§6.3 (a)-(e) smoke 全绿（SetupTG 3/3 + Write 10/10 + Query 1/1）。
 
-遗留：spec gap 19 个未验功能点（按 P1/P2/P3 排序）+ schemaless smoke 后续 3 项。
+遗留：spec gap 19 个未验功能点（按 P1/P2/P3 排序）+ §6.5 insecure↔TLS 切换流程。
 
 ## 已完成（压缩）
 
@@ -12,36 +12,11 @@
 - **§6.x insecure-removal (c876acc)**：schemaless Login 强制非空密码 → 必须 TLS → insecure 路径无解（SQLSTATE 28P01）。`RestApiConfig.https_mode` Literal 收紧 `["tls"]` + ca_cert_path 必填 + 三处 generator 删 insecure 分支 + fixture `test_cfg_schemaless.yaml` 删 + `test_cfg_schemaless_tls.yaml` login_password 改 `root123`。test 5 调整 + 2 新增。16 文件 +306/-241。
 - **§6.x UDV/skill sync (27b8aec)**：kwjdbc-jmx-smoke 恢复双模式（JDBC 走 insecure / schemaless 走 TLS 唯一）；ca_cert_path 改 `${__P(rest_api.ca_cert_path,)}` UDV（与 hostname/port 一致），绝对路径 -J 注入；SKILL.md §6 双模式 + §6.0 容器 TLS 重建 + §6.0.1 隔离陷阱 + §6.2 jmeter 命令加必填 -J + §6.4 调试占位。design.md Decision 2 加范围说明。test 2 调整。8 文件 +105/-21。
 - **§6.4 调试填充 + 2 docs/refs (4351c99)**：3 次 TLS smoke 实跑沉淀 4 条调试条目（root 无密码 / DDL-2 props.put null / Query 表不存在 cascade / 端口 8080 误报）。新增 2 份 docs/refs：`kaiwudb-kwbase-sql-reference.md` 3.2.0 全参数 + `kaiwudb-user-management-reference.md` CREATE/ALTER/DROP + 权限模型 + insecure 限制。SKILL.md 交叉引用区扩到 4 条。3 文件 +564/-1。
+- **§6.4.2 全修 + B1/B3/B5 (d461e40)**：squash merge `fee6986`+`a6d079a`+`12e5238`+`ddb0329`。DDL SetupTG setprop_script 加 null/empty 守卫（DDL-2 根因修复）+ duration 1s→`${test_duration}` + Write TG 默认 db `defaultdb`→`iot_monitor` + SharedMemory 加载回 setup + **B1** Write body-code assertion（锁 J）+ **B3** Query `$.data` 抽取 + assertion 检 `data.size() >= expected_rows`（避 `$.rows` 列数假阳性）+ **B5** Write prep `ctx.stopThread()` 替代 `ctx.setStopThread(true)`（JMeter 5.6.3 Groovy 无 boolean 参数版）+ SKILL.md §6.4.5 新增空 body 诊断 + 反例/防退化清单。smoke v17 全绿：SetupTG 3/3 + Write 10/10 + Query 1/1，DB `count(*) from iot_monitor.meters`=10，ptag `device_1+device_2` 各 5 行。pytest 701/701。30 文件 +4530/-247。
 
 ## 遗留真问题
 
-- §6.4.2 DDL-2 失败根因（生成器层 `props.put(K, null)` → Authorization header = `Basic null`）。workaround 已记录在 §6.4.2，待生成器层根治。
-- §6.5 insecure ↔ TLS 切换流程尚未落地（容器 cert 导出 / dbs 备份 / 容器销毁重建 / 旧 fixture 清理）。
-- §6.3 (a)-(e) 全绿未验证（DDL-2 fix 之前 12/14 pass；fix 后期望 14/14 + DB count + ptag 范围）。
-
-## 🔖 Checkpoint — 2026-07-29（停手，下次续）
-
-**当前 state**：
-
-| 项 | 状态 |
-|---|------|
-| branch | `feature/20260723/rest-schemaless-write` |
-| worktree | `.worktrees/20260723/rest-schemaless-write` |
-| base ref | `53adf3b` |
-| phase | build（§6.4 调试沉淀 + 2 新 ref docs 已 commit） |
-| pytest baseline | 694/694 |
-| git status | clean |
-| last commit | `4351c99` (docs(skill): link kwbase/user-mgmt refs + fill §6.4 TLS debug) |
-| 容器 | `kaiwudb-smoke` 跑 TLS 模式 + `root/root123` + `ca.crt` 拷到 `tests/kwjdbc_svt/fixtures/ca.crt`（gitignored） |
-| smoke 实际 | 14 samples / 12 pass / 2 fail（DDL-2 + Query cascade by §6.4.2） |
-
-**下次续 3 件事**（按建议顺序）：
-
-1. **§6.4.2 根因修复**：改 `ddl_setup.py:367` setprop_script 加 null/empty 守卫，pytest 新增 1 项 + 跑 smoke 验 14/14。最小 1 文件 + 1 行。
-2. **§6.3 (a)-(e) 全绿验证**：§6.4.2 修后跑 smoke → 验 DB `count(*) from defaultdb.meters` 匹配 + ptag 范围 `device_1..device_10`。
-3. **§6.5 insecure ↔ TLS 切换流程**：导出旧 cert / dbs 备份 / 容器销毁 / 旧 fixture cert 清理 / 反向重建。SKILL.md 新增 §6.5。
-
-建议先做 1（最小修复 + 跑通 14/14 验证连接），再做 2（全绿测试），最后 3（流程固化）。
+- §6.5 insecure ↔ TLS 切换流程尚未落地（容器 cert 导出 / dbs 备份 / 容器销毁重建 / 旧 fixture 清理）。SKILL.md 暂无 §6.5 节。
 
 ## 已删（误判 → 真因）
 
@@ -93,10 +68,10 @@ shig fixture + smoke 跑过的：关系+时序混合、PK/ptag/rtag、ref: FK、
 
 下一步建议：先验 **#1 多种写入模式** + **#3 nullable+null_rate** + **#2 schemaless 报错**。这三个是 P1 且不依赖新 fixture 改写（可用 shig 切 mode 测，或写一个新 fixture）。
 
-## 跑命令模板（schemaless TLS smoke — 2026-07-29 基线）
+## 跑命令模板（schemaless TLS smoke — 2026-07-31 基线）
 
 ```bash
-cd /home/liujin/workspace/quality-test-pipelines/kwjdbc-svt/.worktrees/20260723/rest-schemaless-write
+cd /home/liujin/workspace/quality-test-pipelines/kwjdbc-svt
 source .venv/bin/activate
 
 # 容器状态（已 TLS 重建 + root/root123 建好）
@@ -120,15 +95,17 @@ timeout 30 jmeter -n -t test_plan.jmx \
     -Jwrite_throughput=60 \
     -l /tmp/jmeter-schemaless.jtl -j /tmp/jmeter-schemaless.log 2>&1 | tail -5
 
-# 预期：14 samples / 12 pass / 2 fail（DDL-2 + Query cascade — §6.4.2 待修）
-# §6.4.2 修后期望 14/14 + DB count match + ptag 范围 device_1..device_10
+# 预期（d461e40 基线）：14 samples / 14 pass
+#   SetupTG 3/3 (Login + DDL-1 create ts db + DDL-2 create ts table)
+#   Write 10/10 (device_1..device_2 各 5 行, ctx.stopThread 兜底不再发空 body)
+#   Query 1/1 ($.data 抽取, size() >= expected_rows)
 docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
-    -e "select count(*) from defaultdb.meters; select distinct ptag_varchar_1 from defaultdb.meters"
+    -e "select count(*) from iot_monitor.meters; select distinct device_id from iot_monitor.meters"
 ```
 
 **容器镜像**：用 `devops.inspur.com:80/isg/zdp/repo/local_repo/daily_svt/kaiwudb/kwdb-x86_64-master:latest`（F-17 已修）。`/kaiwudb/bin/kwbase` 绝对路径，`PATH` 里没有。
 
-## 改动文件清单（R-3 + F-17 + 条件关系初始化 + §1-§6 + §6.4/2docs 基线 4351c99）
+## 改动文件清单（R-3 + F-17 + 条件关系初始化 + §1-§6 + §6.4/2docs + §6.4.2全修+B1/B3/B5 基线 d461e40）
 
 ```
 src/config_parser/models.py                                    # R-2, R-3: QueryConfig.name + validate_foreign_key_refs 用 column NAME
@@ -138,37 +115,46 @@ src/jmx_skeleton_generator/generators/query_groups.py        # F-11, F-13, F-14,
 src/jmx_skeleton_generator/generators/shared_memory_setup.py # F-12
 src/jmx_skeleton_generator/generators/test_plan.py           # F-15, F-16
 src/jmx_skeleton_generator/generators/write_groups.py       # F-10
-src/jmx_skeleton_generator/generators/ddl_setup.py            # §2 + §6.x: generate_ddl_setup_http_thread_group + JSON Extractor + JSR223 PostProcessor + ca_cert_path UDV
-src/jmx_skeleton_generator/generators/rest_write_groups.py  # §3 + §6.x: InfluxDB Line + ca_cert_path UDV
-src/jmx_skeleton_generator/generators/rest_query_groups.py  # §4 + §6.x: ca_cert_path UDV
+src/jmx_skeleton_generator/generators/ddl_setup.py            # §2 + §6.x + d461e40: generate_ddl_setup_http_thread_group + JSON Extractor + JSR223 PostProcessor + ca_cert_path UDV + §6.4.2 setprop_script null/empty 守卫 + duration→test_duration
+src/jmx_skeleton_generator/generators/rest_write_groups.py  # §3 + §6.x + d461e40: InfluxDB Line + ca_cert_path UDV + B1 body-code assertion + B5 ctx.stopThread() 替换 setStopThread(true) + defaultdb→iot_monitor
+src/jmx_skeleton_generator/generators/rest_query_groups.py  # §4 + §6.x + d461e40: ca_cert_path UDV + B3 JSONPostProcessor 抽 $.data + JSR223Assertion 检 vars.get('data').size()
+src/jmx_skeleton_generator/generators/skeleton.py            # d461e40: §6 DDL/Write/Query TG 装配 + iot_monitor 路由
+src/utils/rest_errors.py                                      # d461e40: RestConfigError + missing_ca_cert()（new）
+src/utils/xml_helpers.py                                      # d461e40: http_request_sampler_element(...) 通用构造器（new）
 src/seed_data_generator/orchestrator.py                      # F-9
 src/config_parser/test_parser.py                             # R-3: test_foreign_key_target_exists 改用 pk_int8_1
+tests/config_parser/test_rest_api_config.py                  # d461e40: 2 case 覆盖 TLS 必填 + login_password 非空（new）
 tests/jmx_skeleton_generator/test_batch_prepared_typed_binding.py  # F-10
 tests/jmx_skeleton_generator/test_generators.py              # F-14, R-2
 tests/jmx_skeleton_generator/test_query_seed_resolution.py         # F-11, F-14
 tests/jmx_skeleton_generator/test_shared_memory_setup.py    # F-12 (new)
-tests/jmx_skeleton_generator/test_ddl_setup_http_thread_group.py  # §2 (new): 6 case 覆盖 Login/DDL/RelInit/TLS
+tests/jmx_skeleton_generator/test_ddl_setup_http_thread_group.py  # §2 + d461e40: 6 case 覆盖 Login/DDL/RelInit/TLS + §6.4.2 token guard
+tests/jmx_skeleton_generator/test_rest_write_groups.py       # d461e40: B1 body-code assertion + B5 stopThread 替换 + InfluxDB line (new, 655 行)
+tests/jmx_skeleton_generator/test_rest_query_groups.py       # d461e40: B3 $.data 抽取 + size() 断言 (new, 525 行)
+tests/kwjdbc_svt/test_main_routes_schemaless_influxdb.py     # d461e40: mode: schemaless_influxdb 路由集成 (new, 111 行)
 tests/multi_end_coordination/test_helper_unified.py          # F-10 refactor
 tests/multi_end_coordination/test_udv_property_injection.py # F-15, F-16
 tests/multi_end_coordination/test_udv_integration.py         # F-15
 tests/seed_data_generator/test_orchestrator.py                # F-9
 tests/seed_data_generator/test_reference.py                  # R-3: ref: pregenerate
 tests/throughput_control/test_udv_integration.py             # F-15
+tests/utils/test_http_request_sampler_element.py             # d461e40: 通用 HTTP sampler 构造器 (new, 168 行)
+tests/utils/test_rest_errors.py                               # d461e40: RestConfigError.missing_ca_cert (new, 52 行)
 tests/kwjdbc_svt/fixtures/test_cfg_shig.yaml                 # R-1/R-3/F-17: Q1 rtag→ptag, NIL, Q4/Q5 rtag_varchar_1 引用 op_group_1..4
 tests/kwjdbc_svt/fixtures/test_model_shig.yaml               # R-1/R-3/R-3 续/F-17: 67+49 cols, 3 层 FK, workshop 100 行, t_cnc/t_electmeter 2-3 rtag
 tests/kwjdbc_svt/fixtures/test_model_schemaless.yaml         # §6.1: meters measurement, 4 fields + 1 ptag + 2 rtag
 tests/kwjdbc_svt/fixtures/test_cfg_schemaless_tls.yaml       # §6.x: https_mode=tls + login_password=root123
-.claude/skills/kwjdbc-jmx-smoke/SKILL.md                     # §6: 双模式 + §6.0 TLS 容器重建 + §6.0.1 隔离陷阱 + §6.4 4 条调试 + 4 docs/refs 交叉引用
+.claude/skills/kwjdbc-jmx-smoke/SKILL.md                     # §6: 双模式 + §6.0 TLS 容器重建 + §6.0.1 隔离陷阱 + §6.3 (a)-(e) 断言表 + §6.4 5 条调试（新增 §6.4.5 空 body 诊断 + 反例/防退化）+ 4 docs/refs 交叉引用
 docs/issues/F17.md                                            # F-17: 完整 issue 报告
 docs/issues/F17Repro.java                                     # F-17: 最小 Java repro
 docs/refs/jmx-components-references.md                        # §2: 重写 HTTPSamplerProxy 节为 P0-A/B/C + P1+×2
-docs/refs/kaiwudb-schemaless-write-reference.md               # §6: REST API 协议 + 鉴权 + DDL/Write/Query 流程
+docs/refs/kaiwudb-schemaless-write-reference.md               # §6 + d461e40: REST API 协议 + 鉴权 + DDL/Write/Query 流程 + §2.0 DB 类型约束 + §3 含 DCR 阶段列
 docs/refs/kaiwudb-tls-cert-reference.md                      # §6.0: TLS 证书体系 + kwbase cert 子命令
 docs/refs/kaiwudb-kwbase-sql-reference.md                     # 4351c99: kwbase sql 全参数 + 输出格式 + 容器部署后建用户流程
 docs/refs/kaiwudb-user-management-reference.md               # 4351c99: CREATE/ALTER/DROP USER + 权限模型 + insecure 限制
 openspec/changes/query-naming/{proposal,design,tasks}.md    # R-2 DCR
 openspec/changes/conditional-relational-setup/*             # #3 DCR
-openspec/changes/rest-schemaless-write/*                    # §1-§6 主 change
-docs/superpowers/plans/2026-07-23-rest-schemaless-write.md    # §2: frontmatter 对齐 guard schema (comet_change + role + canonical_spec)
-openspec/changes/rest-schemaless-write/tasks.md                # §1-§6 勾选
+openspec/changes/rest-schemaless-write/*                    # §1-§6 + d461e40 主 change (proposal/design/tasks + d461e40 微调)
+docs/superpowers/plans/2026-07-23-rest-schemaless-write.md    # §2: frontmatter 对齐 guard schema (comet_change + role + canonical_spec) + d461e40 4 行 update
+openspec/changes/rest-schemaless-write/tasks.md                # §1-§6 + d461e40 勾选
 ```
