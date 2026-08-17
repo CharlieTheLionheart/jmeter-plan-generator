@@ -72,6 +72,40 @@ def test_regex_val_range_on_numeric_type_rejected():
         classify_val_range("int8", "^[0-9]+$")
 
 
+def test_decimal_float_interval_accepted():
+    """spec §403 列 decimal 为支持类型 — adapter 应识别为 numeric。
+
+    历史坑: 生成器只把 int/float 加入 _FLOAT_TYPES，decimal/numeric 被
+    误判成非 numeric，numeric range 抛 SeedGenError。修复后 decimal
+    按 float 路径走（is_integer=False, precision=2）。
+    """
+    domain = classify_val_range("decimal", "[0.0, 1000.0]")
+    assert domain.kind is DomainKind.NUMERIC
+    assert domain.is_integer is False
+    assert domain.precision == 2
+    assert domain.low == pytest.approx(0.0)
+    assert domain.high == pytest.approx(1000.0)
+    assert domain.low_inclusive is True
+    assert domain.high_inclusive is True
+
+
+def test_numeric_alias_float_interval_accepted():
+    """``numeric`` 是 KaiwuDB decimal 的 SQL 标准别名（同为 arbitrary precision）。"""
+    domain = classify_val_range("numeric", "(0.0, 100.0)")
+    assert domain.kind is DomainKind.NUMERIC
+    assert domain.is_integer is False
+    assert domain.precision == 2
+    assert domain.low_inclusive is False
+    assert domain.high_inclusive is False
+
+
+def test_decimal_parens_ignored_in_base_type():
+    """``decimal(10,2)`` 形参应被 _base_type 切到 'decimal'，与 decimal 同路径。"""
+    domain = classify_val_range("decimal(10,2)", "[0.0, 9999.99]")
+    assert domain.kind is DomainKind.NUMERIC
+    assert domain.is_integer is False
+
+
 def test_missing_val_range_rejected():
     with pytest.raises(SeedGenError, match="val_range is required"):
         classify_val_range("int8", None)

@@ -67,6 +67,9 @@ def _build_foreign_key_clause(val_range: Optional[str]) -> Optional[str]:
     val_range; this function translates that into a KaiwuDB REFERENCES
     fragment that the DDL generator appends to the column definition.
     Returns None when val_range is not a ref.
+
+    外键关系生成（T1）落地于 commit ``8614b90``（R-3 续 FK 约束 +
+    workshop 100 行）；主 spec §7 历史排期跟踪 + §2.0 ref: 字段定义。
     """
     if not val_range or not val_range.startswith("ref:"):
         return None

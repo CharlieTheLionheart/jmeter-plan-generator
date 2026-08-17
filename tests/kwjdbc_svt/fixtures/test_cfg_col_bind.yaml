@@ -1,0 +1,57 @@
+# col-tag-bind-write 端到端 fixture cfg
+#
+# OpenSpec change ``col-tag-bind-write`` (2026-08-05) tasks.md §7.4
+# 用途: smoke + 端到端 IT（commit 6 §7.4 + §8.5/8.6）。
+#
+# 设计: write_configs[0] = iot_monitor.meters (col_tag_bind_mode=true,
+# col_num_per_tag=5), write_configs[1] = iot_monitor.t_full (全行回退)。
+# mixed 场景验证 bind + full-row 端到端共存。
+#
+# num_threads / device_per_thread 调小（2/2）缩短 smoke 跑时；
+# 生产 scale 由 SKILL.md §6.2 命令模板用 num_threads=4 / device_per_thread=2。
+
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 4
+  device_start: 1
+  test_duration: 30
+
+rest_api_config:
+  https_mode: tls
+  ca_cert_path: tests/kwjdbc_svt/fixtures/ca.crt
+  http_port: 8081
+  login_user: root
+  login_password: Kaiwu#2026
+  login_url_path: /restapi/login
+  ddl_url_path: /restapi/ddl
+  write_url_path: /restapi/influxdb
+  query_url_path: /restapi/query
+  default_db: iot_monitor
+  timezone: null
+  pre_create_tables: true
+
+write_config:
+  - tbl_name: iot_monitor.meters
+    throughput: 60.0
+    mode: schemaless
+    batch_lines: 1
+    device_per_thread: 2
+    num_threads: 2
+    col_tag_bind_mode: true
+    col_num_per_tag: 5
+  - tbl_name: iot_monitor.t_full
+    throughput: 60.0
+    mode: schemaless
+    batch_lines: 1
+    device_per_thread: 2
+    num_threads: 2
+
+query_config:
+  - query: "select count(*) from iot_monitor.meters;"
+    throughput: 1.0
+    num_threads: 1
+  - query: "select count(*) from iot_monitor.t_full;"
+    throughput: 1.0
+    num_threads: 1

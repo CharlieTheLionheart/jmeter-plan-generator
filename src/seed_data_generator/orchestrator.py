@@ -10,6 +10,7 @@ from typing import Any, Optional
 from config_parser.models import (
     DatabaseConfig,
     TableConfig,
+    TestConfig,
     TestModelConfig,
 )
 from seed_data_generator.adapter import SeedGenError, classify_val_range
@@ -46,8 +47,16 @@ def _generate_table_seeds(
     output_dir: Path,
     refs: dict[str, list[Any]],
     ref_paths: dict[str, Path],
+    *,
+    skip_row_aggregate: bool = False,
 ) -> list[Path]:
-    """Generate column seed files and the row aggregate for one table."""
+    """Generate column seed files and the row aggregate for one table.
+
+    col-tag-bind-write (2026-08-05): when ``skip_row_aggregate=True``, the
+    row-aggregate CSV (``{db}/{table}.csv``) is NOT produced. Column seed
+    files are still written regardless, because the SetupTG bind sampler
+    reads them directly to initialize per-group row memory.
+    """
     table_dir = output_dir / db.name / table.name
     generated: list[Path] = []
 
@@ -121,11 +130,14 @@ def _generate_table_seeds(
         write_column_seed(col_path, values)
         generated.append(col_path)
 
-    # Build row aggregate, injecting first ptag as virtual column if present
-    header, rows = build_row_aggregate(table_dir, first_ptag_info=first_ptag_info)
-    aggregate_path = output_dir / db.name / f"{table.name}.csv"
-    write_row_aggregate(aggregate_path, header, rows)
-    generated.append(aggregate_path)
+    # Build row aggregate, injecting first ptag as virtual column if present.
+    # col-tag-bind-write (2026-08-05): skipped when ``skip_row_aggregate=True``
+    # because the SetupTG bind sampler reads column seeds directly.
+    if not skip_row_aggregate:
+        header, rows = build_row_aggregate(table_dir, first_ptag_info=first_ptag_info)
+        aggregate_path = output_dir / db.name / f"{table.name}.csv"
+        write_row_aggregate(aggregate_path, header, rows)
+        generated.append(aggregate_path)
     return generated
 
 
@@ -134,6 +146,7 @@ def generate_seeds(
     output_dir: str | Path,
     *,
     seed: Optional[int] = None,
+    test_cfg: Optional[TestConfig] = None,
 ) -> dict[str, list[Path]]:
     """Generate column seed files and row aggregates for every table in ``model``.
 
@@ -141,6 +154,11 @@ def generate_seeds(
         model: Parsed test model configuration.
         output_dir: Directory where ``seeds/`` subtree will be written.
         seed: Optional random seed for reproducible generation.
+        test_cfg: col-tag-bind-write (2026-08-05): when provided, per-table
+            ``WriteConfig.col_tag_bind_mode`` is consulted and the row aggregate
+            is skipped for tables that opt into column-tag binding. Backward
+            compatible: passing ``None`` preserves the prior full-row behavior
+            for every table.
 
     Returns:
         Mapping from ``db_name.table_name`` to the list of generated paths.
@@ -164,7 +182,11 @@ def generate_seeds(
     all_files: list[Path] = []
     for db in model.rel_dbs + model.ts_dbs:
         for table in db.tables:
-            files = _generate_table_seeds(db, table, output_dir, refs, ref_paths)
+            wc = test_cfg.find_write_config(db.name, table.name) if test_cfg else None
+            skip = bool(wc and wc.col_tag_bind_mode)
+            files = _generate_table_seeds(
+                db, table, output_dir, refs, ref_paths, skip_row_aggregate=skip
+            )
             results[f"{db.name}.{table.name}"] = files
             all_files.extend(files)
 

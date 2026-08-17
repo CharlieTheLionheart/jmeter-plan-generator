@@ -352,6 +352,12 @@ class WriteConfig(BaseModel):
     batch_lines: int = Field(default=1, ge=1)
     device_per_thread: int = Field(default=1, ge=1)
     num_threads: int = Field(default=1, ge=1)
+    # col-tag-bind-write (2026-08-05): per-table column-tag binding sub-mode.
+    # When True, Orchestrator skips row-aggregate generation for this table
+    # and Write TG emits inline INSERT with a ptag-bound subset of data
+    # columns. Orthogonal to ``mode`` (applies to all 5 WriteMode values).
+    col_tag_bind_mode: bool = False
+    col_num_per_tag: int = 0
 
     @model_validator(mode="after")
     def check_single_insert_batch_lines(self) -> "WriteConfig":
@@ -360,6 +366,20 @@ class WriteConfig(BaseModel):
             raise ValueError(
                 f"single_insert mode requires batch_lines=1, "
                 f"but got batch_lines={self.batch_lines}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_col_tag_bind_mode_positive(self) -> "WriteConfig":
+        """col-tag-bind-write (2026-08-05): ``col_num_per_tag`` must be > 0
+        when ``col_tag_bind_mode=True``. Per-table upper-bound validation
+        (``col_num_per_tag <= data_col_count``) and ptag-count check
+        (``primary_tag_count >= 1``) are enforced at the main entry, since
+        they require cross-reference to ``TestModelConfig``."""
+        if self.col_tag_bind_mode and self.col_num_per_tag <= 0:
+            raise ValueError(
+                f"col_num_per_tag must be > 0 when col_tag_bind_mode=true; "
+                f"got col_num_per_tag={self.col_num_per_tag}"
             )
         return self
 
@@ -409,6 +429,19 @@ class TestConfig(BaseModel):
     write_config: list[WriteConfig] = Field(default_factory=list)
     query_config: list[QueryConfig] = Field(default_factory=list)
     rest_api_config: Optional[RestApiConfig] = None
+
+    def find_write_config(self, db_name: str, table_name: str) -> Optional["WriteConfig"]:
+        """Return the ``WriteConfig`` for ``db_name.table_name`` or ``None``.
+
+        col-tag-bind-write (2026-08-05): shared lookup used by Orchestrator
+        (skip row aggregate) and main entry (per-table validations). Matches
+        ``WriteConfig.tbl_name`` exactly (``{db}.{table}`` format).
+        """
+        key = f"{db_name}.{table_name}"
+        for wc in self.write_config:
+            if wc.tbl_name == key:
+                return wc
+        return None
 
     @model_validator(mode="after")
     def check_write_num_threads_consistency(self) -> "TestConfig":

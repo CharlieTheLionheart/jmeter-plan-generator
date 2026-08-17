@@ -25,6 +25,13 @@ class DataTypeMapper:
             "float4",
             "float8",
             "double",
+            # decimal / numeric：spec §403 显式列出；D-9 (2026-08-11)
+            # 修复 — 历史遗漏导致 fixture 写 ``col_type: decimal`` 报
+            # ``UnsupportedDataTypeError: decimal``。KaiwuDB 与 PostgreSQL
+            # 一致：``decimal`` / ``numeric`` 是 arbitrary-precision
+            # decimal 同义词，DDL 接受 ``decimal(p, s)`` / ``numeric(p, s)``。
+            "decimal",
+            "numeric",
             # R-1 (2026-07-21): shig fixture mirrors develop-2.0
             # ``resources/db_shig/{t_cnc,t_electmeter}`` which use
             # ``char(N)`` heavily (char(20/30/10/2/63) accounts for

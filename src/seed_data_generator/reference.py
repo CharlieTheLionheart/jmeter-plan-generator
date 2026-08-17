@@ -144,7 +144,12 @@ def pregenerate_reference_columns(
     registry: dict[str, tuple[DatabaseConfig, TableConfig, Any, int, str, str]],
     refs: dict[str, list[tuple[DatabaseConfig, TableConfig, Any, int, str]]],
 ) -> dict[str, Path]:
-    """Write ``.csv`` seed files for every referenced column and return target->path."""
+    """Write ``.csv`` seed files for every referenced column and return target->path.
+
+    外键关系生成（T1）落地于 commit ``8614b90``（R-3 续 FK 约束 +
+    workshop 100 行）；主 spec §7 历史排期跟踪。shig fixture 3 层 FK，
+    FK 23503 验证 / 0 orphans。
+    """
     ref_paths: dict[str, Path] = {}
     for target in refs:
         entry = registry.get(target)

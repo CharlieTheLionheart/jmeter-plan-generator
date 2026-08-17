@@ -38,7 +38,9 @@ class ValueDomain:
 _INTEGER_TYPES = frozenset(
     {"int8", "int4", "int2", "int", "bigint", "smallint", "tinyint"}
 )
-_FLOAT_TYPES = frozenset({"float", "float4", "float8", "double"})
+_FLOAT_TYPES = frozenset(
+    {"float", "float4", "float8", "double", "decimal", "numeric"}
+)
 
 
 class SeedGenError(Exception):
