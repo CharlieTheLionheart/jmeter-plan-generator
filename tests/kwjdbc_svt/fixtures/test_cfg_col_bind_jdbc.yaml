@@ -1,0 +1,45 @@
+# col-tag-bind-write JDBC 路径 (mode=batch_prepared) smoke fixture
+#
+# 用途: D-17 — 验证 col_tag_bind_mode=true 在 JDBC 路径下能正常工作
+#       (原 schemaless 路径已通过, 见 tests/kwjdbc_svt/fixtures/test_cfg_col_bind.yaml)
+# OpenSpec change ``col-tag-bind-write`` tasks.md §7.4
+#
+# 设计: write_configs[0] = iot_monitor.meters (col_tag_bind_mode=true,
+#         col_num_per_tag=5, mode=batch_prepared) — D-17 验证目标
+#       write_configs[1] = iot_monitor.t_full (full-row, mode=batch_prepared)
+#         — 同一 JDBC 路径下的对照表, 验证非 bind 写入仍正常
+# 沿用 test_model_col_bind.yaml 模型定义, 不改 model.
+#
+# num_threads / device_per_thread 调小 (2/2) 缩短 smoke 跑时.
+
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 4
+  device_start: 1
+  test_duration: 30
+
+write_config:
+  - tbl_name: iot_monitor.meters
+    throughput: 60.0
+    mode: batch_prepared
+    batch_lines: 1
+    device_per_thread: 2
+    num_threads: 2
+    col_tag_bind_mode: true
+    col_num_per_tag: 5
+  - tbl_name: iot_monitor.t_full
+    throughput: 60.0
+    mode: batch_prepared
+    batch_lines: 1
+    device_per_thread: 2
+    num_threads: 2
+
+query_config:
+  - query: "select count(*) from iot_monitor.meters;"
+    throughput: 1.0
+    num_threads: 1
+  - query: "select count(*) from iot_monitor.t_full;"
+    throughput: 1.0
+    num_threads: 1

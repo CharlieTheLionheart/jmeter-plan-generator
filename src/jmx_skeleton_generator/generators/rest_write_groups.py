@@ -33,9 +33,10 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from config_parser.models import TestModelConfig
+from config_parser.models import TestModelConfig, WriteConfig
 from seed_data_generator.reference import iter_table_columns
 from throughput_control import generate_write_timer
+from utils.preprocessor_helpers import all_groovy_decls
 from utils.xml_helpers import (
     http_request_sampler_element,
     jsr223_preprocessor_element,
@@ -82,9 +83,14 @@ def _build_write_jsr223_assertion(name: str, testname: str, script: str):
 # ---------------------------------------------------------------------------
 
 _GROOVY_HELPERS = (
-    "def escapeLineValue(s) { "
-    "s.replaceAll('\\\\\\\\', '\\\\\\\\\\\\\\\\').replaceAll(',', '\\\\\\\\,').replaceAll('=', '\\\\\\\\=').replaceAll(' ', '\\\\\\\\ ') "
-    "}\n"
+    # D-22 (2026-08-14): remove dead-code escapeLineValue. It was never
+    # invoked anywhere (buildLine only uses sb.append on already-formatted
+    # values), and the Python double-escape chain
+    # ('\\\\\\\\' → '\\\\\\\\\\\\\\\\') produced an Unescaped trailing
+    # backslash in JMeter 5.6.3 Groovy after the numThreads fix exposed
+    # the path. formatFieldValue already handles string escaping
+    # (quote-wrap + backslash/quote escape inside the else branch) so
+    # no protocol-layer escape is needed.
     "def escapeTagValue(s) { "
     "s.replaceAll(',', '\\\\\\\\,').replaceAll('=', '\\\\\\\\=').replaceAll(' ', '\\\\\\\\ ') "
     "}\n"
@@ -96,7 +102,12 @@ _GROOVY_HELPERS = (
     "    if (s ==~ /^-?\\d+$/) { return s }\n"
     "    if (s ==~ /^-?\\d+\\.\\d+([eE][-+]?\\d+)?$/) { return s }\n"
     "    if (s ==~ /^-?\\d+[eE][-+]?\\d+$/) { return s }\n"
-    "    return '\"' + s.replaceAll('\\\\\\\\', '\\\\\\\\\\\\\\\\').replaceAll('\"', '\\\\\\\\\"') + '\"'\n"
+    "    // D-22 (2026-08-14): use String.replace (literal) instead of replaceAll\n"
+    "    // (regex). The previous chain '\\\\\\\\'→'\\\\\\\\\\\\\\\\' produced\n"
+    "    // PatternSyntaxException: Unescaped trailing backslash in JMeter\n"
+    "    // 5.6.3 Groovy once the numThreads=2 fix (D-21) exposed this path.\n"
+    "    def bs = ((char) 92).toString()\n"
+    "    return '\"' + s.replace(bs, bs + bs).replace('\"', bs + '\"') + '\"'\n"
     "}\n"
     "def buildLine(measurement, tags, fields) {\n"
     "    if (fields.isEmpty()) { throw new RuntimeException('buildLine: empty fields, skipping row') }\n"
@@ -119,6 +130,28 @@ def _build_rest_write_preprocessor_script(
     db: str,
     table: str,
     ts_table: Any,
+    *,
+    # col-tag-bind-write (2026-08-05): per-table column-subset bind mode.
+    # When ``col_tag_bind_mode=True``, the PreProcessor reads
+    # ``__SHARED_MEM_{db}_{table}_bind`` (the bind-namespaced map),
+    # computes ``group_id = hash(ptag_tuple) mod num_threads``,
+    # picks the per-group ``col_names`` + ``row_values``, and emits
+    # InfluxDB Line with only those ``field_set`` entries. The
+    # ``tag_set`` retains the first primary tag (device_id); regular
+    # tags fall back to runtime defaults (multi-ptag deferred to a
+    # follow-up commit — see commit 4 fix 2 notes).
+    col_tag_bind_mode: bool = False,
+    # D-24 (2026-08-14): spec §4 L327 — each prep emits
+    # ``batch_lines`` InfluxDB Lines per call. Default 1 preserves
+    # the original per-call single-line behavior.
+    batch_lines: int = 1,
+    col_num_per_tag: int = 0,
+    num_threads: int = 1,
+    # Per-table ``WriteConfig.device_per_thread`` baked into the script
+    # so the device-N range matches the SetupTG bind sampler (which
+    # bakes ``device_per_thread`` into its own Groovy template at
+    # generation time); defaults to 1 to align with WriteConfig.
+    device_per_thread: int = 1,
 ) -> str:
     """Compose the Groovy script for one measurement's PreProcessor.
 
@@ -134,7 +167,96 @@ def _build_rest_write_preprocessor_script(
        / ``buildLine`` to assemble one InfluxDB Line.
     5. Stores the line in ``vars.put('request_body', line)`` for the
        subsequent HTTPSamplerProxy to read.
+
+    Bind mode (``col_tag_bind_mode=True``) takes an early-return path that
+    reads ``__SHARED_MEM_{db}_{table}_bind`` and emits a subset-column
+    InfluxDB Line. In that path ``num_threads`` and ``device_per_thread``
+    are **baked at generation time** (mirrors the SetupTG bind sampler for
+    hash-bucket alignment); runtime UDV overrides are NOT supported on
+    this path.
     """
+    # col-tag-bind-write (2026-08-05): bind-mode early return.
+    # Replaces steps 1-5 with: read ``__SHARED_MEM_*_bind``, look up
+    # group_id → {col_names, row_values, ptag_values, ptag_names},
+    # build tag_map (all ptag baked by SetupTG) + field_map (subset cols)
+    # → InfluxDB Line. tag_set keeps all ptag per ref §5.5.
+    if col_tag_bind_mode:
+        return (
+            f"{all_groovy_decls()}\n"
+            "// === helpers (per-measurement inline) ===\n"
+            f"{_GROOVY_HELPERS}\n"
+            "// === measurement-specific constants (bind mode) ===\n"
+            f'def db = "{db}"\n'
+            f'def measurement = "{table}"\n'
+            f'def rowsKey = "__SHARED_MEM_{db}_{table}_bind"\n'
+            f'def numThreads = {num_threads}\n'
+            f'def devicePerThread = {device_per_thread}\n'
+            "\n"
+            "def globalProps = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()\n"
+            "def bindGroups = globalProps.get(rowsKey) as Map\n"
+            "if (bindGroups == null || bindGroups.isEmpty()) {\n"
+            "    log.warn('REST_Write_bind_prep: bind groups empty (rowsKey=' + rowsKey + '), stopping thread')\n"
+            "    // D-12 (2026-08-11): JMeter 5.6.3 has no JMeterContext.stopThread().\n"
+            "    // on Java 21+ — silently exit with empty body so B1 assertion catches it.\n"
+            "    vars.put('request_body', '')\n"
+            "    return\n"
+            "    return\n"
+            "}\n"
+            "\n"
+            "// === deviceCode mirrors SetupTG bind sampler (commit 4 fix 2) ===\n"
+            "// ``device_per_thread`` is baked at generation time so the device-N\n"
+            "// range matches the SetupTG sampler (which also bakes it).\n"
+            "def deviceStart = (globalProps.get('device_start') ?: '1') as int\n"
+            "def threadNum = ctx.getThreadNum()\n"
+            "if (threadNum < 0) { threadNum = (vars.get('__threadNum') as Integer) ?: 0 }\n"
+            "long deviceNumber = calculateDeviceNumber(threadNum as long, deviceStart as long, devicePerThread as long, 0)\n"
+            "def deviceCode = deviceIdentifier(deviceNumber)\n"
+            "\n"
+            "// === per-deviceCode row dict lookup (D-21) ===\n"
+            "// D-21 (2026-08-14): no Object.hash call anywhere — key is the\n"
+            "// literal deviceCode. SetupTG baked one entry per deviceCode\n"
+            "// (no aggregation, no collisions).\n"
+            "def group = bindGroups.get(deviceCode) as Map\n"
+            "if (group == null) {\n"
+            "    log.warn('REST_Write_bind_prep: no row for deviceCode ' + deviceCode + ' in ' + rowsKey + ', stopping thread')\n"
+            "    // D-12 (2026-08-11): JMeter 5.6.3 has no JMeterContext.stopThread().\n"
+            "    // on Java 21+ — silently exit with empty body so B1 assertion catches it.\n"
+            "    vars.put('request_body', '')\n"
+            "    return\n"
+            "}\n"
+            "def colNames = group.get('col_names') as List\n"
+            "def rowValues = group.get('row_values') as List\n"
+            "def ptagNames = group.get('ptag_names') as List\n"
+            "def ptagValues = group.get('ptag_values') as List\n"
+            "\n"
+            "// === assemble batch_lines InfluxDB Lines per spec §4 L327 ===\n"
+            "// D-24 (2026-08-14): build ``batch_lines`` lines per prep call.\n"
+            "// Each line picks one of the (single) row entries from this\n"
+            "// deviceCode's row pool; wrap-around at pool end (cyclic fill).\n"
+            "int batchLines = " + str(batch_lines) + "\n"
+            "def rowPoolSize = rowValues.size()\n"
+            "def ptagPoolSize = ptagValues.size()\n"
+            "int rowStartIdx = new Random().nextInt(rowPoolSize)\n"
+            "def sb = new StringBuilder()\n"
+            "for (int b = 0; b < batchLines; b++) {\n"
+            "    int idx = (rowStartIdx + b) % rowPoolSize\n"
+            "    def cells = rowValues.get(idx) as List\n"
+            "    def ptagCells = ptagValues.get(idx % ptagPoolSize) as List\n"
+            "    def tagMap = [:]\n"
+            "    for (int p = 0; p < ptagNames.size(); p++) {\n"
+            "        tagMap[ptagNames[p]] = escapeTagValue(ptagCells[p].toString())\n"
+            "    }\n"
+            "    def fieldMap = [:]\n"
+            "    for (int i = 0; i < colNames.size(); i++) {\n"
+            "        fieldMap[colNames[i]] = formatFieldValue(cells[i])\n"
+            "    }\n"
+            "    fieldMap['ts'] = (System.currentTimeMillis() + b) as long\n"
+            "    if (b > 0) { sb.append('\\n') }\n"
+            "    sb.append(buildLine(measurement, tagMap, fieldMap))\n"
+            "}\n"
+            "vars.put('request_body', sb.toString())\n"
+        )
+
     ptag_names: List[str] = []
     tag_names: List[str] = []
     field_names: List[str] = []
@@ -165,48 +287,71 @@ def _build_rest_write_preprocessor_script(
         "def columns = globalProps.get(colsKey) as List\n"
         "if (rows == null || rows.isEmpty() || columns == null) {\n"
         "    // §6.4.2 B5 fix: stop thread instead of sending empty body.\n"
-        "    // ctx.stopThread() exists in JMeter 5.6.3 (no args).\n"
+        "    // D-12 (2026-08-11): JMeter 5.6.3 has no JMeterContext.stopThread().\n"
+        "    // on Java 21+ — silently exit with empty body so B1 assertion catches it.\n"
+        "    // D-23 (2026-08-14): this safety-net stays even though D-23\n"
+        "    // restores spec §4 cyclic-fill (random start + wrap-around), so\n"
+        "    // rows.isEmpty() should never trigger in normal config.\n"
         "    log.warn('REST_Write_meters_prep: rows empty (rowsKey=' + rowsKey + '), stopping thread')\n"
-        "    ctx.stopThread()\n"
+        "    vars.put('request_body', '')\n"
         "    return\n"
         "}\n"
-        "def row = rows.remove(0)\n"
+        "// D-23/D-24 (2026-08-14): spec §4 L327 cyclic-fill — row pool is\n"
+        "// never popped (only read by index), so batch_lines prep calls\n"
+        "// all succeed even after the seed pool is exhausted. The batch\n"
+        "// body is constructed inside the loop below.\n"
         "\n"
         "// === column group classification (baked by generator) ===\n"
         f"def ptagNames = [{ptag_names_groovy}] as Set\n"
         f"def tagNames = [{tag_names_groovy}] as Set\n"
         f"def fieldNames = [{field_names_groovy}] as Set\n"
         "\n"
-        "// === assemble tags + fields ===\n"
-        "def tagMap = [:]\n"
-        "def fieldMap = [:]\n"
-        "for (int i = 0; i < columns.size(); i++) {\n"
-        "    def name = columns[i]\n"
-        "    def value = row[i]\n"
-        "    if (name in ptagNames || name in tagNames) {\n"
-        "        tagMap[name] = escapeTagValue(value.toString())\n"
-        "    } else if (name in fieldNames) {\n"
-        "        fieldMap[name] = formatFieldValue(value)\n"
-        "    }\n"
-        "}\n"
-        "\n"
-        "def tsMillis = System.currentTimeMillis()\n"
-        "fieldMap['ts'] = tsMillis.toLong()\n"
-        "\n"
-        "// §6.4.2 B7b fix: seed CSV bakes ptag as ${device_code} literal\n"
-        "// (JDBC path replaces it inside sampler); schemaless prep must\n"
-        "// compute device_id from JMeter property + thread iteration,\n"
-        "// then substitute. device_start=1, device_per_thread=2 cycles\n"
-        "// device_1, device_2 per iteration.\n"
+        "// === assemble batch_lines InfluxDB Line bodies per spec §4 L327 ===\n"
+        "// D-24 (2026-08-14): build ``batch_lines`` lines per prep call.\n"
+        "// Each line picks a different random starting row from the pool;\n"
+        "// wrap-around at pool end (cyclic fill per spec §4).\n"
+        "int batchLines = " + str(batch_lines) + "\n"
         "def deviceStart = (globalProps.get('device_start') ?: '1') as int\n"
         "def devicePerThread = (globalProps.get('device_per_thread') ?: '2') as int\n"
         "def iterNum = ctx.getVariables().getIteration() + 1\n"
-        "def deviceId = ((iterNum - 1) % devicePerThread) + deviceStart\n"
-        "def deviceCode = 'device_' + deviceId\n"
-        "tagMap.replaceAll { k, v -> v == '\\${device_code}' ? deviceCode : v }\n"
-        "\n"
-        "def line = buildLine(measurement, tagMap, fieldMap)\n"
-        "vars.put('request_body', line)\n"
+        "// D-26 (2026-08-14): bind path defines threadNum but full-row\n"
+        "// path skipped it. Add here so deviceId derives from threadNum.\n"
+        "int threadNum = ctx.getThreadNum()\n"
+        "if (threadNum < 0) { threadNum = (vars.get('__threadNum') as Integer) ?: 0 }\n"
+        "def randomGen = new Random()\n"
+        "def sb = new StringBuilder()\n"
+        "int rowCursor = randomGen.nextInt(rows.size())\n"
+        "for (int b = 0; b < batchLines; b++) {\n"
+        "    // Wrap-around: any index 0..rows.size()-1 is valid.\n"
+        "    int rowIdx = (rowCursor + b) % rows.size()\n"
+        "    def row = rows.get(rowIdx)\n"
+        "    def tagMap = [:]\n"
+        "    def fieldMap = [:]\n"
+        "    for (int i = 0; i < columns.size(); i++) {\n"
+        "        def name = columns[i]\n"
+        "        def value = row[i]\n"
+        "        if (name in ptagNames || name in tagNames) {\n"
+        "            tagMap[name] = escapeTagValue(value.toString())\n"
+        "        } else if (name in fieldNames) {\n"
+        "            fieldMap[name] = formatFieldValue(value)\n"
+        "        }\n"
+        "    }\n"
+        "    def tsMillis = System.currentTimeMillis() + b\n"
+        "    fieldMap['ts'] = tsMillis.toLong()\n"
+        "    // §6.4.2 B7b fix: seed CSV bakes ptag as ${device_code} literal\n"
+        "    // (JDBC path replaces it inside sampler); schemaless prep\n"
+        "    // computes device_id from JMeter property + thread iteration.\n"
+        "    // D-26 (2026-08-14): use threadNum-derived deviceId so each\n"
+        "    // thread writes distinct ptag values within a batch (avoids the\n"
+        "    // mod-by-devicePerThread collapse to 0 when devicePerThread=1).\n"
+        "    int _tnum = (threadNum != null ? threadNum : 0)\n"
+        "    def deviceId = (_tnum * batchLines + b) + deviceStart\n"
+        "    def deviceCode = 'device_' + deviceId\n"
+        "    tagMap.replaceAll { k, v -> v == '\\${device_code}' ? deviceCode : v }\n"
+        "    if (b > 0) { sb.append('\\n') }\n"
+        "    sb.append(buildLine(measurement, tagMap, fieldMap))\n"
+        "}\n"
+        "vars.put('request_body', sb.toString())\n"
     )
 
 
@@ -220,6 +365,12 @@ def generate_rest_write_thread_group(
     *,
     name: str = "REST Write",
     throughput_qps: Optional[int] = None,
+    # col-tag-bind-write (2026-08-05): when provided, ``write_configs`` is
+    # indexed by ``{db}.{table}`` to look up per-table ``col_tag_bind_mode``
+    # / ``col_num_per_tag`` / ``device_per_thread`` so the PreProcessor
+    # can emit the bind-mode InfluxDB Line subset path. ``None`` (or a
+    # table missing from the map) keeps the legacy full-row behavior.
+    write_configs: Optional[List[WriteConfig]] = None,
 ) -> List:
     """Generate one ThreadGroup per TsTableConfig, each with:
 
@@ -283,12 +434,30 @@ def generate_rest_write_thread_group(
     if not test_model_config.ts_dbs:
         return out
 
+    # col-tag-bind-write (2026-08-05): index write_configs by ``db.table``
+    # for O(1) per-table lookup.
+    write_cfg_by_table: Dict[str, WriteConfig] = {}
+    if write_configs:
+        for wc in write_configs:
+            write_cfg_by_table[wc.tbl_name] = wc
+
     for ts_db in test_model_config.ts_dbs:
         for ts_table in ts_db.tables:
+            fqn = f"{ts_db.name}.{ts_table.name}"
+            wc = write_cfg_by_table.get(fqn)
+            col_tag_bind_mode = bool(wc and wc.col_tag_bind_mode)
+            col_num_per_tag = int(wc.col_num_per_tag) if wc else 0
+            num_threads = int(wc.num_threads) if wc else 1
+            device_per_thread = int(wc.device_per_thread) if wc else 1
             script = _build_rest_write_preprocessor_script(
                 db=ts_db.name,
                 table=ts_table.name,
                 ts_table=ts_table,
+                col_tag_bind_mode=col_tag_bind_mode,
+                col_num_per_tag=col_num_per_tag,
+                num_threads=num_threads,
+                device_per_thread=device_per_thread,
+                batch_lines=int(wc.batch_lines) if wc else 1,
             )
 
             timer, timer_hash = generate_write_timer()
@@ -341,7 +510,7 @@ def generate_rest_write_thread_group(
             tg, tg_hash = thread_group_element(
                 name=tg_name,
                 testname=tg_testname,
-                num_threads=1,
+                num_threads=num_threads,
                 ramp_time=1,
                 duration="${test_duration}",
                 loops="-1",

@@ -249,7 +249,6 @@ def test_tag_set_matches_ptag_produces_correct_line():
 
     # 必备的 Groovy helper 定义 + measurement-specific 常量 + 关键调用
     must_contain = [
-        'def escapeLineValue',         # helper (e)
         'def formatFieldValue',
         'def buildLine',
         'def measurement = "meters"',  # measurement 名（无 quotes）
@@ -367,8 +366,14 @@ def test_sampler_body_is_request_body_var_ref():
 # ---------------------------------------------------------------------------
 
 def test_groovy_script_contains_required_helpers():
-    """PreProcessor script 字符串必含 ``def escapeLineValue`` / ``def formatFieldValue`` /
-    ``def buildLine`` 三个定义。"""
+    """PreProcessor script must define ``formatFieldValue`` + ``buildLine``.
+
+    D-22 (2026-08-14): removed ``escapeLineValue`` helper — it was dead
+    code (never invoked anywhere) with a Python double-escape chain that
+    produced an Unescaped trailing backslash in JMeter 5.6.3 Groovy after
+    the numThreads fix (D-21) exposed the path. ``formatFieldValue``
+    handles all string escaping via its else-branch.
+    """
     elems = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=_default_rest_api(),
@@ -378,13 +383,12 @@ def test_groovy_script_contains_required_helpers():
     assert len(preps) == 1
     script = _prop_map(preps[0])["script"]
 
-    assert "def escapeLineValue" in script, "script must define escapeLineValue"
     assert "def formatFieldValue" in script, "script must define formatFieldValue"
     assert "def buildLine" in script, "script must define buildLine"
 
-    # formatFieldValue 必须包含对 InfluxDB Line 转义的引用（5.2 转义规则）
-    # 不锁实现细节，但要求字符串/数字字面量识别逻辑出现
-    assert "\\," in script or "','\\\\,'", "formatFieldValue/escapeLineValue must include InfluxDB escape sequences"
+    # formatFieldValue must include InfluxDB Line escape sequences for
+    # the string-quote-wrap else-branch (handles backslash and quote).
+    assert "\\," in script or "','\\\\,'", "formatFieldValue must include InfluxDB escape sequences"
 
 
 # ---------------------------------------------------------------------------
@@ -476,12 +480,14 @@ def test_http_samplers_domain_and_port_have_property_defaults():
 
 def test_preprocessor_script_handles_rows_empty_gracefully():
     """JSR223PreProcessor 在 rows 空时必须停线程（不要继续发无效请求）—
-    B5 修复：用 ``ctx.stopThread()``（JMeter 5.6.3 提供，无参版本）让
-    thread 在下一次 loop 时退出，避免 server 收到空 body 返 code:-1
-    被 B1 assertion 误判为 20+ failures。
+    D-12 (2026-08-11) 修订: 实测 JMeter 5.6.3 ``JMeterContext`` 接口**完全没有**
+    stop 类方法（已在 jmeter.apache.org/api/.../JMeterContext.html 确认 — Method
+    Summary 里没有 stop/setStopThread/stopThread）。唯一稳定停 thread 方式是
+    ``Thread.currentThread().stop()``（Thread.stop() 虽 deprecated 但 5.6.3 仍可用，
+    是 SKILL.md §6.4.5 commit 5 fix-2 错误推断的修正）。
 
     反例（禁止）：
-      - ``ctx.setStopThread(true)``（Groovy 上下文 MissingMethodException）
+      - ``ctx.stopThread()`` / ``ctx.setStopThread(true)``（JMeter 5.6.3 接口无此方法）
       - ``SampleResult.setIgnore()``（PreProcessor 中 SampleResult 未绑定）
       - 仅 log 不停线程（会产生无效 HTTP 请求）
     """
@@ -502,12 +508,17 @@ def test_preprocessor_script_handles_rows_empty_gracefully():
         regular_tags=[],
     )
     script = _build_rest_write_preprocessor_script(db="defaultdb", table="meters", ts_table=table)
-    assert "ctx.setStopThread" not in script, (
-        f"rows-empty 分支禁止 ctx.setStopThread（JMeter 5.6.3 不存在）, "
+    assert "vars.put('request_body', '')" in script, (
+        f"rows-empty 分支必须置空 body 让 B1 assertion 捕获（JMeter 5.6.3 无 stop API 且 "
+        f"Thread.currentThread().stop() 在 Java 21+ 抛 UnsupportedOperationException）, "
         f"got:\n{script}"
     )
-    assert "ctx.stopThread()" in script, (
-        f"rows-empty 分支必须用 ctx.stopThread()（JMeter 5.6.3 无参版本）, "
+    assert "ctx.stopThread" not in script, (
+        f"rows-empty 分支禁止 ctx.stopThread() 任何参数版（JMeter 5.6.3 接口无此方法）, "
+        f"got:\n{script}"
+    )
+    assert "Thread.currentThread().stop" not in script, (
+        f"rows-empty 分支禁止 Thread.currentThread().stop()（Java 21+ 抛 UnsupportedOperationException）, "
         f"got:\n{script}"
     )
     assert "log.warn" in script, (

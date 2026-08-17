@@ -11,7 +11,10 @@ from jmx_skeleton_generator.generators.assembler import JMXAssembler, JMXWriter,
 from jdbc_datasource import JDBCDataSourceGenerator
 from jmx_skeleton_generator.generators.ddl_setup import generate_ddl_setup_thread_group, generate_ddl_setup_http_thread_group
 from jmx_skeleton_generator.generators.query_groups import generate_query_thread_groups
-from jmx_skeleton_generator.generators.shared_memory_setup import generate_shared_memory_setup_thread_group
+from jmx_skeleton_generator.generators.shared_memory_setup import (
+    generate_bind_setup_thread_group,
+    generate_shared_memory_setup_thread_group,
+)
 from jmx_skeleton_generator.generators.test_plan import generate_test_plan, generate_user_defined_variables
 from jmx_skeleton_generator.generators.write_groups import generate_write_thread_groups
 from jmx_skeleton_generator.generators.rest_write_groups import generate_rest_write_thread_group
@@ -35,6 +38,42 @@ class JMXSkeletonGenerator:
         self.rel_init_specs = rel_init_specs or []
         self._is_schemaless = any(w.mode == "schemaless" for w in test_config.write_config)
 
+    def _write_num_threads(self) -> int:
+        """Return the ``num_threads`` declared by the first write_config,
+        defaulting to 1 if absent. Used by the Bind SetupTG to pick the
+        hash-modulo base; the Write TG consumes the same value via the
+        existing ``num_threads`` UDV at runtime.
+        """
+        if not self.test_config.write_config:
+            return 1
+        return int(self.test_config.write_config[0].num_threads)
+
+    def _ptag_names_by_table(self) -> Dict[str, List[str]]:
+        """Map ``{db}.{table} -> [ptag_name1, ptag_name2, ...]`` for every
+        ts table in the model. Consumed by the Bind SetupTG so its baked
+        ``ptag_names`` list matches the actual column names (default falls
+        back to ``['device_id']`` when the model is unavailable, which is
+        only correct for legacy shig-style fixtures).
+        """
+        result: Dict[str, List[str]] = {}
+        if self.model is None or not getattr(self.model, "ts_dbs", None):
+            return result
+        from ddl_generator.column_name_generator import ColumnNameGenerator
+        for ts_db in self.model.ts_dbs:
+            for ts_table in getattr(ts_db, "tables", []) or []:
+                fqn = f"{ts_db.name}.{ts_table.name}"
+                count = int(getattr(ts_table, "primary_tag_count", 0) or 0)
+                if count <= 0:
+                    continue
+                ptag_cfgs = list(ts_table.primary_tags or [])
+                # All ptag columns for one table share the same column-name
+                # series (e.g. ``ptag_varchar_1``), so a single generator
+                # call gives us all names in order.
+                col_type = ptag_cfgs[0].col_type if ptag_cfgs else "varchar(64)"
+                gen = ColumnNameGenerator(ts_table)
+                result[fqn] = gen.generate_primary_tags(col_type, count)
+        return result
+
     def generate(self) -> Path:
         if self._is_schemaless:
             if self.test_config.rest_api_config is None:
@@ -45,8 +84,22 @@ class JMXSkeletonGenerator:
             assembler.add_many(generate_ddl_setup_http_thread_group(self.ddl_statements, rel_init_specs=self.rel_init_specs, rest_api_config=rest))
             sm_elems = generate_shared_memory_setup_thread_group(self.seed_csv_paths)
             if sm_elems: assembler.add_many(sm_elems)
+            bind_elems = generate_bind_setup_thread_group(
+                self.test_config.write_config,
+                seed_root=Path(self.output_dir) / "seeds",
+                num_threads=self._write_num_threads(),
+                ptag_names_by_table=self._ptag_names_by_table(),
+            )
+            if bind_elems: assembler.add_many(bind_elems)
             if self.model is not None:
-                assembler.add_many(generate_rest_write_thread_group(self.model, rest))
+                # col-tag-bind-write (2026-08-05, commit 5 + 6): pass
+                # ``write_configs`` so the schemaless Write TG can look
+                # up per-table ``col_tag_bind_mode`` / ``col_num_per_tag``
+                # / ``device_per_thread``. None → legacy full-row path.
+                assembler.add_many(generate_rest_write_thread_group(
+                    self.model, rest,
+                    write_configs=self.test_config.write_config,
+                ))
                 assembler.add_many(generate_rest_query_thread_group(self.model, rest))
             root = assembler.assemble(tp_elem, tp_hash, generate_user_defined_variables(self.test_config.conn_config))
             return JMXWriter(self.output_dir).write(root)
@@ -59,6 +112,13 @@ class JMXSkeletonGenerator:
         if ddl_elems: assembler.add_many(ddl_elems)
         sm_elems = generate_shared_memory_setup_thread_group(self.seed_csv_paths)
         if sm_elems: assembler.add_many(sm_elems)
+        bind_elems = generate_bind_setup_thread_group(
+            self.test_config.write_config,
+            seed_root=Path(self.output_dir) / "seeds",
+            num_threads=self._write_num_threads(),
+            ptag_names_by_table=self._ptag_names_by_table(),
+        )
+        if bind_elems: assembler.add_many(bind_elems)
         write_elems = generate_write_thread_groups(self.test_config.write_config, self.prepared_templates, model=self.model)
         if write_elems: assembler.add_many(write_elems)
         query_elems = generate_query_thread_groups(self.test_config.query_config)
