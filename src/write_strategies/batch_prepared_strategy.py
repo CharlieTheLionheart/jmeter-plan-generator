@@ -3,6 +3,10 @@
 Design: openspec/changes/write-strategies/design.md
 Spec:    openspec/changes/write-strategies/specs/write-strategies/spec.md
 
+落地于 commit ``9fdcf0d``（2026-07，(feat) JDBC数据源配置生成器，
+DirectInsert/PrepareInsert语句生成器）；主 spec §2.0 L135 mode 枚举 +
+§7 历史排期跟踪。shig fixture 默认 ``batch_prepared``。
+
 JMeter ``JDBCSampler`` can only bind one parameter set per call, so
 batch_prepared bypasses it and uses ``JSR223Sampler`` to invoke JDBC
 ``addBatch`` / ``executeBatch`` directly. The batch size is

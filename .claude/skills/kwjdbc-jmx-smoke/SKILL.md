@@ -199,24 +199,45 @@ docker run -d --name kaiwudb-smoke -p 26257:26257 -p 8081:8080 \
     devops.inspur.com:80/isg/zdp/repo/local_repo/daily_svt/kaiwudb/kwdb-x86_64-master:latest \
     tail -f /dev/null
 
-# 3) 在容器内生成 cert 集（CA + node cert + 客户端 cert —— REST 客户端 ca.crt 足够）
+# 3) 在容器内生成 cert 集（CA + node + 客户端 root）
+#    注意：--ca-cert 不是 kwbase cert create-ca 的 flag，
+#    CA 证书自动写到 <certs-dir>/ca.crt；只需 --ca-key。
+#    客户端 cert（client.root.crt/key）是 §6.0 step 5/6 免密登录 root 的前提，
+#    缺它会导致 `kwbase sql` 卡在 `Enter password:`
+#    （参见 §6.4.6）。
 docker exec kaiwudb-smoke mkdir -p /kaiwudb/certs
 docker exec kaiwudb-smoke /kaiwudb/bin/kwbase cert create-ca \
-    --certs-dir=/kaiwudb/certs --ca-cert=/kaiwudb/certs/ca.crt --ca-key=/kaiwudb/certs/ca.key
+    --certs-dir=/kaiwudb/certs \
+    --ca-key=/kaiwudb/certs/ca.key
 docker exec kaiwudb-smoke /kaiwudb/bin/kwbase cert create-node \
     localhost $(hostname) 127.0.0.1 \
-    --certs-dir=/kaiwudb/certs
+    --certs-dir=/kaiwudb/certs \
+    --ca-key=/kaiwudb/certs/ca.key
+docker exec kaiwudb-smoke /kaiwudb/bin/kwbase cert create-client root \
+    --certs-dir=/kaiwudb/certs \
+    --ca-key=/kaiwudb/certs/ca.key
 
-# 4) 启动 kwbase（带 --certs-dir）
-docker stop kaiwudb-smoke
+# 4) 拷 certs 到宿主机 + rm tail 容器 + 重建（PID 1 = kwbase）
+#    **必须同时挂载 certs 和 data，否则用户/数据全部丢失**：
+#      - /kaiwudb/certs        → cert 集（只读：:ro）
+#      - /kwbase-data          → kwbase 数据目录（读写，**不在 /kaiwudb 下**）
+#    旧版曾用 `docker exec -d` 在 tail 容器内启动 kwbase（保留 certs 但 PID 1 = tail，
+#    docker ps COMMAND 列误导），现在改用 rm + 重建，PID 1 = kwbase 进程。
+mkdir -p /tmp/kaiwudb-certs /tmp/kaiwudb-data
+docker cp kaiwudb-smoke:/kaiwudb/certs/. /tmp/kaiwudb-certs/
+docker cp kaiwudb-smoke:/kwbase-data/.   /tmp/kaiwudb-data/
+docker rm -f kaiwudb-smoke
 docker run -d --name kaiwudb-smoke -p 26257:26257 -p 8081:8080 \
     --ulimit nofile=65536 \
+    -v /tmp/kaiwudb-certs:/kaiwudb/certs:ro \
+    -v /tmp/kaiwudb-data:/kwbase-data \
     devops.inspur.com:80/isg/zdp/repo/local_repo/daily_svt/kaiwudb/kwdb-x86_64-master:latest \
     /kaiwudb/bin/kwbase start-single-node \
     --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080 \
     --certs-dir=/kaiwudb/certs
+#    重建后 `docker ps` COMMAND 列显示 `/kaiwudb/bin/kwbase…`，即 PID 1 = kwbase。
 
-# 5) 等 kwbase ready
+# 5) 等 kwbase ready（用 client.root cert 免密登录 root）
 for i in $(seq 1 30); do
     docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
         -e "select 1" >/dev/null 2>&1 && break
@@ -224,7 +245,8 @@ for i in $(seq 1 30); do
 done
 
 # 6) 建非空密码 root（**关键**：insecure 模式 ALTER USER PASSWORD 不支持）
-#    语法见 docs/refs/kaiwudb-user-management-reference.md §3，
+#    此处用 step 3 生成的 client.root.crt/key 做 client cert 认证，
+#    无需输入密码。语法见 docs/refs/kaiwudb-user-management-reference.md §3，
 #    命令格式见 docs/refs/kaiwudb-kwbase-sql-reference.md §4.1。
 docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
     -e "CREATE USER root WITH PASSWORD 'root123'"
@@ -233,10 +255,45 @@ docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
 docker cp kaiwudb-smoke:/kaiwudb/certs/ca.crt tests/kwjdbc_svt/fixtures/ca.crt
 ```
 
+#### 6.0.2 建其他 SQL 用户（test / app / 等）
+
+§6.0 step 6 用 client cert 登录 root 后，可继续建业务用户（典型场景：
+schemaless / JDBC 测试 fixture 用非 root 账号）。**所有非 root 用户必须在
+TLS 模式下用 `CREATE USER ... WITH PASSWORD` 创建**（insecure 模式
+`ALTER USER PASSWORD` 报 SQLSTATE 28P01，参见 §6.4.1）。
+
+```bash
+# 1) 用 client.root cert 登录，建 test 用户（密码含 # 时 shell 用单引号包 SQL，
+#    URL 形式登录时 # 必须 URL-encode 为 %23，参见下方验证步骤）
+docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
+    -e "CREATE USER test WITH PASSWORD 'Znbase#1234'"
+
+# 2) 列出所有用户（注意 SHOW USERS 不显示 PASSWORD 字段；
+#    无法用 SQL 自检密码是否设置，必须用 REST / JDBC 实连验证）
+docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
+    -e "SHOW USERS"
+# → username  options    member_of
+#   admin     CREATEROLE {}
+#   root      CREATEROLE {admin}
+#   test      ""         {}
+
+# 3) 验证 test 用户可用密码登录（kwbase sql --url 形式，
+#    postgresql://user:password@host:port/db?sslmode=require&sslrootcert=<ca.crt>）
+docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql \
+    --url "postgresql://test:Znbase%231234@localhost:26257/defaultdb?sslmode=require&sslrootcert=/kaiwudb/certs/ca.crt" \
+    -e "SELECT current_user"
+# → current_user
+#   test
+```
+
+> 若后续 fixture（`test_cfg.yaml` 等）需要用 test 用户跑 JDBC sampler，
+> 同步更新其 `db_username` / `db_password` 字段，并跑一遍 §6.3 断言确认
+> SetupTG / WriteTG / QueryTG 全绿。
+
 > 完整 TLS 容器配置 + 调试见 `docs/refs/kaiwudb-tls-cert-reference.md`。
 > KaiwuDB TLS 无官方调试文档；本 skill §6.4 调试条目随 smoke 实跑逐条增量。
 
-#### 6.0.1 容器 ↔ 宿主机隔离陷阱（cert 生命周期）
+#### 6.0.1 容器 ↔ 宿主机隔离陷阱（cert + data 生命周期）
 
 > **易错点**：容器内 `/kaiwudb/certs/` 与宿主机文件系统**默认隔离**。
 > JMeter 在宿主机跑，**无法**直接读容器路径。处理：
@@ -246,6 +303,7 @@ docker cp kaiwudb-smoke:/kaiwudb/certs/ca.crt tests/kwjdbc_svt/fixtures/ca.crt
 3. **`ca.crt` SAN 必须包含 JMeter 连接的目标**：§6.0 step 3 `kwbase cert create-node` 的参数列表决定 SAN。如果 JMeter 通过 `127.0.0.1:8081` 连，必须含 `127.0.0.1`；通过容器 IP 连需先 `docker inspect kaiwudb-smoke | grep IPAddress` 取 IP 加到 create-node。SAN 不匹配 → TLS handshake fail 但 JTL 不直接报（看 `jmeter-schemaless.log` 里 `SSLHandshakeException` / `certificate_unknown`）。
 4. **`ca.key` / `node.crt` / `node.key` 永远留在容器**：只 `docker cp` 出 `ca.crt`，私钥不外传（即便测试环境）。
 5. **`hostname` 在容器内 = 容器 hostname**（如 `bd8c95fcb0d1`）：§6.0 step 3 用 `$(hostname)` 取的是**宿主机** hostname（在 `docker exec` 时由宿主机解析），不是容器 hostname。两侧 SAN 含义不同——若 JMeter 用容器 hostname 连会 fail；用宿主机 hostname 连也 fail（因为容器内 hostname 与宿主机 hostname 一般不同）。**安全做法**：create-node 只传 `localhost 127.0.0.1 <docker-host-ip>` 三段，JMeter 一律用 `127.0.0.1:8081` 连。
+6. **数据目录 `/kwbase-data` 不在 `/kaiwudb/` 下**（容易猜错）：kwbase 默认 store 路径是 `/kwbase-data`，**不是** `/kaiwudb/data`。§6.0 step 4 重建容器时**必须挂载 `-v /tmp/kaiwudb-data:/kwbase-data`**，否则用户、表、数据全部丢失（容器用空白状态启动，`SHOW USERS` 只剩 admin/root）。`docker cp` + `-v` 流程确保 certs + data 双持久化。
 
 ### 6.1 调用（schemaless 走 TLS fixture）
 
@@ -555,6 +613,72 @@ if (rows == null || rows.isEmpty() || columns == null) {
 **相关 commit**：`fee6986`（§6.4.2 主线，含 duration 1s→test_duration +
 null/empty token guard + defaultdb→iot_monitor + SharedMemory 加回）、
 `a6d079a`（B1 锁 J + B5 锁 K stopThread）。
+
+#### 6.4.6 `kwbase sql` 卡在 `Enter password: ERROR: inappropriate ioctl for device` — 缺 client.root cert
+
+**症状**：执行 §6.0 step 5/6 的 `docker exec kaiwudb-smoke kwbase sql --certs-dir=/kaiwudb/certs -e "select 1"` 输出：
+
+```
+Enter password: ERROR: inappropriate ioctl for device
+Failed running "sql"
+```
+
+进程退出码非 0，step 5 轮询 30s 后仍不 ready。
+
+**定位命令**：
+
+```bash
+# 1. 容器内 certs 目录是否有 client.root.crt/key
+docker exec kaiwudb-smoke ls -la /kaiwudb/certs/
+# 预期正常：ca.crt/ca.key + node.crt/node.key + client.root.crt/client.root.key
+# 缺 client.*  → §6.0 step 3 漏跑
+
+# 2. 容器内 kwbase 是否监听 26257
+docker exec kaiwudb-smoke bash -c "cat /proc/net/tcp | awk 'NR>1 {print \$2}' | sort -u"
+# 0000:0000:A339 / 0000:0000:1F90  → 26257 / 8080 都 LISTENING → kwbase 已 ready
+# 仅 8080 而无 26257 → kwbase 还没启动或绑错地址
+
+# 3. 用 curl 直接探 REST 端口
+curl -sk -o /dev/null -w "%{http_code}\n" https://127.0.0.1:8081/ -m 5
+# → 200/404/401 → kwbase 已就绪，问题仅在 kwbase sql 客户端认证
+```
+
+**根因**：KaiwuDB TLS 模式下 `kwbase sql` 必须有客户端证书才能认证 root 用户。
+CLI 在没有可用 client cert、root 用户又无密码时会进入交互式密码读取——
+`docker exec` 不分配 tty，导致 `inappropriate ioctl for device` 错误。
+**§6.0 step 3 必须显式跑 `kwbase cert create-client root`** 生成
+`client.root.crt` / `client.root.key`，CLI 才会自动用它做 mTLS 认证。
+
+旧版 SKILL §6.0 step 3 注释里写"客户端 cert —— REST 客户端 ca.crt 足够"是
+误导（ca.crt 仅做 server 验证，client 侧认证仍需 client.*）。
+
+**修复**：
+
+```bash
+# 1. 补 client.root cert
+docker exec kaiwudb-smoke /kaiwudb/bin/kwbase cert create-client root \
+    --certs-dir=/kaiwudb/certs \
+    --ca-key=/kaiwudb/certs/ca.key
+
+# 2. 验证免密登录
+docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
+    -e "select 1"
+# → ?column?
+#   1
+
+# 3. 然后继续 §6.0 step 6 建 root 密码 + §6.0.2 建其他用户
+```
+
+`SHOW USERS` 不显示 PASSWORD 字段（参见 §6.4.1 / §6.0.2 第 2 步）——
+非 root 用户的密码是否生效必须用 §6.0.2 第 3 步的 `--url` 实连验证，
+或在 fixture 里替换 `db_username`/`db_password` 后跑 §6.3 断言。
+
+**防退化**：
+
+- §6.0 step 3 的命令注释写"客户端 cert —— REST 客户端 ca.crt 足够" 已替换为
+  明确生成 client.root cert 的命令，CI 重跑不应再触发此症状。
+- 若后续 kwbase 升级或换镜像，client cert 仍**必须**与 server 共用同一 CA
+  才能 mTLS 成功 —— 重建容器（§6.0.1 隔离陷阱）后必须重跑全套 §6.0 step 1-7。
 
 ## 交叉引用
 

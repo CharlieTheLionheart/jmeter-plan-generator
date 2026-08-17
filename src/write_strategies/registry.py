@@ -75,6 +75,9 @@ def bootstrap() -> None:
     register_strategy("batch_insert", BatchInsertStrategy)
     register_strategy("single_prepared", SinglePreparedStatementStrategy)
     register_strategy("batch_prepared", BatchPreparedStatementStrategy)
+    # NOTE: `schemaless` 是 dead-code 注册（d461e40 后实际生成器走 skeleton.py REST
+    # 分支，不再调用此 strategy）。保留仅为防御未来回退 strategy 架构时 KeyError。
+    # 详见 schemaless_strategy.py module docstring + docs/specs §7。
     register_strategy("schemaless", SchemalessWriteStrategy)
 
 
