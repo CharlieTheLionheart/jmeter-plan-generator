@@ -1,11 +1,14 @@
-# 现状与遗留任务（2026-07-31 checkpoint）
+# 现状与遗留任务（2026-08-17 checkpoint）
 
-> 10 个 fix + 2 个 DCR + R-3（partial + FK DDL 续）+ F-17 + 条件关系初始化 + §1-§5 + §6 insecure-removal + §6 UDV/skill + §6.4 调试填充 + §6.4.2 全修 + B1/B3/B5：稳定基线 `c876acc` / `27b8aec` / `4351c99` / `d461e40`（squash merge of `fee6986`+`a6d079a`+`12e5238`+`ddb0329`）。pytest 701/701。§6.3 (a)-(e) smoke 全绿（SetupTG 3/3 + Write 10/10 + Query 1/1）。
+> 10 个 fix + 2 个 DCR + R-3（partial + FK DDL 续）+ F-17 + 条件关系初始化 + §1-§5 + §6 insecure-removal + §6 UDV/skill + §6.4 调试填充 + §6.4.2 全修 + B1/B3/B5 + **col-tag-bind-write 8 commits + 4 fix (D-9~D-13)**：稳定基线 `c876acc` / `27b8aec` / `4351c99` / `d461e40` / `b9301c6`（DCR proposal）/ `3898aa8` `b677255` `9769493` `b067c8c` `c078431` `801ed46` `90f7dee` `6455cab` `389dc56` `76cb16a` `4e3791c` `22092a8` `3e65a37`（doc）/ `8246c44`（fixture ts+root pwd）/ `526dcbf`（seed+ddl decimal）/ `f23773a`（JMeter 5.6.3 stop API + ptag_values wiring）/ `7fef4ab`（fixture decimal→float8）。pytest 745/745。smoke 实测 bind path（iot_monitor.meters 10 行绿）。分支 `col-tag-bind-write` ahead origin 11 commits（未 push）。
 
-遗留：spec gap 19 个未验功能点（按 P1/P2/P3 排序）。
+遗留：spec gap 19 个未验功能点；col-tag-bind-write §8 smoke 端到端反退化断言 + JDBC bind path 验证待补；t_full full-row path `escapeLineValue` Groovy regex `PatternSyntaxException` 是 rest-schemaless §1-§5 范围 D-15 独立 bug（与 bind 无关）。
 
 ## 已完成（压缩）
 
+- **D-17 JDBC bind path smoke + D-27 generator fix (af21456 / d83a09e)**：D-17 验证 `mode=batch_prepared + col_tag_bind_mode=true` JDBC 路径真集群 smoke，发现并修 D-27 — `_build_batch_prepared_preprocessor_body` 完全没有 `col_tag_bind_mode` 分支，prep 仍读 `__SHARED_MEM_<table>` 但 SetupTG bind sampler 写 `__SHARED_MEM_<table>_bind` → Write TG 每轮 NPE `size() on null`。fix: 加 `_build_batch_prepared_bind_preprocessor_body` helper，按 D-21 per-deviceCode key（与 schemaless 路径一致）从 bind map 取 row，按 ColumnNamer 实际列顺序（`[ts, *data_cols, *ptag]`，ptag 在末尾）填 row，未在 subset 的列填 NULL。`_build_batch_prepared_preprocessor_body` + `build_batch_prepared_preprocessor_script` + `generate_write_thread_groups` 三层透传参数；D-27 fix 同时给 `test_model_col_bind.yaml` 两张表补 `ts_col`（name=ts, type=timestamp, ms_step=1000）—— pre-fix `_build_columns_by_table` 在 `ts_col=None` 时跳过 'ts' 列名，baked INSERT 模板少 1 列 vs DDL 12 列 → server reject；schemaless bind path 不读 baked insertSql 所以未暴露。7 个新 pytest case（test_batch_prepared_bind.py），753 总 pass / 0 regress。30s jmeter -n smoke：127 samples / 0 Err (0.00%)，iot_monitor.meters 60 行 (device_1=30, device_3=30)，iot_monitor.t_full 60 行 (device_1=30, device_3=30)，distinct ptag=2 各表，列互补 100% 兑现（device_1 写 col_char_1 only，device_3 写 col_int8_1 + col_varchar_2 only）。分支 `col-tag-bind-write` ahead origin +2 commits (af21456 / d83a09e)。
+
+- **§7 文档对齐 + schemaless dead-code 标注 (2e97349)**：3 个 T1/T2 功能（PreparedStatement / 外键 / 无模式写入）已落地但主 spec §7 未维护，文档/代码脱节。改主 spec §7 表格 + 删过时 note + 加 "代码层冗余" + 加 "回归覆盖" note；schemaless_strategy.py module/class docstring 改写为 "DEAD CODE since d461e40"；registry.py:78 加 NOTE；single/batch_prepared_strategy.py + _build_foreign_key_clause + pregenerate_reference_columns 加 commit 引用。7 文件 +56/-15。pytest 746 passed 0 regress。
 - **F-9 至 F-17 + R-1/R-2/R-3/R-3 续 + #3**（9e285aa / cbc0b8d / ea3dcfe / 3069d9c / e33605e / 09fa065 / 8614b90 / b3e2c5e / 1c02629 / 2c32c81 / d9c3fa9 / 87faab9 / c14969f / 9333117）：10 fix + 2 DCR + R-3 partial + 条件关系初始化。shig smoke 0 err / 4-20-100-3900-3900 / FK 23503 验证 / 0 orphans / pytest 633+10 = 643 pass / sparse 603 samples。
 - **§1-§5 (rest-schemaless-write)** (996427f / 71400dc / 67d8f7b / ef2faed / af32312 / 87bf67c / 93d8a18 / dd4a091 / 7b3e904 / 2f2f575 / d481022 / d9c2720 / 5b21cc3 / 92efda5)：HTTP sampler + RestConfigError + SetupTG HTTP DDL pre-create + Write TG (InfluxDB Line) + Query Round-Trip + mode 路由。pytest 666 pass + 6 个新 test_ddl_setup_http_thread_group case。
 - **§2 上接** (300d675 / 53adf3b / 06ebb3c / fb99013)：SetupTG HTTP DDL pre-create 落地，fail-fast TLS + ca_cert_path 缺失。
@@ -13,10 +16,99 @@
 - **§6.x UDV/skill sync (27b8aec)**：kwjdbc-jmx-smoke 恢复双模式（JDBC 走 insecure / schemaless 走 TLS 唯一）；ca_cert_path 改 `${__P(rest_api.ca_cert_path,)}` UDV（与 hostname/port 一致），绝对路径 -J 注入；SKILL.md §6 双模式 + §6.0 容器 TLS 重建 + §6.0.1 隔离陷阱 + §6.2 jmeter 命令加必填 -J + §6.4 调试占位。design.md Decision 2 加范围说明。test 2 调整。8 文件 +105/-21。
 - **§6.4 调试填充 + 2 docs/refs (4351c99)**：3 次 TLS smoke 实跑沉淀 4 条调试条目（root 无密码 / DDL-2 props.put null / Query 表不存在 cascade / 端口 8080 误报）。新增 2 份 docs/refs：`kaiwudb-kwbase-sql-reference.md` 3.2.0 全参数 + `kaiwudb-user-management-reference.md` CREATE/ALTER/DROP + 权限模型 + insecure 限制。SKILL.md 交叉引用区扩到 4 条。3 文件 +564/-1。
 - **§6.4.2 全修 + B1/B3/B5 (d461e40)**：squash merge `fee6986`+`a6d079a`+`12e5238`+`ddb0329`。DDL SetupTG setprop_script 加 null/empty 守卫（DDL-2 根因修复）+ duration 1s→`${test_duration}` + Write TG 默认 db `defaultdb`→`iot_monitor` + SharedMemory 加载回 setup + **B1** Write body-code assertion（锁 J）+ **B3** Query `$.data` 抽取 + assertion 检 `data.size() >= expected_rows`（避 `$.rows` 列数假阳性）+ **B5** Write prep `ctx.stopThread()` 替代 `ctx.setStopThread(true)`（JMeter 5.6.3 Groovy 无 boolean 参数版）+ SKILL.md §6.4.5 新增空 body 诊断 + 反例/防退化清单。smoke v17 全绿：SetupTG 3/3 + Write 10/10 + Query 1/1，DB `count(*) from iot_monitor.meters`=10，ptag `device_1+device_2` 各 5 行。pytest 701/701。30 文件 +4530/-247。
+- **col-tag-bind-write 8 commits + 4 DCR fix (3898aa8 / b677255 / 9769493 / b067c8c / c078431 / 801ed46 / 90f7dee / 6455cab / 389dc56 / 76cb16a / 4e3791c / 22092a8 / 3e65a37 / 8246c44 / 526dcbf / f23773a / 7fef4ab)**：
+  - **commit 1 (3898aa8)** `feat(col-tag-bind-write): per-table col_tag_bind_mode + col_num_per_tag in WriteConfig` — `WriteConfig` 加 2 字段 + `check_col_tag_bind_mode_positive` 校验 + 6 config_parser case
+  - **commit 2 (e33605e 部分改写)** `feat(orchestrator): skip row aggregate generation when col_tag_bind_mode=true` — `_generate_table_seeds` 加 `skip_row_aggregate` + main entry 装配 `write_cfg_by_table` + 4 orchestrator case
+  - **commit 3 (90f7dee + 6455cab + c078431)** `feat(setup-tg): append bind sampler for col_tag_bind tables` — `generate_bind_setup_thread_group` + hash 分组 Groovy sampler + 4 setup_bind + 1 hash_distribution 反退化
+  - **commit 4 (801ed46)** `feat(write-tg): _build_inline_sql_preprocessor_script col_tag_bind_mode branch` — JDBC bind 路径 + safe SELECT 1 兜底 + 5 inline_sql_bind case
+  - **commit 5 (389dc56 + 76cb16a + 4e3791c)** `feat(rest-write): schemaless mode col_tag_bind branch (InfluxDB Line subset fields)` + 2 fix — schemaless bind + 4 rest_write_bind case
+  - **commit 6 (22092a8)** `feat(main): col_tag_bind_mode validation + write_configs routing + mixed-table fixture` — main entry ValueError 校验 + write_configs 路由 + 4 main_col_bind case + 端到端混合表 fixture
+  - **commit 7 (3e65a37)** `docs(col-tag-bind-write): spec + reference + todolist update` — §col_tag_bind_mode spec §131-144 + reference §5.5 集成段
+  - **D-9 (526dcbf)** `fix(seed-ddl): align decimal/numeric support with spec §403` — adapter `_FLOAT_TYPES` + DDL mapper 加 decimal/numeric + 6 pytest
+  - **D-10 (8246c44)** `fix(col-tag-bind-write): fixture timestamp val_range + root password` — timestamp regex + decimal numeric range + ent 镜像密码策略（Kaiwu#2026）
+  - **D-12/D-13 (f23773a)** `fix(col-tag-bind-write): JMeter 5.6.3 stop API + ptag_values wiring` — `vars.put('request_body','')` 兜底替换 stopThread 错误推断（jmeter.apache.org API 确认 JMeterContext 无 stop 类方法）+ SetupTG 烤 `ptag_values` / `ptag_names` + skeleton.py `_ptag_names_by_table()` 传 write_cfg
+  - **D-11 (7fef4ab)** `fix(col-tag-bind-write): fixture decimal→float8 for ts table type scope` — spec §8.1 (L412-428) 通用时序 data 列类型未含 decimal（仅关系表）
+  - pytest 701→745（+44：6 config_parser + 4 orchestrator + 4 setup_bind + 1 hash_distribution + 5 inline_sql_bind + 4 rest_write_bind + 4 main_col_bind + 3 ddl_mapper + 3 adapter + 10 旧 case 覆盖）。0 regress。schemaless bind path smoke 实测：`iot_monitor.meters` 10 行写入成功。
 
 ## 遗留真问题
 
-（无）
+（无 — D-17 / D-27 已闭环）
+
+## D-23/D-24/D-25/D-26 闭环（2026-08-14）
+
+D-23 修 spec §4 L327 cyclic-fill（random start + wrap-around）：commit 5 简化实现 `rows.remove(0)`（rows 用尽后 prep 静默退出）→ 改 random start + wrap-around（rows 永不用尽）。
+
+D-24 实现 batch_lines 拼 N 行 body：prep 每次 prep 构造 `batch_lines` 个 InfluxDB Line 用 `\n` 分隔，spec §4 L327 完整语义。
+
+D-25 SetupTG bind sampler 给每 deviceCode 烤 batch_lines row（之前每 device 1 row，batch_lines=10 时 10 行重复同一 row → server reject duplicate-value）→ D-25 让 SetupTG 烤 batch_lines 行不同 row（per-(deviceCode, b) hash 取列种子索引）。
+
+D-26 deviceId 用 threadNum 派生：之前 `(iterNum-1 + b) % devicePerThread + deviceStart`，devicePerThread=1 时 mod 1 = 0 → deviceId 永远 = deviceStart → distinct ptag = 1。改 `threadNum × batchLines + b + deviceStart` 让 thread 间区分。
+
+**5min smoke 实测**（user 要求 throughput 偏差 ≤5%）：
+- 4 threads × 1/sec × 10 batch_lines × 300s = 12000 行/thread × 4 = **实测 12000+12000 = 24000 行**
+- meters 12000 (偏差 0%)
+- t_full 12000 (偏差 0%)
+- meters distinct ptag = 4 ✓ (SetupTG 烤的 4 deviceCode)
+- pytest 746 passed (0 regress)
+
+## D-15 / D-22 闭环（2026-08-14）
+
+D-15 真根因找到（D-22 commit `78b81a4`）：**不是 commit 5 加的 `escapeLineValue`**（它是死代码，0 调用），而是 **`formatFieldValue` 行 100 的字符串转义分支**——`replaceAll('\\\\\\\\', '\\\\\\\\\\\\\\\\')` Python 双反斜杠转义链到 Groovy 单引号串后 Java regex 看到 trailing backslash。
+
+之前能调通的原因：D-21 之前 Write TG ThreadGroup `num_threads` 硬编码 1，t_full threadNum=1 永不跑 prep——formatFieldValue 路径从未真触发。D-21 修 num_threads 后 threadNum=1 跑 prep 才暴露。
+
+**修法**：formatFieldValue 字符串转义改用 `String.replace` (literal, 无 regex)。同时删 `escapeLineValue` 死代码，保留 `escapeTagValue` 兜底。
+
+**真集群 smoke 验证 D-22**（用户要求非仅 UT）：
+- 临时 fixture t_full 加 col_varchar_3 `val_range: "^[ \",=]+$"`（字符集只含 InfluxDB Line 协议保留字符 `space , = "` 不含字母数字 → 强制 100% 触发 formatFieldValue 字符串转义分支）
+- 实测 seed 内容：`"  \""\""  ="` `" = \""\""\""\""=="` （**全保留字符**）
+- smoke `PatternSyntaxException = 0`（D-22 修法生效）
+- DB `col_varchar_3` 真值含 `"  \""\""  ="`（**保留字符 round-trip 写入成功**）
+- 回归 fixture 删除 col_varchar_3 后 pytest 746 passed + smoke t_full 5 行
+
+**smoke 实测**（D-22 后）：
+- iot_monitor.meters (bind): 20 行 ✓ (D-21 互补列不变)
+- iot_monitor.t_full (full-row): 5 行 ✓ (seed_num=5 用尽后 rows empty 兜底)
+- pytest 746 passed
+
+## 收尾确认
+
+**col-tag-bind-write 当前状态**（11 commits ahead origin）：
+```
+e765bf1 docs(col-tag-bind): per-deviceCode key 修订 + per-group-subsets DCR 跟踪
+fcaef6f fix(col-tag-bind-write): per-deviceCode SharedMemory key + col_names by loop index (D-21)
+be6b7fe docs(todolist): D-14 bind path ptag_values 真值验证 + 移除 D-16
+2fdabde fix(col-tag-bind-write): bind SetupTG first-ptag = deviceCode regardless of name (D-14)
+de87bea docs(col-tag-bind-write): checkpoint D-9/D-10/D-11/D-12/D-13 + D-15/D-16/D-17 follow-ups
+7fef4ab fix(col-tag-bind-write): fixture decimal→float8 for ts table type scope (D-11)
+f23773a fix(col-tag-bind-write): JMeter 5.6.3 stop API + ptag_values wiring (D-12/D-13)
+8246c44 fix(col-tag-bind-write): fixture timestamp val_range + root password (D-10)
+526dcbf fix(seed-ddl): align decimal/numeric support with spec §403 (D-9)
+3e65a37 docs(col-tag-bind-write): spec + reference + todolist update
+22092a8 feat(main): col_tag_bind_mode validation + write_configs routing + mixed-table fixture
+```
+
+**bind path smoke 真绿**（schemaless + 真集群）：
+- `iot_monitor.meters`：20 行（numThreads=2 + devicePerThread=2）
+- device_1 写 `col_float4_1 + col_float8_1 + col_bool_1 + col_float8_2 + col_char_1`
+- device_3 写 `col_int8_1 + col_int4_1 + col_varchar_1 + col_varchar_2 + col_float8_3`
+- **两组列 100% 互补**（design §1 业务语义："设备 1 关心列 1-5，其他列对它无效"）
+
+**关键修复路径**（从错到对）：
+- commit 5/6: 落地"每组共享前 N 列"简化版（design §4.3 简化说明）
+- D-12: SKILL.md §6.4.5 stopThread 推断错（JMeter 5.6.3 无 stop API）→ 改 `vars.put('request_body','')` 兜底
+- D-13: bind mode tag_set 漏 ptag → SetupTG 烤 `ptag_values` + skeleton 传 `ptag_names_by_table`
+- D-14: SetupTG first-ptag 硬编码 device_id（fixture ptag_varchar_1 落空）→ 按 ptagNamesOrdered[0]
+- D-15: t_full escapeLineValue regex bug — 与 bind 无关，独立 follow-up
+- D-18: 改 colNamesSubset 按 group_id offset（hash 退化鲁棒性差）
+- D-19: 改 random sampling（hash 退化仍是问题）
+- D-21: **彻底改设计**——key=deviceCode（不用 hash）+ col_names by loop index `t` + Write TG ThreadGroup num_threads 修硬编码 1
+
+**设计教训**（D-18 → D-21 完整迭代）：
+- "用 hash 函数决定列分配"对短字符串不可靠——Groovy 默认 hash 退化
+- "用 random sampling" 仍依赖 hash group_id 索引
+- "用 deviceCode 当 key" + "offset 用循环 index"——彻底避开 hash 依赖，每 device 真正独立
+- 业务语义："设备 N 关心列 N" 对应 **per-deviceCode key**（非 per-groupId）
 
 ## 已删（误判 → 真因）
 
@@ -104,6 +196,63 @@ docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
 ```
 
 **容器镜像**：用 `devops.inspur.com:80/isg/zdp/repo/local_repo/daily_svt/kaiwudb/kwdb-x86_64-master:latest`（F-17 已修）。`/kaiwudb/bin/kwbase` 绝对路径，`PATH` 里没有。
+
+## col-tag-bind-write DCR 推进状态（2026-08-05）
+
+**分支**：`col-tag-bind-write`（从 `refactor/generic-test-plan`@`baf4c95` 拉），HEAD `b9301c6`，ahead origin 4 commits。
+
+**产物**（4 件）：
+- `openspec/changes/col-tag-bind-write/proposal.md` (48 行) + `design.md` (156 行) + `tasks.md` (190 行细化版) + `specs/col-tag-bind-write/spec.md` (143 行)
+- `docs/superpowers/specs/2026-08-05-col-tag-bind-write-design.md` (393 行)
+- `docs/superpowers/plans/2026-08-05-col-tag-bind-write.md` (286 行)
+- `todolist.md` checkpoint 更新
+
+**DCR 决策摘要**（8 Decisions）：
+1. `col_tag_bind_mode` 每表独立（`write_config[].tbl_name` 项下），与 mode 正交
+2. SetupTG 复用现有加载行种子文件 sampler + if 分支；启用追加新 JSR223 Sampler 加载列种子
+3. 复用现有列种子文件（Orchestrator 已生成，API 在 `src/seed_data_generator/io.py`）
+4. 映射函数：`hash(ptag_tuple) mod num_threads`（多对一）；每组行数 = `seed_num`
+5. SharedMemory key 区分：`__SHARED_MEM_{db}_{table}_bind`（混合表场景强制需求）
+6. INSERT 列名列表必须包含 NOT NULL 列（ts + primary_tag + 显式 NOT NULL data_col）
+7. 适用所有 5 种 mode（含 schemaless）
+8. schemaless 集成：InfluxDB Line 部分列从 bind 内存种子组取
+
+**下一步**：commit 1 = `WriteConfig` 加 `col_tag_bind_mode` + `col_num_per_tag` 字段 + 6 config_parser pytest case + 全量 701+ 不 regress。
+
+## 跑命令模板（col-tag-bind-write smoke — 待 commit 1-7 落地后跑）
+
+```bash
+cd /home/liujin/workspace/quality-test-pipelines/kwjdbc-svt
+source .venv/bin/activate
+
+# 容器状态（已 TLS 重建 + root/root123 建好）
+docker ps --filter name=kaiwudb-smoke --format "{{.Status}}"
+
+# 1. 生成 JMX
+rm -rf /tmp/jmeter-col-bind-out && mkdir -p /tmp/jmeter-col-bind-out
+python -m kwjdbc_svt.main \
+    tests/kwjdbc_svt/fixtures/test_model_col_bind.yaml \
+    tests/kwjdbc_svt/fixtures/test_cfg_col_bind.yaml \
+    -o /tmp/jmeter-col-bind-out
+
+# 2. 跑 jmeter
+cd /tmp/jmeter-col-bind-out
+timeout 30 jmeter -n -t test_plan.jmx \
+    -Jtest_duration=10 -Jnum_threads=4 -Jdevice_start=1 -Jdevice_per_thread=2 \
+    -Jdb_url=jdbc:kaiwudb://127.0.0.1:26257/defaultdb \
+    -Jrest_api.hostname=127.0.0.1 \
+    -Jrest_api.http_port=8081 \
+    -Jrest_api.ca_cert_path=$PWD/../tests/kwjdbc_svt/fixtures/ca.crt \
+    -Jwrite_throughput=60 \
+    -l /tmp/jmeter-col-bind.jtl -j /tmp/jmeter-col-bind.log 2>&1 | tail -5
+
+# 预期（commit 7 落地后）：SetupTG 3/3 + Write 10/10 + Query 1/1
+#   DB `iot_monitor.meters` count(*) = 4 × 2 × 5 = 40 行
+#   INSERT 列数 = ts + 1 ptag + col_num_per_tag (5) = 7
+#   反退化 §8.8：JTL 中至少 2 个不同 insert_sql 列名片段
+docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
+    -e "select count(*) from iot_monitor.meters; select distinct device_id from iot_monitor.meters"
+```
 
 ## 改动文件清单（R-3 + F-17 + 条件关系初始化 + §1-§6 + §6.4/2docs + §6.4.2全修+B1/B3/B5 基线 d461e40）
 

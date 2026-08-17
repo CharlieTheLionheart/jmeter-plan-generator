@@ -249,6 +249,60 @@ INSERT INTO meters VALUES (NOW(), 17.01, 220, 0.29,
 
 类型映射要点：标签**保留数值类型**（Integer/Float → FLOAT8），不做全 VARCHAR 化。其他类型（如 bool）输入则报错。
 
+### 5.5 col_tag_bind + schemaless 集成（OpenSpec `col-tag-bind-write`，2026-08-05）
+
+col_tag_bind_mode 在 schemaless 路径下的行为：InfluxDB Line Protocol body 的 `field_set` 部分只填按 hash 分组选取的子集 data 列，`tag_set` 部分仍按所有 ptag + regular_tag 填（保持 measurement 标识完整）。
+
+#### 报文结构（col_tag_bind_mode=true）
+
+```
+<measurement>,<ptag1>=<v>,<ptag2>=<v>,<tag1>=<v> <subset_field_1>=<v>,<subset_field_2>=<v>,ts=<epoch_ms> <timestamp>
+```
+
+#### 与 legacy full-row 行为对比
+
+| 字段 | legacy（`col_tag_bind_mode=false`） | bind（`col_tag_bind_mode=true`） |
+|------|------------------------------------|-----------------------------------|
+| `tag_set` | 全部 ptag + regular_tag | 同 legacy（保持完整） |
+| `field_set` | 全部 data 列 + ts | **子集** data 列（`col_num_per_tag` 列，按 hash 分组选取）+ ts |
+| 列来源 | 列种子文件全行随机采样 | `__SHARED_MEM_{db}_{table}_bind`（SetupTG bind sampler 预先生成） |
+| 空 group 兜底 | 无（不进入 bind 路径） | `ctx.stopThread()`（与 B5 同语义，不发空 body） |
+
+#### hash 分组语义
+
+- 每个 `__SHARED_MEM_{db}_{table}_bind` 是 `Map<group_id, {col_names: List, row_values: List}>`，由 SetupTG bind sampler 生成时烘焙
+- 运行时 Write TG PreProcessor 算 `ptagTuple = [deviceCode, ...]`（`deviceCode = deviceIdentifier(calculateDeviceNumber(threadNum, deviceStart, devicePerThread, 0))`），`group_id = Math.abs(ptagTuple.hashCode()) % num_threads`
+- SetupTG + Write TG 两侧 `device_per_thread` 必须一致（生成时 bake，UDV 不 override；commit 5 fix `76cb16a` 对齐 SetupTG 的 baked 行为）
+
+#### 示例（10 data_cols, col_num_per_tag=5, num_threads=4）
+
+Legacy full-row（10 fields）：
+
+```
+meters,device_id=device_1,location=Beijing current=17.01,voltage=220,phase=0.29,int1=1,int2=2,v1="A",v2="B",b1=true,ts=1700000000000 1700000000000
+```
+
+Bind（5 subset fields，按 hash 选）：
+
+```
+meters,device_id=device_1,location=Beijing current=17.01,v2="B",b1=true,int1=1,ts=1700000000000 1700000000000
+```
+
+注意 bind 路径下 `tag_set` 不变（`device_id`, `location`），`field_set` 只含 `col_num_per_tag=5` 个 data 列（服务端对未列出的 field 用 NULL / 上次值填充，符合 InfluxDB Line 语义）。
+
+#### 安全兜底
+
+- `bindGroups == null || bindGroups.isEmpty()` → `log.warn(...)` + `ctx.stopThread()`，不发请求
+- `group == null`（hash 算出的 group_id 不在 map 里）→ 同上 `ctx.stopThread()`
+- 与 JDBC 路径（`_build_inline_sql_preprocessor_script`）的 safe `SELECT 1` 兜底语义对齐
+
+#### 适用所有 5 种 mode
+
+bind 路径设计原则：**与 `mode` 正交**。spec §col_tag_bind_mode 段明确：
+- `single_insert` / `batch_insert` / `single_prepared` / `batch_prepared` 走 JDBC 路径（`_build_inline_sql_preprocessor_script`）
+- `schemaless` 走本节描述的 InfluxDB Line 路径
+- `WriteConfig.check_col_tag_bind_mode_positive`（commit 1 落地）只校验 `col_num_per_tag > 0`；`col_num_per_tag ≤ data_col_count` + `primary_tag_count ≥ 1` 在 `main entry` 校验（commit 6 落地）
+
 ## 6. 认证与传输（P0）
 
 ### 6.1 认证方式：Token 认证（**P0 唯一**）
