@@ -118,6 +118,11 @@ def map_exception_to_exit_code(exc: BaseException) -> int:
     """Map a runtime exception to a stable shell exit code."""
     if isinstance(exc, ConfigParserError):
         return EXIT_VALIDATION
+    # col-tag-bind-write (2026-08-05): main entry cross-reference
+    # validation raises ``ValueError`` (per-table constraint violations);
+    # treat as validation failure, not unexpected.
+    if isinstance(exc, ValueError):
+        return EXIT_VALIDATION
     if isinstance(exc, SeedGenError):
         return EXIT_SEED
     if isinstance(exc, DdlGenerationError):
@@ -154,6 +159,42 @@ def _build_columns_by_table(model: TestModelConfig) -> dict[str, List[str]]:
             fqn = f"{db.name}.{table.name}".lower()
             out[fqn] = column_list
     return out
+
+
+def _validate_col_tag_bind_constraints(
+    model: TestModelConfig,
+    cfg: TestConfig,
+) -> None:
+    """col-tag-bind-write (2026-08-05): main entry validation.
+
+    Cross-references each ``col_tag_bind_mode=True`` ``WriteConfig``
+    against its ``TestModelConfig`` table. Per-table upper-bound
+    (``col_num_per_tag <= data_col_count``) and ptag-count check
+    (``primary_tag_count >= 1``) cannot live on ``WriteConfig`` alone
+    because they require cross-reference to ``TestModelConfig``.
+
+    Raises :class:`ValueError` naming the offending ``{db}.{table}``.
+    Rel tables are skipped: bind mode is a ts-table feature (rel tables
+    have no primary tags, so the hash-bucket key is undefined).
+    """
+    for db in model.ts_dbs:
+        for table in db.tables:
+            wc = cfg.find_write_config(db.name, table.name)
+            if wc is None or not wc.col_tag_bind_mode:
+                continue
+            fqn = f"{db.name}.{table.name}"
+            if wc.col_num_per_tag > table.data_col_count:
+                raise ValueError(
+                    f"col_tag_bind_mode=true requires col_num_per_tag "
+                    f"({wc.col_num_per_tag}) <= data_col_count "
+                    f"({table.data_col_count}) for {fqn}"
+                )
+            if table.primary_tag_count < 1:
+                raise ValueError(
+                    f"col_tag_bind_mode=true requires primary_tag_count "
+                    f">= 1 for {fqn}, got primary_tag_count="
+                    f"{table.primary_tag_count}"
+                )
 
 
 def _wants_prepared(cfg: TestConfig) -> bool:
@@ -297,17 +338,30 @@ def _run_pipeline(
 
     # Seeds (under seeds/ subdir; absolute path passed to generate_seeds)
     seeds_root = output_dir / "seeds"
-    seed_paths_map = generate_seeds(model, seeds_root)
+    # col-tag-bind-write (2026-08-05): pass cfg so Orchestrator can honor
+    # per-table ``col_tag_bind_mode`` and skip row-aggregate generation
+    # for opt-in tables.
+    seed_paths_map = generate_seeds(model, seeds_root, test_cfg=cfg)
     # Reshape seed_paths_map (db_name.table -> list[Path]) into
     # seed_csv_paths (db_name -> {table_name -> csv_path}) for the
     # skeleton. Each entry is the row-aggregate CSV (last path is the
     # aggregate; column seed files are written but not used by the
     # skeleton — shared-memory setup reads them directly).
+    # col-tag-bind-write (2026-08-05): bind-mode tables have NO row
+    # aggregate (Orchestrator skipped write_row_aggregate); the last
+    # path in that list is a column seed file, not a row-aggregate.
+    # Wiring ``paths[-1]`` to the row-aggregate loader would emit an
+    # invalid ``csvPath=`` in SetupTG. Exclude bind-mode tables from
+    # ``seed_csv_paths``; commit 3 wires them up via SetupTG bind sampler.
     seed_csv_paths: dict[str, dict[str, str]] = {}
     for fqn, paths in seed_paths_map.items():
         db_name, table_name = fqn.split(".", 1)
-        if paths:
-            seed_csv_paths.setdefault(db_name, {})[table_name] = str(paths[-1])
+        if not paths:
+            continue
+        wc = cfg.find_write_config(db_name, table_name)
+        if wc is not None and wc.col_tag_bind_mode:
+            continue
+        seed_csv_paths.setdefault(db_name, {})[table_name] = str(paths[-1])
 
     # DDL
     ddl_statements = DDLGenerator(model).generate_statements()
@@ -354,6 +408,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         logger.info("writing artifacts to %s", output_dir)
 
         model, cfg = load_configs(args)
+        # col-tag-bind-write (2026-08-05): per-table cross-reference
+        # validation runs before _run_pipeline so failures short-circuit
+        # seed generation (which would otherwise produce orphan column-seed
+        # files for the rejected bind-mode table).
+        _validate_col_tag_bind_constraints(model, cfg)
         _run_pipeline(model, cfg, output_dir)
         logger.info("done")
         return EXIT_OK
