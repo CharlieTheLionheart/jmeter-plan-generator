@@ -7,37 +7,37 @@
 
 ## §1. 配置 schema（每表独立）— Plan §阶段 1 → commit 1
 
-- [ ] 1.1 在 `WriteConfig`（[src/config_parser/models.py:344](src/config_parser/models.py#L344)）新增字段：
+- [x] 1.1 在 `WriteConfig`（[src/config_parser/models.py:344](src/config_parser/models.py#L344)）新增字段：
   - `col_tag_bind_mode: bool = False`
   - `col_num_per_tag: int = 0`
-- [ ] 1.2 Pydantic `model_validator(mode="after")`：
+- [x] 1.2 Pydantic `model_validator(mode="after")`：
   - `col_tag_bind_mode=true` 时 `col_num_per_tag > 0`，否则 `ValueError("col_num_per_tag must be > 0 when col_tag_bind_mode=true; got {value}")`
   - **5 种 mode 全允许**（含 `schemaless`），无 mode 限制
-- [ ] 1.3 新增 `tests/config_parser/test_col_tag_bind_config.py`（6 case）：
+- [x] 1.3 新增 `tests/config_parser/test_col_tag_bind_config.py`（6 case）：
   - `test_default_mode_false_and_zero_per_tag`
   - `test_explicit_false_accepted`
   - `test_true_with_positive_per_tag_accepted`
   - `test_true_with_zero_per_tag_rejected`
   - `test_true_with_negative_per_tag_rejected`
   - `test_all_five_modes_accepted_when_bind_enabled`
-- [ ] **verification**: `pytest tests/config_parser/test_col_tag_bind_config.py -v` → 6 pass；`pytest tests/config_parser/` → 0 regress
-- [ ] **commit 1**: `commit_1_pending` → `feat(col-tag-bind-write): per-table col_tag_bind_mode + col_num_per_tag in WriteConfig`
+- [x] **verification**: `pytest tests/config_parser/test_col_tag_bind_config.py -v` → 6 pass；`pytest tests/config_parser/` → 0 regress
+- [x] **commit 1**: `commit_1_pending` → `feat(col-tag-bind-write): per-table col_tag_bind_mode + col_num_per_tag in WriteConfig`
 
 ## §2. Orchestrator 跳过行种子文件生成 — Plan §阶段 2 → commit 2
 
-- [ ] 2.1 修改 `src/seed_data_generator/orchestrator.py::_generate_table_seeds`：
+- [x] 2.1 修改 `src/seed_data_generator/orchestrator.py::_generate_table_seeds`：
   - 新增关键字参数 `skip_row_aggregate: bool = False`
   - `True` 时跳过 `build_row_aggregate` + `write_row_aggregate` + `generated.append(aggregate_path)`
   - 列种子文件**照常生成**（不依赖 `skip_row_aggregate`）
-- [ ] 2.2 `generate_seeds` 顶层循环增加查 `test_cfg.write_configs` + 设 `skip_row_aggregate=True` 当 `col_tag_bind_mode=True`
-- [ ] 2.3 新增工具函数 `_find_write_config_for_table(test_cfg, db_name, table_name) -> Optional[WriteConfig]`（放 `src/kwjdbc_svt/main.py`）
-- [ ] 2.4 新增 `tests/seed_data_generator/test_orchestrator_col_bind.py`（4 case）：
+- [x] 2.2 `generate_seeds` 顶层循环增加查 `test_cfg.write_configs` + 设 `skip_row_aggregate=True` 当 `col_tag_bind_mode=True`
+- [x] 2.3 新增工具函数 `_find_write_config_for_table(test_cfg, db_name, table_name) -> Optional[WriteConfig]`（放 `src/kwjdbc_svt/main.py`）
+- [x] 2.4 新增 `tests/seed_data_generator/test_orchestrator_col_bind.py`（4 case）：
   - `test_skip_row_aggregate_skips_aggregate_csv`
   - `test_skip_row_aggregate_keeps_column_seeds`
   - `test_default_skip_false_keeps_aggregate`
   - `test_mixed_table_skip_only_for_bind`
-- [ ] **verification**: `pytest tests/seed_data_generator/test_orchestrator_col_bind.py -v` → 4 pass；`pytest tests/seed_data_generator/` → 0 regress
-- [ ] **commit 2**: `commit_2_pending` → `feat(orchestrator): skip row aggregate generation when col_tag_bind_mode=true`
+- [x] **verification**: `pytest tests/seed_data_generator/test_orchestrator_col_bind.py -v` → 4 pass；`pytest tests/seed_data_generator/` → 0 regress
+- [x] **commit 2**: `commit_2_pending` → `feat(orchestrator): skip row aggregate generation when col_tag_bind_mode=true`
 
 ## §3. SetupTG 追加 Bind sampler — Plan §阶段 3（合并原 §3 + §4）→ commit 3
 
@@ -161,8 +161,8 @@
 
 ## §8. Smoke 验收 — Plan §阶段 8（commit 8 可选）
 
-- [ ] 9.1 起 `kaiwudb-smoke` 容器（已 TLS 重建 + root/root123）
-- [ ] 9.2 跑 sparse col_bind smoke：
+- [x] 9.1 起 `kaiwudb-smoke` 容器（已 TLS 重建 + root/root123）
+- [x] 9.2 跑 sparse col_bind smoke：
   ```bash
   source .venv/bin/activate
   rm -rf /tmp/jmeter-col-bind-out && mkdir -p /tmp/jmeter-col-bind-out
@@ -179,35 +179,35 @@
       -Jwrite_throughput=60 \
       -l /tmp/jmeter-col-bind.jtl -j /tmp/jmeter-col-bind.log 2>&1 | tail -5
   ```
-- [ ] 9.3 验证：
+- [x] 9.3 验证：
   - SetupTG 3/3 (Login + DDL-1 + DDL-2) + Write 10/10 + Query 1/1
   - `iot_monitor.meters` `count(*) = num_threads × device_per_thread × iterations = 4 × 2 × 5 = 40`
   - ptag 列 `device_id` 非 NULL
   - INSERT 列数 = `ts + 1 ptag + col_num_per_tag (5) = 7`（断言 JTL 中 `insert_sql` 列名部分）
-- [ ] 9.4 **反退化 §8.8**：JTL 中至少 2 个不同 `insert_sql` 列名片段（多个 ptag → 不同 group_id → 不同列子集）
-- [ ] 9.5 schemaless col_bind smoke 同 9.2-9.4，验证 InfluxDB Line `field_set` 子集语义
-- [ ] **verification**: Smoke v1 + v2 全绿；DB 行数 + 列数 + 反退化断言通过
-- [ ] **commit 8** (optional): `commit_8_pending` → `chore(smoke): col_tag_bind smoke v1 + v2 record`
+- [x] 9.4 **反退化 §8.8**：JTL 中至少 2 个不同 `insert_sql` 列名片段（多个 ptag → 不同 group_id → 不同列子集）
+- [x] 9.5 schemaless col_bind smoke 同 9.2-9.4，验证 InfluxDB Line `field_set` 子集语义
+- [x] **verification**: Smoke v1 + v2 全绿；DB 行数 + 列数 + 反退化断言通过
+- [x] **commit 8** (optional): `commit_8_pending` → `chore(smoke): col_tag_bind smoke v1 + v2 record`
 
 ## §10. 反退化测试加固（已并入 §4.6 + §9.4）
 
 - [x] §8.7 单元测试：在 §4.6 已落地 `test_hash_distribution_no_degeneracy`
 - [x] §8.8 冒烟测试：通过 §9.4 JTL 列名片段断言覆盖
-- [ ] 不再单独立 commit；与 commit 4 + commit 9 一起验证
+- [x] 不再单独立 commit；与 commit 4 + commit 9 一起验证
 
 ---
 
 ## 全局验收（9 个 commit 全落 + smoke 全绿后）
 
-- [ ] 全量 `pytest tests/` 通过（baseline 701+ + 新增 ~25 case = ~726 pass）
-- [ ] sparse col_bind smoke：SetupTG 3/3 + Write 10/10 + Query 1/1，DB 行数 = 40
-- [ ] schemaless col_bind smoke：SetupTG 3/3 + Write 10/10 + Query 1/1
-- [ ] 反退化测试 §8.7（单元）+ §8.8（冒烟）通过
-- [ ] docs/specs/kwdb-svt-test-plan-generator-spec.md 已增补 §col_tag_bind_mode
-- [ ] docs/refs/kaiwudb-schemaless-write-reference.md 已增补 §col_tag_bind + schemaless
-- [ ] todolist.md 已更新 DCR 进度（8 commits 落 hash）
-- [ ] working tree clean，无遗留 fix
-- [ ] 分支 `col-tag-bind-write` 已 ahead origin 8 commits，未 push
+- [x] 全量 `pytest tests/` 通过（baseline 701+ + 新增 ~25 case = ~726 pass）
+- [x] sparse col_bind smoke：SetupTG 3/3 + Write 10/10 + Query 1/1，DB 行数 = 40
+- [x] schemaless col_bind smoke：SetupTG 3/3 + Write 10/10 + Query 1/1
+- [x] 反退化测试 §8.7（单元）+ §8.8（冒烟）通过
+- [x] docs/specs/kwdb-svt-test-plan-generator-spec.md 已增补 §col_tag_bind_mode
+- [x] docs/refs/kaiwudb-schemaless-write-reference.md 已增补 §col_tag_bind + schemaless
+- [x] todolist.md 已更新 DCR 进度（8 commits 落 hash）
+- [x] working tree clean，无遗留 fix
+- [x] 分支 `col-tag-bind-write` 已 ahead origin 8 commits，未 push
 
 ## commit 节奏总览
 
