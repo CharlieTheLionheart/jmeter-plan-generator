@@ -134,6 +134,14 @@
   - `single_prepared`：单条 PreparedStatement 写入（T1）
   - `batch_prepared`：批量 PreparedStatement 写入（T1）
   - `schemaless`：无模式写入（T2）
+- `col_tag_bind_mode`：列标签绑定模式（**每表独立**，与 `mode` 正交，5 种 mode 全部适用，含 `schemaless`）。`true` 时启用**列子集** INSERT：每张 col_tag_bind 表只写 `col_num_per_tag` 列（hash 分组后从列种子文件随机抽取），而不是全 data 列；`false`（默认）保持全列 INSERT 行为
+  - **每张表独立**：同一 model 中不同表的 `col_tag_bind_mode` 可独立配置（`write_config[]` 数组里分别配各自的 `tbl_name`），与 `mode` 正交
+  - **适用范围**：仅时序表（`ts_dbs` 下的 table）。关系表（`rel_dbs`）无 primary tag 概念，hash 分组语义无定义；启用则 `main entry` 校验抛 `ValueError`
+  - **hash 分组**：每张 col_tag_bind 表按 `hash(ptag_tuple) mod num_threads` 划分为 `num_threads` 个 group，每个 group 写一份列子集到 `__SHARED_MEM_{db}_{table}_bind`；SetupTG 加载列种子文件后写入该 SharedMemory key，Write TG 运行时按 `ptag_tuple` 的 hash 选取对应 group 的列子集
+  - **NOT NULL 列必须列入**：INSERT 列名列表 = `ts` + 所有 `primary_tag` 列 + `col_num_per_tag` 个子集 data 列 + 显式 NOT NULL data 列（`nullable=false` 的 data 列；LinkedHashSet 保序去重）。NOT NULL data 列必须由生成器列入每组 subset，否则生成的 INSERT 会违反 NOT NULL 约束
+  - **JDBC 路径**：`_build_inline_sql_preprocessor_script` 走 bind 分支，生成 `INSERT INTO <table> (ts, ptag, subset_cols) VALUES (?, ?, ...)` + safe `SELECT 1` 兜底（empty group → `ctx.stopThread()`）
+  - **schemaless 路径**：InfluxDB Line Protocol body 走 bind 分支，`tag_set` 部分仍按所有 ptag + regular_tag 填，`field_set` 部分只填子集 data 列 + `ts`
+- `col_num_per_tag`：col_tag_bind_mode 下每个 group 包含的 data 列数。`col_tag_bind_mode=true` 时必须 `> 0`（`WriteConfig` 层校验）；同时必须 `≤ data_col_count` 且对应表 `primary_tag_count ≥ 1`（`main entry` 校验）。`col_tag_bind_mode=false` 时忽略
 - `batch_lines`：批次写入记录条数，`batch` 和 `schemaless` 模式下可提供，未提供默认每批次写入 1 条
 - `device_per_thread`：每线程负责写入的设备数，与连接池连接数（`conn_pool_size`）无关。每个线程独立负责一批设备，设备号按线程维度划分
 - `num_threads`：写入线程组并发数，也可以设置为 `conn_pool_size`，大于 `conn_pool_size` 时所有写入线程和查询线程共享和复用连接
@@ -373,15 +381,19 @@ query_config:
 
 ---
 
-## 7. 未来扩展
+## 7. 历史排期（已落地）
 
-| 功能 | 排期 | 说明 |
-|------|------|------|
-| PreparedStatement 写入 | T1 | T0 基础上提高写入性能 |
-| 外键关系生成            | T1 | 支持更复杂的关联场景 |
-| 支持无模式写入          | T2 | **暂不实现，等待后续 DCR 实现** |
+> §7 早期规划（2026-07）了 3 项功能，截至 2026-08-17 全部落地。本节作为历史排期跟踪保留；新增规划请另起章节或 DCR。
 
-> **注意**：`schemaless`（无模式写入 T2）当前版本不实现，代码中虽已预留 `SchemalessWriteStrategy` 骨架，但其所有方法均为空实现或返回占位值。若在 `test_cfg.yaml` 中配置 `mode: schemaless`，生成器将在校验阶段主动报错，拒绝生成测试计划。后续由独立 DCR 推动该功能的完整设计与实现。
+| 功能 | 排期 | 落地状态 | 落地 commit + 说明 |
+|------|------|----------|---------------------|
+| PreparedStatement 写入 | T1 | ✅ 已落地 | commit `9fdcf0d` `(feat) JDBC数据源配置生成器，DirectInsert/PrepareInsert语句生成器` — `mode: single_prepared` / `mode: batch_prepared`（shig fixture 默认 `batch_prepared`，smoke 0 errors） |
+| 外键关系生成            | T1 | ✅ 已落地 | commit `8614b90` `feat(ddl-generator): R-3 续 FK 约束 + workshop 100 行` — `ref:db.table.col` + `_build_foreign_key_clause` + `pregenerate_reference_columns`（shig fixture 3 层 FK，FK 23503 验证 / 0 orphans） |
+| 支持无模式写入          | T2 | ✅ 已落地 | commit `d461e40` `feat(rest-schemaless-write): §6.4.2 full fix` — `mode: schemaless` 走 REST/InfluxDB Line Protocol 路径（`iot_monitor.meters` 真集群 smoke 10/10 → 20 行绿） |
+
+> **代码层冗余**：`src/write_strategies/schemaless_strategy.py` 是 2026-07-10 commit `040e555` 重构时引入的占位 strategy（`get_sampler_script` 抛 `NotImplementedError("Schemaless write strategy is not yet implemented (T2)")`），`src/write_strategies/registry.py:78` 的 `register_strategy("schemaless", ...)` 实际生成器从未调用。`src/jmx_skeleton_generator/generators/skeleton.py:39` 的 `_is_schemaless` 检测后直接走 REST/HTTP/InfluxDB Line 分支，绕过 strategy 层。保留该死代码仅为防御未来回退 strategy 架构时不抛 `KeyError`，**不应**作为 schemaless 模式的实现依据。如需彻底清理，可另起 DCR 删 `schemaless_strategy.py` + 删 `registry.py:78` 注册 + 改 `WriteMode` Literal 注释明确 schemaless 走 REST 路径。
+
+> **回归覆盖**：`tests/kwjdbc_svt/test_main_routes_schemaless_influxdb.py` 已覆盖 `mode: schemaless` + 缺 `rest_api` 段 → `RestConfigError.missing_rest_api()`、缺 `ca_cert_path` → `ValidationError/RestConfigError`、正常生成 JMX 等场景。spec §7 早期描述的"主动报错"语义实际由 `RestConfigError.missing_rest_api`（[src/utils/rest_errors.py:30](src/utils/rest_errors.py#L30)）承担，并非 strategy 层 `NotImplementedError`。
 
 ---
 
