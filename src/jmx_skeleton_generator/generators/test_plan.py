@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import List
+from typing import List, Optional
 
 from config_parser.models import ConnConfig
 from utils.xml_helpers import (
@@ -33,8 +33,27 @@ def _validate_var_name(key: str) -> str:
 # UserDefinedVariables
 # ---------------------------------------------------------------------------
 
-def generate_user_defined_variables(conn_config: ConnConfig) -> List:
+def generate_user_defined_variables(
+    conn_config: ConnConfig,
+    *,
+    seed_dir: Optional[str] = None,
+) -> List:
     """Build Arguments + hashTree elements for connection configuration.
+
+    Parameters
+    ----------
+    conn_config:
+        Connection configuration from ``TestConfig``.
+    seed_dir:
+        Absolute path to the seed CSV directory baked at generation time
+        (typically ``<output_dir>/seeds``). Goes through
+        ``${__P(seed_dir,<default>)}`` so a launching pipeline can
+        override it via ``-J seed_dir=<path>`` on the JMeter CLI (or
+        via ``user.properties`` if the pipeline still loads one).
+        Samplers read the resolved value via ``vars.get('seed_dir')``,
+        which the UDV config element populates from the evaluated
+        ``${__P(...)}`` expression. ``None`` (default for non-skeleton
+        callers) skips emitting the ``seed_dir`` UDV.
 
     Returns
     -------
@@ -94,6 +113,23 @@ def generate_user_defined_variables(conn_config: ConnConfig) -> List:
         "test_duration": f"${{__P(test_duration,{conn_config.test_duration})}}",
         "write_throughput": "${__P(write_throughput,120)}",  # default 120 samples/min
     }
+    # F-16 (2026-08-20): expose ``seed_dir`` as a UDV so the absolute path
+    # baked at generation time (``output_dir/seeds``) is the default, but
+    # the launching pipeline can override it via ``-J seed_dir=<path>``
+    # on the JMeter CLI. Query TG and Setup TG both read it via
+    # ``vars.get('seed_dir')``; the UserDefinedVariables config element
+    # populates that JMeterVariable from the evaluated ``${__P(seed_dir,default)}``
+    # expression.
+    #
+    # Older pipelines that set ``user.seed_conf_path`` directly were
+    # silently broken because ``vars.get('seed_dir')`` does NOT see
+    # JMeter properties (only JMeter variables), so it never reached the
+    # samplers and they fell back to the literal string ``'seeds'``
+    # resolved against the JMeter working directory — usually wrong on
+    # shared svt-test-server boxes where multiple builds run in
+    # parallel.
+    if seed_dir is not None:
+        fields["seed_dir"] = f"${{__P(seed_dir,{seed_dir})}}"
 
     arg_props: List = []
     for key, value in fields.items():

@@ -168,7 +168,13 @@ def _build_bind_sampler_groovy(
 // row memory to {rows_key}.
 def dbName = '{safe_db}'
 def tableName = '{safe_table}'
-def seedRoot = '{safe_seed_root}'
+// F-16 (2026-08-20): read seed root from the ``seed_dir`` UDV (set by
+// the UserDefinedVariables config element from ``${__P(seed_dir,default)}``)
+// so the launching pipeline can override the absolute path baked at
+// generation time (``output_dir/seeds``) via ``-J seed_dir=<path>``
+// on the JMeter CLI. Falls back to the baked path when the UDV is
+// missing (defensive — non-pipeline JMX runs still work).
+def seedRoot = vars.get('seed_dir') ?: '{safe_seed_root}'
 def colNumPerTag = {col_num_per_tag}
 def numThreads = {num_threads}
 def devicePerThread = {device_per_thread}
