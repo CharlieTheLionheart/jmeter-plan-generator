@@ -14,6 +14,7 @@ ts_dbs:
         with_hash: 4
         retentions: 1d
         comment: 4000 列稀疏数控机床表
+        sparse: true
         ts_col:
           name: ts
           type: timestamp

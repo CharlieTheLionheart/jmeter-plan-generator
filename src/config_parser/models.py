@@ -192,6 +192,11 @@ class TsTableConfig(TableConfig):
     primary_tags: list[PrimaryTagColTypeConfig] = Field(default_factory=list)
     regular_tags: list[ColTypeConfig] = Field(default_factory=list)
     retentions: Optional[str] = None
+    # sparse (KaiwuDB 2.4.1+): emit ``create sparse table`` and raise the
+    # data_col_count cap from 4096 to 20000. Only valid for time-series
+    # engine. Coupling with nullable/null_rate is intentionally absent —
+    # see spec §3.2 / §8.3 for the narrow semantic.
+    sparse: bool = False
 
     @model_validator(mode="after")
     def check_type_proportions(self) -> "TsTableConfig":
@@ -218,6 +223,20 @@ class TsTableConfig(TableConfig):
     def check_with_hash(self) -> "TsTableConfig":
         if self.with_hash is not None and not (1 <= self.with_hash <= 50000):
             raise ValueError("with_hash must be between 1 and 50000")
+        return self
+
+    @model_validator(mode="after")
+    def check_data_col_count_cap(self) -> "TsTableConfig":
+        """Sparse (KaiwuDB 2.4.1+) raises the data column cap from 4096 to
+        20000. Regular time-series tables keep the 4096 bound. Enforced at
+        parse time so misconfigured fixtures fail before JMX emission.
+        """
+        cap = 20000 if self.sparse else 4096
+        if self.data_col_count > cap:
+            raise ValueError(
+                f"data_col_count={self.data_col_count} exceeds "
+                f"{'sparse' if self.sparse else 'regular'} cap {cap}"
+            )
         return self
 
     @model_validator(mode="after")

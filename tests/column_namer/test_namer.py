@@ -108,12 +108,17 @@ def test_ts_table_sequential_indices():
 
 
 def test_large_column_count():
-    """TsTableConfig with only data_cols, primary_tag_count=0, regular_tag_count=0."""
+    """TsTableConfig with only data_cols, primary_tag_count=0, regular_tag_count=0.
+
+    sparse (KaiwuDB 2.4.1+) raises the data_col_count cap from 4096 to
+    20000 — opt in here so the 10000-col allocator path still runs.
+    """
     table = TsTableConfig(
         name="t_big",
         data_col_count=10000,
         primary_tag_count=0,
         regular_tag_count=0,
+        sparse=True,
         data_cols=[
             ColTypeConfig(col_type="int8", type_proportion=0.5),
             ColTypeConfig(col_type="varchar(64)", type_proportion=0.5),

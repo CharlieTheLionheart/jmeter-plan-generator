@@ -145,3 +145,70 @@ def test_ts_table_lower_case():
     model = TestModelConfig(ts_dbs=[_ts_db()])
     script = DDLGenerator(model).generate()
     assert script == script.lower()
+
+
+# ---------------------------------------------------------------------------
+# sparse (KaiwuDB 2.4.1+) — ``create sparse table`` DDL keyword emission
+# ---------------------------------------------------------------------------
+
+
+def test_ts_table_sparse_keyword():
+    """sparse=True emits the ``sparse`` keyword between ``create`` and ``table``."""
+    table = _ts_table(sparse=True)
+    model = TestModelConfig(ts_dbs=[_ts_db_with_table(table)])
+    script = DDLGenerator(model).generate()
+    assert "create sparse table if not exists iot_monitor.t_cnc" in script
+
+
+def test_ts_table_non_sparse_keyword():
+    """sparse=False (default) emits the plain ``create table`` form."""
+    model = TestModelConfig(ts_dbs=[_ts_db()])
+    script = DDLGenerator(model).generate()
+    assert "create table if not exists iot_monitor.t_cnc" in script
+    assert "create sparse table" not in script
+
+
+def test_ts_table_sparse_with_if_not_exists_ordering():
+    """``if not exists`` stays directly after ``table`` (spec §8.3)."""
+    table = _ts_table(sparse=True, if_not_exists=True)
+    model = TestModelConfig(ts_dbs=[_ts_db_with_table(table)])
+    script = DDLGenerator(model).generate()
+    # Scope to the CREATE TABLE statement — the script also contains
+    # ``create ts database if not exists iot_monitor`` which would
+    # otherwise trip the substring ordering assertions below.
+    head = script.split("iot_monitor.t_cnc", 1)[0]
+    create_pos = head.rindex("create")
+    sparse_pos = head.rindex("sparse")
+    table_pos = head.rindex("table")
+    ine_pos = head.rindex("if not exists")
+    assert create_pos < sparse_pos < table_pos < ine_pos
+
+
+def test_ts_table_sparse_with_hash_last():
+    """sparse + retentions + comment + with_hash: ordering invariants preserved.
+
+    ``with hash(N)`` must remain LAST regardless of sparse flag.
+    """
+    table = _ts_table(
+        sparse=True, retentions="5d", comment="稀疏表", with_hash=64
+    )
+    model = TestModelConfig(ts_dbs=[_ts_db_with_table(table)])
+    script = DDLGenerator(model).generate()
+    assert "create sparse table" in script
+    assert "retentions 5d" in script
+    assert "comment '稀疏表'" in script
+    assert "with hash(64)" in script
+    assert script.index("retentions 5d") < script.index("with hash(64)")
+    assert script.index("comment '稀疏表'") < script.index("with hash(64)")
+
+
+def test_ts_table_sparse_no_if_not_exists():
+    """sparse=True with if_not_exists=False omits the guard clause."""
+    table = _ts_table(sparse=True, if_not_exists=False)
+    # Disable ``if not exists`` on the database CREATE too, so the script
+    # contains no ``if not exists`` substring at all.
+    db = TsDbConfig(name="iot_monitor", if_not_exists=False, tables=[table])
+    model = TestModelConfig(ts_dbs=[db])
+    script = DDLGenerator(model).generate()
+    assert "create sparse table iot_monitor.t_cnc" in script
+    assert "if not exists" not in script

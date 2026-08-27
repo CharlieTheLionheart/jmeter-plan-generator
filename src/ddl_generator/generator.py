@@ -281,7 +281,13 @@ class DDLGenerator:
         column_defs = [ts_col_def]
         column_defs.extend(self._column_definitions(data_specs))
 
-        parts = ["create table"]
+        parts = ["create"]
+        if table.sparse:
+            # KaiwuDB 2.4.1+: ``create sparse table`` keyword placement is
+            # strictly between ``create`` and ``table``. ``if not exists``
+            # stays directly after ``create`` (spec §8.3 sparse syntax).
+            parts.append("sparse")
+        parts.append("table")
         if table.if_not_exists:
             parts.append("if not exists")
         parts.append(f"{db_name}.{table.name}")

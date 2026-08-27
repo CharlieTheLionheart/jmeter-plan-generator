@@ -55,6 +55,7 @@
 - `data_cols`：数据列类型配置列表（关系表和时序表共用）
 - `primary_tags`：时序表主 tag 列类型配置列表，其值绑定到设备后固定不变，用于唯一标识时序数据源
 - `regular_tags`：时序表一般 tag 列类型配置列表，其值在初始化时绑定到设备（由 primary_tags 的笛卡尔积唯一标识）后固定不变，写入时不随时间变化
+- `sparse`：是否生成稀疏时序表（`create sparse table`），仅 `ts_dbs` 下表生效；启用后该表的 `data_col_count` 上限放宽至 20000（默认普通时序表上限 4096）。与 `nullable` / `null_rate` 字段无强制耦合。
 
 **列类型定义字段（适用于 `primary_keys`、`primary_tags`、`regular_tags`、`data_cols` 下的列表条目）**
 
@@ -505,6 +506,8 @@ create table table_name (
     ...
 ) primary tags(tag1)
   [retentions keep_duration];
+
+   稀疏表语法（KaiwuDB 2.4.1+）：`create sparse table table_name (...) tags(...) primary tags(...)`，仅时序引擎支持；列数上限 20000，普通时序表上限 4096。
 
 2. 参数说明：
 - 第一列必须是时间戳列，且列名必须为 k_timestamp，数据类型为 timestamp 或 timestamptz，且必须设置为 not null。
