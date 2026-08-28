@@ -169,7 +169,7 @@ def _build_bind_sampler_groovy(
 def dbName = '{safe_db}'
 def tableName = '{safe_table}'
 // F-16 (2026-08-20): read seed root from the ``seed_dir`` UDV (set by
-// the UserDefinedVariables config element from ``${__P(seed_dir,default)}``)
+// the UserDefinedVariables config element from ``${{__P(seed_dir,default)}}``)
 // so the launching pipeline can override the absolute path baked at
 // generation time (``output_dir/seeds``) via ``-J seed_dir=<path>``
 // on the JMeter CLI. Falls back to the baked path when the UDV is

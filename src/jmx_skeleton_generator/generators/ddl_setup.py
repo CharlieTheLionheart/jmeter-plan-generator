@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from utils.rest_errors import RestConfigError
@@ -245,6 +244,33 @@ def _build_jsr223_postprocessor_element(
     )
 
 
+def _build_jsr223_preprocessor_element(
+    name: str, testname: str, script: str
+) -> Any:
+    """构造 ``<JSR223PreProcessor>`` 元素（scriptLanguage=groovy）。
+
+    用途：DDL Login sampler 在启动前注入 runtime 算的 Authorization 头。
+    详见 ``generate_ddl_setup_http_thread_group`` line 333 改写说明。
+    """
+    return make_element(
+        "JSR223PreProcessor",
+        name=name,
+        testname=testname,
+        attributes={
+            "guiclass": "TestBeanGUI",
+            "testclass": "JSR223PreProcessor",
+            "enabled": "true",
+        },
+        children=[
+            string_prop("cacheKey", "true"),
+            string_prop("filename", ""),
+            string_prop("parameters", ""),
+            string_prop("script", script),
+            string_prop("scriptLanguage", "groovy"),
+        ],
+    )
+
+
 def _build_jsr223_assertion_element(
     name: str, testname: str, script: str
 ) -> Any:
@@ -331,21 +357,47 @@ def generate_ddl_setup_http_thread_group(
     protocol = "https"
 
     # 2) Login sampler：GET login_url_path + Authorization: Basic base64(user:pass)。
-    login_user = rest_api_config["login_user"]
-    login_password = rest_api_config["login_password"]
+    #
+    # 注意：Authorization 头部值**不**在生成期算 — 旧实现 (line 337-339) 把
+    # ``base64.b64encode(f"{login_user}:{login_password}")`` 烤进 JMX，导致
+    # ``Authorization: Basic cm9vdDpyb290MTIz`` 字面硬编，跨用户 / 跨密码
+    # fixture 强制重生成。改为：HeaderManager 不带 Authorization；
+    # JSR223PreProcessor runtime 从 UserDefinedVariables 读
+    # ``login_user`` / ``login_password``，计算 ``Basic `` + base64 注入。
+    # ``login_user`` / ``login_password`` 已在 UserDefinedVariables config
+    # element 中烤入（采用与 ``rest_api.hostname`` / ``rest_api.http_port``
+    # 相同的 ``${__P(rest_api.login_user,...)}`` + ``${__P(rest_api.login_password,...)}``
+    # UDV 模式，env ``-J`` 可覆盖）。
     login_path = rest_api_config["login_url_path"]
-    login_basic = "Basic " + base64.b64encode(
-        f"{login_user}:{login_password}".encode()
-    ).decode()
 
     login_sampler, login_hash = http_request_sampler_element(
         method="GET",
         path=login_path,
-        headers={"Authorization": login_basic},
+        headers={},
         body="",
         ssl_context=ssl_context,
         name="DDL Login",
         testname="DDL Login",
+    )
+
+    login_auth_script = (
+        'def u = vars.get("login_user") as String\n'
+        'def p = vars.get("login_password") as String\n'
+        'if (u == null || p == null) {\n'
+        '    log.error("REST Login Auth: missing UDV login_user/login_password")\n'
+        '    return\n'
+        '}\n'
+        'def basic = "Basic " + (u + ":" + p).bytes.encodeBase64().toString()\n'
+        'sampler.getHeaderManager().removeHeaderNamed("Authorization")\n'
+        'sampler.getHeaderManager().add(\n'
+        '    new org.apache.jmeter.protocol.http.control.Header("Authorization", basic)\n'
+        ')\n'
+        'return'
+    )
+    login_auth_preproc = _build_jsr223_preprocessor_element(
+        name="REST Login Auth Header",
+        testname="REST Login Auth Header",
+        script=login_auth_script,
     )
     # 注入 domain / port / protocol（http_request_sampler_element 不产出这三项
     # —— utils ref doc R1 锁定的 caller 约定，否则 JMeter 报
@@ -387,6 +439,13 @@ def generate_ddl_setup_http_thread_group(
 
     children: List = [login_sampler, login_hash, json_extractor, empty_hash_tree(),
                       setprop_postproc, empty_hash_tree()]
+
+    # Mount the Login Auth PreProcessor inside the login_sampler's hashTree
+    # so it executes immediately before the sampler fires (JMeter scans the
+    # hashTree children in order).  Mirrors the ddl_hash.append pattern at
+    # line 416 below.
+    login_hash.append(login_auth_preproc)
+    login_hash.append(empty_hash_tree())
 
     # 5) DDL pre-create HTTP samplers（pre_create_tables=true 时）。
     ddl_url_path = rest_api_config["ddl_url_path"]

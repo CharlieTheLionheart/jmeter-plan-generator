@@ -147,9 +147,37 @@ def test_pre_create_true_emits_login_plus_ddl_samplers():
     assert _prop_map(login)["HTTPSampler.method"] == "GET"
     assert _prop_map(login)["HTTPSampler.path"] == "/restapi/login"
 
-    # Login 的 Authorization 应是 Basic <base64(user:pass)>
-    expected_basic = "Basic " + base64.b64encode(b"root:root123").decode()
-    assert _header_pairs(elems, login)["Authorization"] == expected_basic
+    # Login Authorization is NOT baked at generation time. The HeaderManager
+    # carries no Authorization row; a JSR223PreProcessor computes the
+    # ``Basic <base64(user:pass)>`` value at runtime from the
+    # ``login_user`` / ``login_password`` UDVs.
+    assert "Authorization" not in _header_pairs(elems, login), (
+        "Login sampler must NOT bake the Authorization header — runtime "
+        "PreProcessor computes it from login_user/login_password UDVs"
+    )
+
+    # The PreProcessor script computes base64(user:pass) at runtime. Check
+    # the script literal lives under the Login sampler's hashTree.
+    login_preprocs = _collect_by_tag(elems, "JSR223PreProcessor")
+    login_preprocs = [
+        el for el in login_preprocs
+        if el.get("testname") == "REST Login Auth Header"
+    ]
+    assert len(login_preprocs) == 1, (
+        f"expected exactly one Login Auth PreProcessor, got {len(login_preprocs)}"
+    )
+    preproc_script = next(
+        sp.text for sp in login_preprocs[0].iter()
+        if _local(sp.tag) == "stringProp" and sp.get("name") == "script"
+    )
+    assert "encodeBase64" in preproc_script
+    assert 'vars.get("login_user")' in preproc_script
+    assert 'vars.get("login_password")' in preproc_script
+
+    # The ``login_user`` / ``login_password`` UDVs are emitted by
+    # ``generate_user_defined_variables`` (test_plan.py), not by this
+    # function. Cover them in a dedicated UDV test rather than asserting
+    # here.
 
     # DDL sampler 应是 POST，body 写入 Argument.value，path 是 ddl_url_path
     for i, ddl_sampler in enumerate(http_samplers[1:]):

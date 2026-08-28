@@ -121,6 +121,14 @@ class JMXSkeletonGenerator:
         udv_elements = generate_user_defined_variables(
             self.test_config.conn_config,
             seed_dir=str(Path(self.output_dir) / "seeds"),
+            **(
+                {
+                    "login_user": self.test_config.rest_api_config.login_user,
+                    "login_password": self.test_config.rest_api_config.login_password,
+                }
+                if self.test_config.rest_api_config is not None
+                else {}
+            ),
         )
         assembler = JMXAssembler()
         assembler.add_many(JDBCDataSourceGenerator(conn_config=self.test_config.conn_config.model_dump()).generate())

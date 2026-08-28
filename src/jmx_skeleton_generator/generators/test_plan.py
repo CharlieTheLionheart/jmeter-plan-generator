@@ -37,6 +37,8 @@ def generate_user_defined_variables(
     conn_config: ConnConfig,
     *,
     seed_dir: Optional[str] = None,
+    login_user: Optional[str] = None,
+    login_password: Optional[str] = None,
 ) -> List:
     """Build Arguments + hashTree elements for connection configuration.
 
@@ -130,6 +132,17 @@ def generate_user_defined_variables(
     # parallel.
     if seed_dir is not None:
         fields["seed_dir"] = f"${{__P(seed_dir,{seed_dir})}}"
+
+    # Login auth (mode=schemaless only): expose ``login_user`` / ``login_password``
+    # as UDVs so the DDL Login PreProcessor can compute the runtime
+    # ``Basic`` Authorization header from ``vars.get`` rather than baking
+    # base64(user:pass) at generation time.  Same ``${__P(name,default)}``
+    # form as the conn fields above; pass ``-Jlogin_user=...`` /
+    # ``-Jlogin_password=...`` on the JMeter CLI to override.
+    if login_user is not None:
+        fields["login_user"] = f"${{__P(login_user,{login_user})}}"
+    if login_password is not None:
+        fields["login_password"] = f"${{__P(login_password,{login_password})}}"
 
     arg_props: List = []
     for key, value in fields.items():

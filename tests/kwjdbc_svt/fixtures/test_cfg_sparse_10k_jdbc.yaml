@@ -1,0 +1,27 @@
+# 稀疏表 10000 列 + JDBC bind path smoke 配置
+# 500 device（num_threads=20 × device_per_thread=25），每 device 绑 20 列，
+# 每 sampler 写 10 行，吞吐量 60/分 ≈ 1/秒。
+#
+# 客户端证书由 test_write.sh 透传 -J db_url="${TEST_TARGET}" + client.root.crt
+# 路径 /data/stability_certs/{ca,client.root}.{crt,key.pk8} 在 target server
+# 上在 client cert 不放本 repo（per-env，target 端预置）。
+
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 2
+  device_start: 1
+  test_duration: 10
+
+write_config:
+  - tbl_name: db_sparse_svt.t_meters
+    throughput: 1.0
+    mode: batch_prepared
+    batch_lines: 10
+    device_per_thread: 25
+    num_threads: 20
+    col_tag_bind_mode: true
+    col_num_per_tag: 20
+
+query_config: []
