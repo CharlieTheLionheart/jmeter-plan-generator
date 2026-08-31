@@ -153,6 +153,13 @@ def _build_bind_sampler_groovy(
     safe_table = table.replace("\\", "\\\\").replace("'", "\\'")
     safe_seed_root = str(seed_root).replace("\\", "\\\\").replace("'", "\\'")
     rows_key = f"__SHARED_MEM_{db}_{table}_bind"
+    # write-batch-mode-semantics DCR (2026-08-31): `t` and `deviceIndex`
+    # are Groovy loop variables, NOT Python locals. We declare these
+    # *string sentinels* so the surrounding Python f-string can interpolate
+    # them as literal Groovy GString expressions (e.g. `"${t}_${deviceIndex}"`)
+    # without Python trying to resolve them as Python identifiers.
+    _groovy_t_marker = "t"
+    _groovy_devidx_marker = "deviceIndex"
     # Groovy list literal of ptag names (used by the SetupTG script to
     # mirror the Write TG's ``ptagValues`` so ``hash(ptag_tuple)`` lines
     # up. ``device_id`` is the convention for bind-mode fixtures; pass
@@ -224,71 +231,80 @@ def dataColumns = colValues.keySet().toList().sort()
 //    column subsets. ``colStart = (deviceIndex - 1) * colNumPerTag``
 //    modulo size handles wrap-around when ``colNumPerTag * numThreads <
 //    dataColumns.size()``.
+//    write-batch-mode-semantics DCR (2026-08-31): outer loop now iterates
+//    `t in 0..numThreads, b in 0..devicePerThread` (DCR Decision 4) so
+//    SetupTG bakes `numThreads × devicePerThread` SharedMemory keys — one
+//    per `(threadNum, deviceIndex)` pair. Pre-fix (D-21 + D-26 single-layer
+//    loop) only baked `numThreads` keys (each thread's deviceCode-0),
+//    silently dropping `device_per_thread > 1` devices. gap #1 fix.
 def deviceStart = (vars.get('device_start') != null ?
     (vars.get('device_start') as Integer) : 1)
 def otherPtagNames = ({ptag_names_groovy}) - ['device_id']
 def ptagNamesOrdered = ({ptag_names_groovy})
 def groups = [:]
 for (int t = 0; t < numThreads; t++) {{
-    long deviceNumber = calculateDeviceNumber(
-        t as long, deviceStart as long, devicePerThread as long, 0)
-    def deviceCode = deviceIdentifier(deviceNumber)
-    // D-21 (2026-08-14): per-deviceCode key in SharedMemory. No
-    // List/Object hash call anywhere — Groovy default Object.hash on
-    // a List of short strings is degenerate for short numeric-suffixed
-    // values (measured: device_1/device_3 both land in same group).
-    // Use deviceCode as the literal key so each device's subset is
-    // independent of any hash distribution.
-    // col_names offset: use the SetupTG loop index ``t`` directly
-    // (monotonically 0..numThreads-1 across iterations) rather than
-    // parsing the deviceCode suffix — the suffix parse fails for
-    // device_per_thread > 1 (thread 1 = device_3, not device_2, so
-    // (deviceIndex-1)*colNumPerTag wrap-arounds back to 0).
-    int colStart = (t * colNumPerTag) % dataColumns.size()
-    def colNamesSubset = (1..colNumPerTag).collect {{ idx ->
-        dataColumns[(colStart + idx - 1) % dataColumns.size()]
-    }}
-    def rowVals = colNamesSubset.collect {{ colName ->
-        def vals = colValues[colName]
-        vals ? vals[t % vals.size()] : "null"
-    }}
-    def ptagVals = ptagNamesOrdered.collect {{ ptagName ->
-        // D-14 (2026-08-13): first ptag is deviceCode (injected at runtime).
-        def isFirst = (ptagName == ptagNamesOrdered[0])
-        if (isFirst) return deviceCode
-        def vals = colValues[ptagName]
-        vals ? vals[t % vals.size()] : "null"
-    }}
-    // D-25 (2026-08-14): bake batchLines rows per deviceCode so the Write
-    // TG prep (D-24) can pick a different row per InfluxDB Line within
-    // one batch_lines prep call. Each row is a fresh sample of the
-    // seed pool using a stable hash(deviceCode + b) → reproducible and
-    // avoids the duplicate-key / duplicate-value reject server-side.
-    int batchLines = {batch_lines}
-    def allRowVals = []
-    def allPtagVals = []
-    for (int b = 0; b < batchLines; b++) {{
-        def rv = colNamesSubset.collect {{ colName ->
-            def v = colValues[colName]
-            // Use a deterministic per-(deviceCode, batchLine) sample index.
-            // Hash deviceCode + b to spread across the pool without RNG
-            // (keeps the baked script deterministic).
-            int idx = Math.abs((deviceCode.hashCode() + b + colName.hashCode()) as int) % (v ? v.size() : 1)
-            v ? v[idx] : "null"
+    for (int b = 0; b < devicePerThread; b++) {{
+        int deviceIndex = deviceStart + b
+        // write-batch-mode-semantics DCR (2026-08-31): deviceCode now uses
+        // an inline GString ``"${{t}}_${{deviceIndex}}"`` (rendered by the
+        // f-string with `_groovy_*_marker` sentinels; see comment above)
+        // instead of the legacy "device_N" `deviceIdentifier(...)` form.
+        // The new format binds `deviceIndex` to the absolute device
+        // number (with device_start), so multi-end cooperative runs no
+        // longer collide on deviceCode.
+        def deviceCode = f"${{{_groovy_t_marker}}}_${{{_groovy_devidx_marker}}}"
+        // col_names offset: D-18/D-21 used `t` as the per-thread loop
+        // index, but that mapped onto the same offset for all `b` values
+        // (every device in a thread got the same column subset). Use the
+        // flattened `(t * devicePerThread + b)` index for the offset so
+        // each `(t, b)` pair gets a unique window into dataColumns.
+        int flatIndex = t * devicePerThread + b
+        int colStart = (flatIndex * colNumPerTag) % dataColumns.size()
+        def colNamesSubset = (1..colNumPerTag).collect {{ idx ->
+            dataColumns[(colStart + idx - 1) % dataColumns.size()]
         }}
-        def pv = ptagNamesOrdered.collect {{ ptagName ->
+        def rowVals = colNamesSubset.collect {{ colName ->
+            def vals = colValues[colName]
+            vals ? vals[flatIndex % vals.size()] : "null"
+        }}
+        def ptagVals = ptagNamesOrdered.collect {{ ptagName ->
+            // D-14 (2026-08-13): first ptag is deviceCode (injected at runtime).
             def isFirst = (ptagName == ptagNamesOrdered[0])
             if (isFirst) return deviceCode
-            def v = colValues[ptagName]
-            int idx = Math.abs((deviceCode.hashCode() + b + ptagName.hashCode()) as int) % (v ? v.size() : 1)
-            v ? v[idx] : "null"
+            def vals = colValues[ptagName]
+            vals ? vals[flatIndex % vals.size()] : "null"
         }}
-        allRowVals.add(rv)
-        allPtagVals.add(pv)
+        // D-25 (2026-08-14): bake batchLines rows per deviceCode so the Write
+        // TG prep (D-24) can pick a different row per InfluxDB Line within
+        // one batch_lines prep call. Each row is a fresh sample of the
+        // seed pool using a stable hash(deviceCode + b) → reproducible and
+        // avoids the duplicate-key / duplicate-value reject server-side.
+        int batchLines = {batch_lines}
+        def allRowVals = []
+        def allPtagVals = []
+        for (int rb = 0; rb < batchLines; rb++) {{
+            def rv = colNamesSubset.collect {{ colName ->
+                def v = colValues[colName]
+                // Use a deterministic per-(deviceCode, batchLine) sample index.
+                // Hash deviceCode + rb to spread across the pool without RNG
+                // (keeps the baked script deterministic).
+                int idx = Math.abs((deviceCode.hashCode() + rb + colName.hashCode()) as int) % (v ? v.size() : 1)
+                v ? v[idx] : "null"
+            }}
+            def pv = ptagNamesOrdered.collect {{ ptagName ->
+                def isFirst = (ptagName == ptagNamesOrdered[0])
+                if (isFirst) return deviceCode
+                def v = colValues[ptagName]
+                int idx = Math.abs((deviceCode.hashCode() + rb + ptagName.hashCode()) as int) % (v ? v.size() : 1)
+                v ? v[idx] : "null"
+            }}
+            allRowVals.add(rv)
+            allPtagVals.add(pv)
+        }}
+        // D-21: key is deviceCode (String), not group_id (int). Each device
+        // gets exactly one row dict entry — no aggregation, no hash collision.
+        groups[deviceCode] = [col_names: colNamesSubset, row_values: allRowVals, ptag_values: allPtagVals, ptag_names: ptagNamesOrdered]
     }}
-    // D-21: key is deviceCode (String), not group_id (int). Each device
-    // gets exactly one row dict entry — no aggregation, no hash collision.
-    groups[deviceCode] = [col_names: colNamesSubset, row_values: allRowVals, ptag_values: allPtagVals, ptag_names: ptagNamesOrdered]
 }}
 
 // 4. Persist to JMeter props singleton (Write TG reads this namespace).

@@ -303,3 +303,121 @@ def test_bind_subset_per_group_offset(tmp_path: Path) -> None:
     assert len(offsets) == num_threads, (
         f"each device should get a distinct starting offset; got {offsets}"
     )
+
+
+# ---------------------------------------------------------------------------
+# write-batch-mode-semantics DCR (2026-08-31) — gap #1 fix verification
+# ---------------------------------------------------------------------------
+
+
+def _scrape_bind_sampler_javascript(elems: list) -> str | None:
+    """Return the Groovy source baked into the JSR223 Sampler, if any.
+
+    SetupTG bind samplers live under the SetupTG as
+    ``JSR223Sampler[testclass=JSR223Sampler]`` whose ``script`` child
+    contains the rendered Groovy body. We scan the whole
+    ``generate_bind_setup_thread_group`` return list (SetupTG +
+    sampler + hashTree pairs) and surface the first script we find.
+    """
+    for el in elems:
+        for node in el.iter():
+            if node.tag.endswith("}stringProp") and node.attrib.get("name") == "script":
+                return node.text or ""
+    return None
+
+
+def test_bind_sampler_emits_num_threads_x_dpt_groups(tmp_path: Path) -> None:
+    """write-batch-mode-semantics DCR (2026-08-31) gap #1 fix:
+    ``device_per_thread > 1`` MUST bake ``numThreads × device_per_thread``
+    SharedMemory keys — one per ``(threadNum, deviceIndex)`` pair.
+    Pre-fix single-layer loop only baked ``numThreads`` keys (each
+    thread's deviceCode-0), silently dropping every device beyond
+    index 0 when ``device_per_thread > 1``.
+    """
+    db, table = "db_smoke", "t_bind_dpt2"
+    _write_column_seed(tmp_path, db, table, "col_int8_1", ["1", "2"])
+    _write_column_seed(tmp_path, db, table, "col_int8_2", ["10", "20"])
+    cfg_dict = _write_cfg(tbl_name=f"{db}.{table}", bind=True).model_dump()
+    cfg_dict["device_per_thread"] = 2
+    cfg = WriteConfig(**cfg_dict)
+    elems = generate_bind_setup_thread_group(
+        [cfg],
+        seed_root=tmp_path,
+        num_threads=2,
+        ptag_names_by_table={f"{db}.{table}": ["device_id"]},
+    )
+    body = _scrape_bind_sampler_javascript(elems) or ""
+    # Outer + inner for loops; pre-fix only had one ``for (int t = ...)``.
+    assert body.count("for (int t = 0; t < numThreads; t++)") == 1
+    assert body.count("for (int b = 0; b < devicePerThread; b++)") == 1
+    # Groups keyed by `${t}_${deviceIndex}` (GString emitted by the
+    # f-string with `_groovy_*_marker` sentinels — see generator).
+    assert "${t}_${deviceIndex}" in body, body
+
+
+def test_bind_sampler_device_index_uses_device_start(tmp_path: Path) -> None:
+    """write-batch-mode-semantics DCR (2026-08-31): ``deviceStart`` MUST
+    be added to the per-(thread, b) offset, producing deviceIndex in
+    ``[device_start, device_start + device_per_thread - 1]``. Pre-fix
+    D-21 used ``deviceIdentifier(...)`` which always started at 1,
+    causing multi-end cooperative runs to collide on deviceCode.
+    """
+    db, table = "db_smoke", "t_bind_start"
+    _write_column_seed(tmp_path, db, table, "col_int8_1", ["1", "2"])
+    _write_column_seed(tmp_path, db, table, "col_int8_2", ["10", "20"])
+    cfg_dict = _write_cfg(tbl_name=f"{db}.{table}", bind=True).model_dump()
+    cfg_dict["device_per_thread"] = 2
+    cfg = WriteConfig(**cfg_dict)
+    elems = generate_bind_setup_thread_group(
+        [cfg],
+        seed_root=tmp_path,
+        num_threads=2,
+        ptag_names_by_table={f"{db}.{table}": ["device_id"]},
+    )
+    body = _scrape_bind_sampler_javascript(elems) or ""
+    assert "int deviceIndex = deviceStart + b" in body, body
+
+
+def test_bind_sampler_dpt1_backward_compat(tmp_path: Path) -> None:
+    """write-batch-mode-semantics DCR (2026-08-31): ``device_per_thread=1``
+    keeps the pre-fix behavior — single-layer outer + inner loop produces
+    the same `numThreads × 1 = numThreads` keys the legacy code did. This
+    is the existing test_model_col_bind path and MUST keep working.
+    """
+    db, table = "db_smoke", "t_bind_dpt1"
+    _write_column_seed(tmp_path, db, table, "col_int8_1", ["1"])
+    _write_column_seed(tmp_path, db, table, "col_int8_2", ["10"])
+    cfg = _write_cfg(tbl_name=f"{db}.{table}", bind=True)
+    elems = generate_bind_setup_thread_group(
+        [cfg],
+        seed_root=tmp_path,
+        num_threads=2,
+        ptag_names_by_table={f"{db}.{table}": ["device_id"]},
+    )
+    body = _scrape_bind_sampler_javascript(elems) or ""
+    assert body.count("for (int t = 0; t < numThreads; t++)") == 1
+    assert body.count("for (int b = 0; b < devicePerThread; b++)") == 1
+
+
+def test_bind_sampler_multi_end_no_collide(tmp_path: Path) -> None:
+    """write-batch-mode-semantics DCR (2026-08-31): the inner loop body's
+    ``int deviceIndex = deviceStart + b`` line is the runtime hook the
+    multi-end cooperative runner uses to shift deviceCodes — end A
+    (device_start=1) emits ``{0_1, 0_2, 1_1, 1_2}``; end B
+    (device_start=3) emits ``{0_3, 0_4, 1_3, 1_4}``. End-to-end smoke
+    verification lives in commit 7.
+    """
+    db, table = "db_smoke", "t_bind_multi"
+    _write_column_seed(tmp_path, db, table, "col_int8_1", ["1"])
+    _write_column_seed(tmp_path, db, table, "col_int8_2", ["10"])
+    cfg_dict = _write_cfg(tbl_name=f"{db}.{table}", bind=True).model_dump()
+    cfg_dict["device_per_thread"] = 2
+    cfg = WriteConfig(**cfg_dict)
+    elems = generate_bind_setup_thread_group(
+        [cfg],
+        seed_root=tmp_path,
+        num_threads=2,
+        ptag_names_by_table={f"{db}.{table}": ["device_id"]},
+    )
+    body = _scrape_bind_sampler_javascript(elems) or ""
+    assert "int deviceIndex = deviceStart + b" in body
