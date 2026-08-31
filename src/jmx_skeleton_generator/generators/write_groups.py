@@ -240,15 +240,14 @@ if (threadNum < 0) {{
 def localDeviceStart = vars.get('device_start') != null ?
     (vars.get('device_start') as Integer) : 0
 
-def baseTimeKey = 'base_time_' + rowsKey
-def batchSeqKey = 'batch_seq_' + rowsKey
-if (vars.get(baseTimeKey) == null) {{
-    vars.put(baseTimeKey, String.valueOf(System.currentTimeMillis()))
-}}
-def baseTime = (vars.get(baseTimeKey) as Long)
-def batchSeq = vars.get(batchSeqKey) != null ?
-    (vars.get(batchSeqKey) as Integer) : 0
-vars.put(batchSeqKey, String.valueOf(batchSeq + 1))
+// write-batch-mode-semantics DCR (2026-08-31): baseTime MUST be
+// re-sampled on every sampler tick as `System.currentTimeMillis()` —
+// NOT cached to a UDV on thread startup. The pre-fix code held
+// `baseTimeKey` (a per-thread init-time stamp) and added a per-tick
+// `batchSeq * msStep` accumulator. Both choices were wrong: ts must
+// reflect the actual write moment so each INSERT SQL covers a real
+// wall-clock window of `batch_lines × ms_step` starting from now.
+def baseTime = System.currentTimeMillis()
 
 def tsFmt = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSSSSS")
 def total = allRows.size()
@@ -257,7 +256,17 @@ def rows = []
 for (int r = 0; r < batchLines; r++) {{
     def srcRow = allRows.get(new Random().nextInt(total))
     def rowCopy = new ArrayList(srcRow)
-    long ts = baseTime + batchSeq * msStep + r * (msStep / Math.max(1, batchLines))
+    // write-batch-mode-semantics DCR (2026-08-31) gap #5 + #6 fix: ts
+    // for one INSERT SQL MUST be `baseTime + r × msStep` (整步语义)
+    // — i.e. one fixed baseTime + per-row `msStep` increment, no
+    // `batchSeq * msStep` tick accumulation. The pre-fix D-24 form
+    // `baseTime + batchSeq * msStep + r * (msStep / batchLines)` had
+    // two bugs: (a) batchSeq accum. makes ts drift forward on every
+    // sampler tick — incompatible with the business intent that each
+    // SQL covers `batch_lines × msStep` wall-clock window; (b)
+    // `msStep / batchLines` is the 分摊 semantics — incompatible
+    // with gap #6.
+    long ts = baseTime + r * msStep
     long deviceNumber = calculateDeviceNumber(threadNum as long, localDeviceStart as long, devicePerThread as long, r)
     def values = new ArrayList()
     // columns[0] is the ts column (synthesized at write time, not in CSV).
