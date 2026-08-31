@@ -660,71 +660,70 @@ def threadNum = ctx.getThreadNum()
 if (threadNum < 0) {{
     threadNum = (vars.get('__threadNum') as Integer) ?: 0
 }}
-long deviceNumber = calculateDeviceNumber(threadNum as long, deviceStart as long, devicePerThread as long, 0)
-def deviceCode = deviceIdentifier(deviceNumber)
-
-def group = bindGroups.get(deviceCode) as Map
-if (group == null) {{
-    log.warn("BatchPreparedBindPrep: no row for deviceCode " + deviceCode + " in " + rowsKey)
-    vars.putObject("__BATCH_ROWS_${{tableName}}", new ArrayList())
-    return
-}}
-def colNames = group.get("col_names") as List
-def rowValues = group.get("row_values") as List
-def ptagValuesByRow = group.get("ptag_values") as List
-if (ptagValuesByRow == null || ptagValuesByRow.isEmpty()) {{
-    // Backwards compatibility — pre-D-13 SetupTG baked only ptag_names;
-    // fall back to ``[deviceCode]`` so single-ptag tables still bind.
-    ptagValuesByRow = [[deviceCode]]
-}}
-
-def baseTimeKey = 'base_time_' + rowsKey
-def batchSeqKey = 'batch_seq_' + rowsKey
-if (vars.get(baseTimeKey) == null) {{
-    vars.put(baseTimeKey, String.valueOf(System.currentTimeMillis()))
-}}
-def baseTime = (vars.get(baseTimeKey) as Long)
-def batchSeq = (vars.get(batchSeqKey) != null ? (vars.get(batchSeqKey) as Long) : 0L)
-vars.put(batchSeqKey, String.valueOf(batchSeq + 1L))
+// write-batch-mode-semantics DCR (2026-08-31): baseTime MUST be
+// re-sampled on every sampler tick — same reasoning as the main path.
+def baseTime = System.currentTimeMillis()
 
 def batchRows = new ArrayList<Object[]>()
-for (int i = 0; i < batchLines; i++) {{
-    int rowIdx = (int)(Math.abs((long)((deviceCode.hashCode() ^ (batchSeq * 31L + i)) as int)) % Math.max(1, rowValues.size()))
-    def cells = rowValues.get(rowIdx) as List
-    int totalCols = allColumns.size()
-    def outRow = new Object[totalCols]
-    outRow[0] = new java.sql.Timestamp(baseTime + batchSeq * msStep + (long)(i * msStep / Math.max(1, batchLines)))
-    // ptag list for this row — all batchLines rows for one deviceCode
-    // share the same ptag sublist (the device_id is constant per
-    // Write TG iteration), so picking ptagValuesByRow[i % size] is
-    // index-aligned with the SetupTG's bake order.
-    def ptagRow = ptagValuesByRow.get(i % ptagValuesByRow.size()) as List
-    if (ptagRow == null) {{ ptagRow = [deviceCode] }}
-    int cellCount = (cells == null) ? 0 : cells.size()
-    // Walk every column in INSERT order and dispatch to either the
-    // baked ptag list (when the column name matches a ptag) or the
-    // per-deviceCode cell list (when it matches a bound data column).
-    // ptag columns live at the END of the INSERT list (``ColumnNamer``
-    // places ptag after data columns), so we cannot split the row into
-    // fixed [ptag|data] zones — the layout depends on the model.
-    for (int c = 1; c < totalCols; c++) {{
-        String colName = allColumns.get(c) as String
-        boolean isPtag = (colName != null) && colName.startsWith("ptag_")
-        if (isPtag) {{
-            // The ptag index within the baked sublist is determined by
-            // ``ptagNamesOrdered`` from the SetupTG (the order in which
-            // ``ptagNames.groovy`` was baked). All col_tag_bind tables
-            // baked in this repo use a single-ptag schema (ptagCount ==
-            // 1), so the only slot is index 0 — which equals
-            // ``deviceCode`` for the first ptag and falls back to
-            // ``null`` for any subsequent ptag column (D-13 contract).
-            outRow[c] = (ptagCount >= 1 && ptagRow != null && !ptagRow.isEmpty()) ? ptagRow.get(0) : deviceCode
-        }} else {{
-            int subsetIdx = (colNames == null) ? -1 : colNames.indexOf(colName)
-            outRow[c] = (subsetIdx >= 0 && subsetIdx < cellCount) ? cells.get(subsetIdx) : null
-        }}
+// write-batch-mode-semantics DCR (2026-08-31) gap #1 + dpt for fix:
+// outer loop iterates `d in [deviceStart, deviceStart + devicePerThread - 1]`
+// so each sampler tick covers all devices assigned to the current
+// thread. Per device, the existing ``for (int i = 0; i < batchLines; i++)``
+// inner loop accumulates ``batchLines`` rows — total rows per tick =
+// `device_per_thread × batch_lines`. The bind map is looked up by
+// literal deviceCode (no hash — D-21). ts is the per-tick `baseTime +
+// i × msStep` (整步语义 gap #6 fix; pre-fix used
+// `batchSeq * msStep + i * msStep / batchLines` which accumulated per
+// tick AND averaged time across rows — both bugs).
+for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
+    // inline GString — Python f-string double-brace escape outputs
+    // the literal Groovy GString syntax that the surrounding f-string
+    // would otherwise try to resolve as Python identifiers.
+    def deviceCode = f"${{threadNum}}_${{d}}"
+    def group = bindGroups.get(deviceCode) as Map
+    if (group == null) {{
+        log.warn("BatchPreparedBindPrep: no row for deviceCode " + deviceCode + " in " + rowsKey)
+        continue
     }}
-    batchRows.add(outRow)
+    def colNames = group.get("col_names") as List
+    def rowValues = group.get("row_values") as List
+    def ptagValuesByRow = group.get("ptag_values") as List
+    if (ptagValuesByRow == null || ptagValuesByRow.isEmpty()) {{
+        // Backwards compatibility — pre-D-13 SetupTG baked only ptag_names;
+        // fall back to ``[deviceCode]`` so single-ptag tables still bind.
+        ptagValuesByRow = [[deviceCode]]
+    }}
+
+    int totalCols = allColumns.size()
+    for (int i = 0; i < batchLines; i++) {{
+        int rowIdx = (int)(Math.abs((long)((deviceCode.hashCode() ^ (i * 31L)) as int)) % Math.max(1, rowValues.size()))
+        def cells = rowValues.get(rowIdx) as List
+        def outRow = new Object[totalCols]
+        // write-batch-mode-semantics DCR (2026-08-31) gap #6 fix: ts is
+        // `baseTime + i × msStep` (整步语义 — single SQL covers
+        // `batchLines × msStep` window). Pre-fix `batchSeq * msStep +
+        // i * msStep / batchLines` was both the batchSeq-tick-accum
+        // bug AND the 分摊 semantics bug.
+        outRow[0] = new java.sql.Timestamp(baseTime + (long)(i * msStep))
+        // ptag list for this row — all batchLines rows for one deviceCode
+        // share the same ptag sublist (the device_id is constant per
+        // Write TG iteration), so picking ptagValuesByRow[i % size] is
+        // index-aligned with the SetupTG's bake order.
+        def ptagRow = ptagValuesByRow.get(i % ptagValuesByRow.size()) as List
+        if (ptagRow == null) {{ ptagRow = [deviceCode] }}
+        int cellCount = (cells == null) ? 0 : cells.size()
+        for (int c = 1; c < totalCols; c++) {{
+            String colName = allColumns.get(c) as String
+            boolean isPtag = (colName != null) && colName.startsWith("ptag_")
+            if (isPtag) {{
+                outRow[c] = (ptagCount >= 1 && ptagRow != null && !ptagRow.isEmpty()) ? ptagRow.get(0) : deviceCode
+            }} else {{
+                int subsetIdx = (colNames == null) ? -1 : colNames.indexOf(colName)
+                outRow[c] = (subsetIdx >= 0 && subsetIdx < cellCount) ? cells.get(subsetIdx) : null
+            }}
+        }}
+        batchRows.add(outRow)
+    }}
 }}
 vars.putObject("__BATCH_ROWS_${{tableName}}", batchRows)
 """
@@ -811,12 +810,6 @@ def batchLines = {batch_lines}
 def totalRows = sharedRows.size()
 def startIdx = (int)(Math.random() * totalRows)
 
-// 基准时间（每个线程首次执行时一次性获取）
-if (vars.get("base_time_{_safe_key_token(table_name)}") == null) {{
-    vars.put("base_time_{_safe_key_token(table_name)}", String.valueOf(System.currentTimeMillis()))
-}}
-def baseTime = Long.parseLong(vars.get("base_time_{_safe_key_token(table_name)}"))
-def batchSeq = Long.parseLong(vars.get("batch_seq_{_safe_key_token(table_name)}") ?: "0")
 def msStep = {ms_step}L
 
 // 设备号计算（本线程负责的设备范围）
@@ -824,28 +817,41 @@ def threadNum = ctx.getThreadNum()
 def deviceStart = Long.parseLong(vars.get("device_start") ?: "1")
 def devicePerThread = Integer.parseInt(vars.get("device_per_thread") ?: "1")
 def localDeviceStart = calculateLocalDeviceStart(deviceStart, threadNum, devicePerThread)
+// write-batch-mode-semantics DCR (2026-08-31): baseTime MUST be
+// re-sampled on every sampler tick — same reasoning as the main path
+// and bind path. batchSeq counter removed.
+def baseTime = System.currentTimeMillis()
 
 def batchRows = new ArrayList<Object[]>()
-for (int i = 0; i < batchLines; i++) {{
-    def srcRow = sharedRows.get((startIdx + i) % totalRows)
-    def rowCopy = srcRow.clone() as Object[]
-    // Overwrite the first Primary Tag cell with the device identifier.
-    if (ptagIdx >= 0) {{
-        rowCopy[ptagIdx] = "device_${{localDeviceStart + (i % devicePerThread)}}".toString()
+// write-batch-mode-semantics DCR (2026-08-31) gap #1 + dpt for fix:
+// outer loop iterates `d in [deviceStart, deviceStart + devicePerThread - 1]`
+// and inner loop iterates `i in [0, batchLines)` — same shape as bind
+// path: per device, accumulate `batchLines` rows. Total rows per tick
+// = `device_per_thread × batch_lines`.
+for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
+    // inline GString — Python f-string double-brace escape outputs
+    // the literal Groovy GString syntax.
+    def deviceCode = f"${{threadNum}}_${{d}}"
+    for (int i = 0; i < batchLines; i++) {{
+        def srcRow = sharedRows.get((startIdx + i) % totalRows)
+        def rowCopy = srcRow.clone() as Object[]
+        if (ptagIdx >= 0) {{
+            rowCopy[ptagIdx] = deviceCode
+        }}
+        // write-batch-mode-semantics DCR (2026-08-31) gap #6 fix:
+        // ts is `baseTime + i × msStep` (整步语义 — single SQL
+        // covers `batchLines × msStep` window). Pre-fix used
+        // `batchSeq * msStep + i * msStep / batchLines` which
+        // accumulated per tick AND averaged time across rows.
+        def ts = new java.sql.Timestamp(baseTime + (long)(i * msStep))
+        def outRow = new Object[rowCopy.length + 1]
+        outRow[0] = ts
+        System.arraycopy(rowCopy, 0, outRow, 1, rowCopy.length)
+        batchRows.add(outRow)
     }}
-    // Build a [ts, *columns] row matching the SQL ``INSERT`` template
-    // (which prepends ``ts`` to the column list). The CSV row contains
-    // only the non-ts columns in the same order, so the result is
-    // ``[ts, *srcRow]``.
-    def ts = new java.sql.Timestamp(baseTime + batchSeq * msStep + (long)(i * msStep / batchLines))
-    def outRow = new Object[rowCopy.length + 1]
-    outRow[0] = ts
-    System.arraycopy(rowCopy, 0, outRow, 1, rowCopy.length)
-    batchRows.add(outRow)
 }}
 
 vars.putObject("__BATCH_ROWS_${{tableName}}", batchRows)
-vars.put("batch_seq_{_safe_key_token(table_name)}", String.valueOf(batchSeq + 1))
 """
 
 # Groovy scripts for batch_prepared JSR223Sampler (JDBC batch 执行).
