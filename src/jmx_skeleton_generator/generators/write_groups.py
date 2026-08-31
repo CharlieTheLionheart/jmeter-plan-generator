@@ -94,6 +94,11 @@ def _build_inline_sql_preprocessor_script(
     safe_table = "'" + table.replace("\\", "\\\\").replace("'", "\\'") + "'"
     rows_key = f"__SHARED_MEM_{db}_{table}"
     cols_list = ", ".join(f"'{c}'" for c in columns)
+    # write-batch-mode-semantics DCR (2026-08-31): deviceCode is the
+    # inline GString `${threadNum}_${d}` (Groovy `JSR223 built-in
+    # `ctx.getThreadNum()` + the dpt loop index `d`). We escape both
+    # names with `{{name}}` so the surrounding Python f-string
+    # does NOT try to resolve them as Python identifiers.
     ptag_index = (
         columns.index(first_ptag_column)
         if first_ptag_column and first_ptag_column in columns
@@ -253,53 +258,67 @@ def tsFmt = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSSSSS")
 def total = allRows.size()
 
 def rows = []
-for (int r = 0; r < batchLines; r++) {{
-    def srcRow = allRows.get(new Random().nextInt(total))
-    def rowCopy = new ArrayList(srcRow)
-    // write-batch-mode-semantics DCR (2026-08-31) gap #5 + #6 fix: ts
-    // for one INSERT SQL MUST be `baseTime + r × msStep` (整步语义)
-    // — i.e. one fixed baseTime + per-row `msStep` increment, no
-    // `batchSeq * msStep` tick accumulation. The pre-fix D-24 form
-    // `baseTime + batchSeq * msStep + r * (msStep / batchLines)` had
-    // two bugs: (a) batchSeq accum. makes ts drift forward on every
-    // sampler tick — incompatible with the business intent that each
-    // SQL covers `batch_lines × msStep` wall-clock window; (b)
-    // `msStep / batchLines` is the 分摊 semantics — incompatible
-    // with gap #6.
-    long ts = baseTime + r * msStep
-    long deviceNumber = calculateDeviceNumber(threadNum as long, localDeviceStart as long, devicePerThread as long, r)
-    def values = new ArrayList()
-    // columns[0] is the ts column (synthesized at write time, not in CSV).
-    // columns[1..] are the CSV columns in their original order. The CSV
-    // header may include the first ptag column with the literal
-    // ``${{device_code}}`` placeholder — we project over the
-    // ptagIndex slot and ignore the CSV cell there.
-    for (int c = 0; c < nCols; c++) {{
-        if (c == 0) {{
-            values.add("'" + tsFmt.format(new java.util.Date(ts)) + "'")
-        }} else if (c == ptagIndex) {{
-            values.add("'" + deviceIdentifier(deviceNumber) + "'")
-        }} else {{
-            // c=1 in SQL maps to rowCopy[0], c=2 in SQL maps to rowCopy[1], etc.
-            int csvIdx = c - 1
-            if (csvIdx < 0 || csvIdx >= rowCopy.size()) {{
-                values.add("NULL")
+// write-batch-mode-semantics DCR (2026-08-31) gap #3 + dpt for fix:
+// outer loop iterates `d in [localDeviceStart, localDeviceStart +
+// devicePerThread - 1]` so each sampler tick covers all devices
+// assigned to the current thread. Each device contributes one
+// batch_lines-row INSERT — total rows per tick = `batch_lines × dpt`.
+for (int d = localDeviceStart; d < localDeviceStart + devicePerThread; d++) {{
+    // write-batch-mode-semantics DCR (2026-08-31): deviceCode is the
+    // inline GString ``threadNum_d`` (Groovy interpolates the two
+    // built-in / loop vars at runtime) — no calculateDeviceNumber
+    // round-trip (the loop index `d` already IS the absolute device
+    // number) and no legacy "device_N" form.
+    // Python f-string double-brace escape outputs the literal Groovy
+    // GString syntax that the surrounding f-string would otherwise
+    // try to resolve as Python identifiers.
+    def deviceCode = f"${{threadNum}}_${{d}}"
+    for (int r = 0; r < batchLines; r++) {{
+        def srcRow = allRows.get(new Random().nextInt(total))
+        def rowCopy = new ArrayList(srcRow)
+        // write-batch-mode-semantics DCR (2026-08-31) gap #5 + #6 fix: ts
+        // for one INSERT SQL MUST be `baseTime + r × msStep` (整步语义)
+        // — i.e. one fixed baseTime + per-row `msStep` increment, no
+        // `batchSeq * msStep` tick accumulation. The pre-fix D-24 form
+        // `baseTime + batchSeq * msStep + r * (msStep / batchLines)` had
+        // two bugs: (a) batchSeq accum. makes ts drift forward on every
+        // sampler tick — incompatible with the business intent that each
+        // SQL covers `batch_lines × msStep` wall-clock window; (b)
+        // `msStep / batchLines` is the 分摊 semantics — incompatible
+        // with gap #6.
+        long ts = baseTime + r * msStep
+        def values = new ArrayList()
+        // columns[0] is the ts column (synthesized at write time, not in CSV).
+        // columns[1..] are the CSV columns in their original order. The CSV
+        // header may include the first ptag column with the literal
+        // ``${{device_code}}`` placeholder — we project over the
+        // ptagIndex slot and ignore the CSV cell there.
+        for (int c = 0; c < nCols; c++) {{
+            if (c == 0) {{
+                values.add("'" + tsFmt.format(new java.util.Date(ts)) + "'")
+            }} else if (c == ptagIndex) {{
+                values.add("'" + deviceCode + "'")
             }} else {{
-                def raw = rowCopy.get(csvIdx)
-                def s = raw == null ? "" : raw.toString()
-                if (s.length() >= 2 && s.startsWith('"') && s.endsWith('"')) {{
-                    s = s.substring(1, s.length() - 1)
-                }}
-                if (s.equalsIgnoreCase("null") || s.isEmpty()) {{
+                // c=1 in SQL maps to rowCopy[0], c=2 in SQL maps to rowCopy[1], etc.
+                int csvIdx = c - 1
+                if (csvIdx < 0 || csvIdx >= rowCopy.size()) {{
                     values.add("NULL")
                 }} else {{
-                    // Numeric / bool columns: emit unquoted so KaiwuDB
-                    // does not have to coerce a quoted literal
-                    // (KaiwuDB rejects ``'62'`` for an INT8 column).
-                    def colType = (c < typeList.size()) ? typeList.get(c) : ""
-                    def needsQuoting = !(colType == "int2" || colType == "int4" || colType == "int8" || colType == "int" || colType == "tinyint" || colType == "smallint" || colType == "bigint" || colType == "float4" || colType == "float8" || colType == "double" || colType == "float" || colType == "bool" || colType == "boolean")
-                    if (needsQuoting) {{
-                        values.add("'" + s.replace("'", "''") + "'")
+                    def raw = rowCopy.get(csvIdx)
+                    def s = raw == null ? "" : raw.toString()
+                    if (s.length() >= 2 && s.startsWith('"') && s.endsWith('"')) {{
+                        s = s.substring(1, s.length() - 1)
+                    }}
+                    if (s.equalsIgnoreCase("null") || s.isEmpty()) {{
+                        values.add("NULL")
+                    }} else {{
+                        // Numeric / bool columns: emit unquoted so KaiwuDB
+                        // does not have to coerce a quoted literal
+                        // (KaiwuDB rejects ``'62'`` for an INT8 column).
+                        def colType = (c < typeList.size()) ? typeList.get(c) : ""
+                        def needsQuoting = !(colType == "int2" || colType == "int4" || colType == "int8" || colType == "int" || colType == "tinyint" || colType == "smallint" || colType == "bigint" || colType == "float4" || colType == "float8" || colType == "double" || colType == "float" || colType == "bool" || colType == "boolean")
+                        if (needsQuoting) {{
+                            values.add("'" + s.replace("'", "''") + "'")
                     }} else {{
                         values.add(s)
                     }}
@@ -308,6 +327,7 @@ for (int r = 0; r < batchLines; r++) {{
         }}
     }}
     rows.add("(" + String.join(", ", values) + ")")
+}}
 }}
 
 def qualifiedTable = db + "." + table

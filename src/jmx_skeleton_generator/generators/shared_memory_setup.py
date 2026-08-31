@@ -153,13 +153,11 @@ def _build_bind_sampler_groovy(
     safe_table = table.replace("\\", "\\\\").replace("'", "\\'")
     safe_seed_root = str(seed_root).replace("\\", "\\\\").replace("'", "\\'")
     rows_key = f"__SHARED_MEM_{db}_{table}_bind"
-    # write-batch-mode-semantics DCR (2026-08-31): `t` and `deviceIndex`
-    # are Groovy loop variables, NOT Python locals. We declare these
-    # *string sentinels* so the surrounding Python f-string can interpolate
-    # them as literal Groovy GString expressions (e.g. `"${t}_${deviceIndex}"`)
-    # without Python trying to resolve them as Python identifiers.
-    _groovy_t_marker = "t"
-    _groovy_devidx_marker = "deviceIndex"
+    # write-batch-mode-semantics DCR (2026-08-31): deviceCode is the
+    # inline GString `t_deviceIndex` (Groovy interpolates the loop
+    # vars at runtime). The Python f-string double-brace escape outputs
+    # the literal Groovy GString syntax that the surrounding f-string
+    # would otherwise try to resolve as Python identifiers.
     # Groovy list literal of ptag names (used by the SetupTG script to
     # mirror the Write TG's ``ptagValues`` so ``hash(ptag_tuple)`` lines
     # up. ``device_id`` is the convention for bind-mode fixtures; pass
@@ -252,7 +250,7 @@ for (int t = 0; t < numThreads; t++) {{
         // The new format binds `deviceIndex` to the absolute device
         // number (with device_start), so multi-end cooperative runs no
         // longer collide on deviceCode.
-        def deviceCode = f"${{{_groovy_t_marker}}}_${{{_groovy_devidx_marker}}}"
+        def deviceCode = f"${{t}}_${{deviceIndex}}"
         // col_names offset: D-18/D-21 used `t` as the per-thread loop
         // index, but that mapped onto the same offset for all `b` values
         // (every device in a thread got the same column subset). Use the
