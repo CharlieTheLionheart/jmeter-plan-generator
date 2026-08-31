@@ -1447,6 +1447,8 @@ def get_strategy(mode: WriteMode) -> WriteStrategy:
     return STRATEGY_REGISTRY[mode]()
 ```
 
+> ⚠️ **deprecated** (2026-08-31)：策略层在生产里仅 `get_sampler_type()` / `get_config("usePrepared")` 两方法被消费，且只发生在 `single_prepared` / `batch_prepared` 模式；其余 6 个抽象方法在生产里 0 引用。重构为 `jmx_skeleton_generator.generators.write_groups._PREPARED_MODE_SAMPLER` lookup；整个 `src/write_strategies/` 子包 + `tests/write_strategies/` 测试包已删除（commit `ffa6cfd` + 后续 commit）。本段设计文档保留为历史归档（不可再生的实现细节）。
+
 ---
 
 ## 4. 目录结构

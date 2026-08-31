@@ -1,15 +1,17 @@
 """Tests that ``calculateLocalDeviceStart`` is the single source of
-device-start arithmetic across ``batch_prepared`` (JSR223PreProcessor)
-and ``single_prepared`` (JSR223PreProcessor inline) callers.
+device-start arithmetic inside ``batch_prepared`` (JSR223PreProcessor).
 
 Closes multi-end-coordination design §"单一设备号计算 helper".
+
+Note: 2026-08-31 refactor removed the ``write_strategies`` layer and the
+``SinglePreparedStatementStrategy`` preprocessor code path; the
+``single_prepared`` half of this test (used to live here) is no longer
+applicable. Only the ``batch_prepared`` side survives.
 """
 
 from __future__ import annotations
 
 from jmx_skeleton_generator.generators.write_groups import build_batch_prepared_preprocessor_script
-from write_strategies.single_prepared_strategy import SinglePreparedStatementStrategy
-from write_strategies.models import ResolvedTable, WriteRuntime
 
 
 class TestSingleSourceHelper:
@@ -31,9 +33,6 @@ class TestSingleSourceHelper:
             table_name="db.t", first_ptag="ptag_varchar_1",
             batch_lines=1, ms_step=1000,
         )
-        body = script.split(
-            "// -------- batch_prepared: JSR223Sampler body --------"
-        )[-1] if False else script
         # Split off the all_groovy_decls prefix by finding the body's
         # comment marker.
         from utils.preprocessor_helpers import all_groovy_decls
@@ -45,31 +44,14 @@ class TestSingleSourceHelper:
         # inside the helper definition).
         assert "threadNum * devicePerThread" not in body
 
-    def test_single_prepared_preprocessor_uses_helper(self):
-        s = SinglePreparedStatementStrategy()
-        script = s.get_preprocessor_code(
-            ResolvedTable(fqn="db.t", columns=["ts", "c1"]),
-            batch_lines=1,
-            runtime=WriteRuntime(device_per_thread=1),
-        )
-        assert "calculateLocalDeviceStart(" in script
-
-    def test_helper_name_byte_equal_across_two_callers(self):
-        """Both batch_prepared and single_prepared invoke the SAME helper name
-        with the SAME casing — eliminates any future drift."""
-        from write_strategies.batch_prepared_strategy import (
-            BatchPreparedStatementStrategy,
+    def test_helper_decl_token_byte_equal(self):
+        """The helper function name token embedded in the preprocessor body
+        matches the ``all_groovy_decls`` declaration byte-for-byte — guards
+        against silent drift between call site and helper definition."""
+        from utils.preprocessor_helpers import (
+            groovy_calculate_local_device_start_decl,
         )
 
-        # single_prepared
-        single_script = SinglePreparedStatementStrategy().get_preprocessor_code(
-            ResolvedTable(fqn="db.t", columns=["c1"]),
-            batch_lines=1,
-            runtime=WriteRuntime(device_per_thread=1),
-        )
-        assert "calculateLocalDeviceStart(0L, threadNum, devicePerThread)" in single_script
-
-        # batch_prepared
         batch_script = build_batch_prepared_preprocessor_script(
             table_name="db.t", first_ptag="ptag_varchar_1",
             batch_lines=1, ms_step=1000,
@@ -77,12 +59,6 @@ class TestSingleSourceHelper:
         assert (
             "calculateLocalDeviceStart(deviceStart, threadNum, devicePerThread)"
             in batch_script
-        )
-
-        # Both call the SAME function; verify the function-name token matches
-        # the all-groovy-decls declaration exactly.
-        from utils.preprocessor_helpers import (
-            groovy_calculate_local_device_start_decl,
         )
 
         decl = groovy_calculate_local_device_start_decl()

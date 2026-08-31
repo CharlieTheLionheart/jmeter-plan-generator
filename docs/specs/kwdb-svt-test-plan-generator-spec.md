@@ -393,9 +393,9 @@ query_config:
 | 外键关系生成            | T1 | ✅ 已落地 | commit `8614b90` `feat(ddl-generator): R-3 续 FK 约束 + workshop 100 行` — `ref:db.table.col` + `_build_foreign_key_clause` + `pregenerate_reference_columns`（shig fixture 3 层 FK，FK 23503 验证 / 0 orphans） |
 | 支持无模式写入          | T2 | ✅ 已落地 | commit `d461e40` `feat(rest-schemaless-write): §6.4.2 full fix` — `mode: schemaless` 走 REST/InfluxDB Line Protocol 路径（`iot_monitor.meters` 真集群 smoke 10/10 → 20 行绿） |
 
-> **代码层冗余**：`src/write_strategies/schemaless_strategy.py` 是 2026-07-10 commit `040e555` 重构时引入的占位 strategy（`get_sampler_script` 抛 `NotImplementedError("Schemaless write strategy is not yet implemented (T2)")`），`src/write_strategies/registry.py:78` 的 `register_strategy("schemaless", ...)` 实际生成器从未调用。`src/jmx_skeleton_generator/generators/skeleton.py:39` 的 `_is_schemaless` 检测后直接走 REST/HTTP/InfluxDB Line 分支，绕过 strategy 层。保留该死代码仅为防御未来回退 strategy 架构时不抛 `KeyError`，**不应**作为 schemaless 模式的实现依据。如需彻底清理，可另起 DCR 删 `schemaless_strategy.py` + 删 `registry.py:78` 注册 + 改 `WriteMode` Literal 注释明确 schemaless 走 REST 路径。
+> **策略层已合入**：`src/write_strategies/` 子包（`WriteStrategy` ABC + 5 个具体策略 + `STRATEGY_REGISTRY`，2026-07-10 commit `040e555` 引入）在生产里仅 `get_sampler_type()` / `get_config()` 两方法被消费，且只发生在 `single_prepared` / `batch_prepared` 模式。2026-08-31 commit `ffa6cfd` + `XXX` 把该 3 行 strategy 调用折叠为 `jmx_skeleton_generator.generators.write_groups._PREPARED_MODE_SAMPLER` lookup，删除整个 `write_strategies/` 子包 + `tests/write_strategies/` 测试包（设计迁移记录 `docs/migration-write-strategies.md`）。`schemaless` 模式继续由 `skeleton.py:39` 的 `_is_schemaless` 路由走 REST/HTTP/InfluxDB Line 路径，不经 strategy。
 
-> **回归覆盖**：`tests/kwjdbc_svt/test_main_routes_schemaless_influxdb.py` 已覆盖 `mode: schemaless` + 缺 `rest_api` 段 → `RestConfigError.missing_rest_api()`、缺 `ca_cert_path` → `ValidationError/RestConfigError`、正常生成 JMX 等场景。spec §7 早期描述的"主动报错"语义实际由 `RestConfigError.missing_rest_api`（[src/utils/rest_errors.py:30](src/utils/rest_errors.py#L30)）承担，并非 strategy 层 `NotImplementedError`。
+> **回归覆盖**：`tests/kwjdbc_svt/test_main_routes_schemaless_influxdb.py` 已覆盖 `mode: schemaless` + 缺 `rest_api` 段 → `RestConfigError.missing_rest_api()`、缺 `ca_cert_path` → `ValidationError/RestConfigError`、正常生成 JMX 等场景。spec §7 早期描述的"主动报错"语义由 `RestConfigError.missing_rest_api`（[src/utils/rest_errors.py:30](src/utils/rest_errors.py#L30)）承担。
 
 ---
 
