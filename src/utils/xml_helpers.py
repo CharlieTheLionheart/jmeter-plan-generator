@@ -430,9 +430,9 @@ def jdbc_sampler_element(
         Whether the element is enabled.
     use_prepared:
         Whether the JMeter GUI treats the statement as prepared. Default
-        ``False`` preserves the historical XML shape; set ``True`` from
-        ``WriteStrategy.get_config("usePrepared")`` when the strategy
-        drives sampler generation.
+        ``False`` preserves the historical XML shape; set ``True`` for
+        ``single_prepared`` mode (see ``_PREPARED_MODE_SAMPLER`` in
+        ``jmx_skeleton_generator.generators.write_groups``).
     """
     all_props: List[ET.Element] = [
         string_prop("dataSource", data_source),

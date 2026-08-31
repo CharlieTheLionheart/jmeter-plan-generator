@@ -30,9 +30,17 @@ from utils.xml_helpers import (
     string_prop,
     thread_group_element,
 )
-from write_strategies import get_strategy
 
 logger = logging.getLogger(__name__)
+
+# Mode → (JMeter sampler tag, JDBC usePrepared flag).
+# single_prepared uses JDBCSampler w/ usePrepared=true (driver-side bind),
+# batch_prepared uses JSR223Sampler for addBatch/executeBatch (typed-binding
+# dispatch lives in _build_batch_prepared_sampler_body).
+_PREPARED_MODE_SAMPLER: Dict[str, Tuple[str, bool]] = {
+    "single_prepared": ("JDBCSampler", True),
+    "batch_prepared":  ("JSR223Sampler", False),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -1041,12 +1049,11 @@ def generate_write_thread_groups(
 
         template = prepared_templates.get(fqn, f"-- placeholder for {wc.tbl_name}")
 
-        # 通过策略注册表决定 sampler 类型与 scriptLanguage；
-        # 单插入/批插入/无模式继续交给 SetupThreadGroup 路径，write_groups 不消费。
-        strategy = get_strategy(wc.mode)
-        sampler_type = strategy.get_sampler_type()
-        script_language = strategy.get_config("scriptLanguage", "groovy")
-        use_prepared = bool(strategy.get_config("usePrepared", False))
+        # Mode → sampler wiring (see _PREPARED_MODE_SAMPLER).
+        # single_insert / batch_insert 走 _build_direct_insert_components 直调
+        # direct_insert_write；无模式继续交给 SetupThreadGroup 路径。
+        sampler_type, use_prepared = _PREPARED_MODE_SAMPLER[wc.mode]
+        script_language = "groovy"
 
         tg, tg_hash = thread_group_element(
             name=f"Write-{wc.tbl_name}",
