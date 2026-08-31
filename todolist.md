@@ -1,6 +1,6 @@
 # 现状与遗留任务（2026-08-31 checkpoint）
 
-> 10 个 fix + 2 个 DCR + R-3（partial + FK DDL 续）+ F-17 + 条件关系初始化 + §1-§5 + §6 insecure-removal + §6 UDV/skill + §6.4 调试填充 + §6.4.2 全修 + B1/B3/B5 + **col-tag-bind-write 8 commits + 4 fix (D-9~D-13)** + **write-strategies 死代码清理（ffa6cfd / ab9e262）**：稳定基线 `c876acc` / `27b8aec` / `4351c99` / `d461e40` / `b9301c6`（DCR proposal）/ `3898aa8` `b677255` `9769493` `b067c8c` `c078431` `801ed46` `90f7dee` `6455cab` `389dc56` `76cb16a` `4e3791c` `22092a8` `3e65a37`（doc）/ `8246c44`（fixture ts+root pwd）/ `526dcbf`（seed+ddl decimal）/ `f23773a`（JMeter 5.6.3 stop API + ptag_values wiring）/ `7fef4ab`（fixture decimal→float8）/`ffa6cfd`（collapse strategy call site to inline lookup）/`ab9e262`（delete strategy module + tests + helper）。pytest 661/661。**smoke 已实跑**（bind path 30s jmeter 127 samples / 0 Err，iot_monitor.meters 60 行 + t_full 60 行，distinct ptag=2 各表，JMX Write TG sampler=`JSR223Sampler` 与 d83a09e/af21456 baseline 字节一致）。分支 `feat/sparse-table` ahead origin 3 commits（未 push）。
+> 10 个 fix + 2 个 DCR + R-3（partial + FK DDL 续）+ F-17 + 条件关系初始化 + §1-§5 + §6 insecure-removal + §6 UDV/skill + §6.4 调试填充 + §6.4.2 全修 + B1/B3/B5 + **col-tag-bind-write 8 commits + 4 fix (D-9~D-13)** + **write-strategies 死代码清理（ffa6cfd / ab9e262）**：稳定基线 `c876acc` / `27b8aec` / `4351c99` / `d461e40` / `b9301c6`（DCR proposal）/ `3898aa8` `b677255` `9769493` `b067c8c` `c078431` `801ed46` `90f7dee` `6455cab` `389dc56` `76cb16a` `4e3791c` `22092a8` `3e65a37`（doc）/ `8246c44`（fixture ts+root pwd）/ `526dcbf`（seed+ddl decimal）/ `f23773a`（JMeter 5.6.3 stop API + ptag_values wiring）/ `7fef4ab`（fixture decimal→float8）/`ffa6cfd`（collapse strategy call site to inline lookup）/`ab9e262`（delete strategy module + tests + helper）。pytest 661/661。**smoke 已实跑**（bind path 30s jmeter 127 samples / 0 Err，iot_monitor.meters 60 行 + t_full 60 行，distinct ptag=2 各表，JMX Write TG sampler=`JSR223Sampler` 与 d83a09e/af21456 baseline 字节一致）。分支 `feat/sparse-table` ahead origin 3 commits（未 push）。**write-batch-mode-semantics DCR 5 件套已起头**（`openspec/changes/write-batch-mode-semantics/{.openspec.yaml, proposal.md, design.md, tasks.md, specs/write-batch-mode-semantics/spec.md}`，openspec-validate 通过；未 commit 待 plan.md 路径 `/home/liujin/.claude/plans/crispy-enchanting-panda.md` 8 commit 落地）。**已合并 `ptag-runtime-derived` DCR**：原 `openspec/changes/ptag-runtime-derived/`（commit 1 `16a66a1` 仅文档落地，tasks 未勾）已删除；其核心规则（ptag 第 1 列 runtime 派生 + SetupTG 双层 for + deviceIndex 与 device_start 绑定）全部归入本 DCR，用内联 GString `"${threadNum}_${deviceIndex}"` 直接拼接，不抽 `ptagRuntimeValue` helper。
 
 遗留：spec gap 19 个未验功能点；col-tag-bind-write §8 smoke 端到端反退化断言 + JDBC bind path 验证待补；t_full full-row path `escapeLineValue` Groovy regex `PatternSyntaxException` 是 rest-schemaless §1-§5 范围 D-15 独立 bug（与 bind 无关）。
 
@@ -35,7 +35,13 @@
 
 ## 遗留真问题
 
-（无 — D-17 / D-27 已闭环）
+- **write-batch-mode-semantics DCR 5 gap 未修（仅 DCR 起头）**：
+  - gap #1：SetupTG bind sampler 仅烤 numThreads 个 entry（`shared_memory_setup.py:232`），Write TG bind 分支固定取 index=0 → 当 `device_per_thread > 1` 时 SetupTG 不烤 numThreads×dpt 个 deviceCode，部分设备找不到 SharedMemory key。现有 `tests/kwjdbc_svt/fixtures/test_model_col_bind.yaml`（dpt=2）已暴露
+  - gap #2：schemaless bind 分支 InfluxDB Line `tag_set` 只填 ptag（`rest_write_groups.py:244-248`），缺 regular_tag，违反 spec §2.0 L145 约定
+  - gap #3：`single_insert` / `batch_insert` / `single_prepared` 三个 mode 与 `col_tag_bind_mode=true` 静默错配（`generate_write_thread_groups` / `_build_direct_insert_components` 不读 `wc.col_tag_bind_mode`）
+  - gap #4：`single_prepared + batch_lines > 1` schema 未禁（运行时未定义行为）
+  - gap #5：`_build_inline_sql_preprocessor_script` bind 分支整批共用一个 ts（`write_groups.py:181`），与 D-24 schemaless bind 分支"batch_lines 个递增 ts"不一致
+  - **前置条件**：ptag-runtime-derived DCR commit 2-3 必须先 archive（提供 `ptagRuntimeValue` helper + SetupTG 双层 for）— 当前 tasks.md 全部 `- [ ]` 未勾
 
 ## D-23/D-24/D-25/D-26 闭环（2026-08-14）
 

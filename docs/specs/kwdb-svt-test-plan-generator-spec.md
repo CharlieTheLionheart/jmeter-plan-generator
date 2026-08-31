@@ -128,24 +128,29 @@
 **写入配置（`write_config`）**
 
 - `tbl_name`：表名，`all` 表示所有表使用相同的写入配置，每张表生成独立的写入线程组；若不同表需要不同的写入参数，则需分条目指定表名，每张表可独立配置
-- `throughput`：每个写入线程的目标吞吐量，单位次/分钟。`ConstantThroughputTimer` 配 `calcMode=0`（This thread only），每个线程独立达到该目标；线程组总吞吐量为 `throughput × num_threads`，集群总吞吐量为 `throughput × num_threads × 端数`。每张表的写入线程组独立挂载 ConstantThroughputTimer，Timer 仅对该线程组生效
-- `mode`：数据写入模式
-  - `single_insert`：单条直接 INSERT 写入（T0）
-  - `batch_insert`：批量直接 INSERT 写入（T0）
-  - `single_prepared`：单条 PreparedStatement 写入（T1）
-  - `batch_prepared`：批量 PreparedStatement 写入（T1）
-  - `schemaless`：无模式写入（T2）
+- `throughput`：**每个设备的目标吞吐量**（per-device-per-minute，单位次/分钟 SQL 触发频率）。`ConstantThroughputTimer` 配 `calcMode=0`（This thread only），配 `throughput` = 每线程每分钟 sampler 触发 = 每设备每分钟 SQL 数（因 1 sampler = `device_per_thread` 个 SQL 自动覆盖 dpt 个设备）。每张表的写入线程组独立挂载 ConstantThroughputTimer，Timer 仅对该线程组生效
+- `mode`：数据写入模式（按"每条 INSERT SQL 写多少行"业务语义重定义，write-batch-mode-semantics DCR 2026-08-31）：
+  - `single_insert`：单条直接 INSERT 写入，**1 行/SQL**（如 `insert into t values (?, ?)`）
+  - `batch_insert`：批量直接 INSERT 写入，**N 行/SQL**（如 `insert into t values (?,?),(?,?),(?,?)`，N 由 `batch_lines` 决定）
+  - `single_prepared`：单条 PreparedStatement 写入，**1 行/SQL**（`PreparedStatement.setXxx(...)` × 1）
+  - `batch_prepared`：批量 PreparedStatement 写入，**N 行/SQL**（`addBatch() × N` + `executeBatch()`，N 由 `batch_lines` 决定）
+  - `schemaless`：无模式写入，**N Lines/HTTP body**（N 个 InfluxDB Line + `\n` 分隔，N 由 `batch_lines` 决定）
 - `col_tag_bind_mode`：列标签绑定模式（**每表独立**，与 `mode` 正交，5 种 mode 全部适用，含 `schemaless`）。`true` 时启用**列子集** INSERT：每张 col_tag_bind 表只写 `col_num_per_tag` 列（hash 分组后从列种子文件随机抽取），而不是全 data 列；`false`（默认）保持全列 INSERT 行为
   - **每张表独立**：同一 model 中不同表的 `col_tag_bind_mode` 可独立配置（`write_config[]` 数组里分别配各自的 `tbl_name`），与 `mode` 正交
   - **适用范围**：仅时序表（`ts_dbs` 下的 table）。关系表（`rel_dbs`）无 primary tag 概念，hash 分组语义无定义；启用则 `main entry` 校验抛 `ValueError`
-  - **hash 分组**：每张 col_tag_bind 表按 `hash(ptag_tuple) mod num_threads` 划分为 `num_threads` 个 group，每个 group 写一份列子集到 `__SHARED_MEM_{db}_{table}_bind`；SetupTG 加载列种子文件后写入该 SharedMemory key，Write TG 运行时按 `ptag_tuple` 的 hash 选取对应 group 的列子集。**已被 D-21 commit `fcaef6f` 推翻 —— SetupTG 改为按 deviceCode 直接烤 SharedMemory key，不再 hash。完整新规约见 OpenSpec DCR `openspec/changes/ptag-runtime-derived/`，下方「ptag #1 runtime 派生」子项作现行实现。**
-  - **ptag #1 runtime 派生**（现行约定，2026-08-28 起）：第一 ptag 列 runtime 派生为 `"{threadNum}_{deviceNum}"` 字符串，`threadNum ∈ [0, numThreads)`、`deviceNum ∈ [1, devicePerThread]`；唯一 ptag 值数 = `numThreads × devicePerThread`。SetupTG 烤 `numThreads × devicePerThread` 个 SharedMemory key；WriteTG PreProcessor 按 `deviceCode` 直接 lookup（无 hash）。fixture 第一 ptag 列可不带 `val_range` / `seed_num`（runtime 完全派生，不再读列种子）。第二 ptag+ 列仍走 val_range / seed_num 派生。详细决策见 OpenSpec DCR `openspec/changes/ptag-runtime-derived/`（proposal / design / spec）。
+  - **hash 分组**：每张 col_tag_bind 表按 `hash(ptag_tuple) mod num_threads` 划分为 `num_threads` 个 group，每个 group 写一份列子集到 `__SHARED_MEM_{db}_{table}_bind`；SetupTG 加载列种子文件后写入该 SharedMemory key，Write TG 运行时按 `ptag_tuple` 的 hash 选取对应 group 的列子集。**已被 D-21 commit `fcaef6f` 推翻 —— SetupTG 改为按 deviceCode 直接烤 SharedMemory key，不再 hash。完整新规约见 OpenSpec DCR `openspec/changes/write-batch-mode-semantics/`，下方「ptag #1 runtime 派生」子项作现行实现。**
+  - **ptag #1 runtime 派生**（现行约定，2026-08-28 起，write-batch-mode-semantics DCR 2026-08-31 重定义）：第一 ptag 列 runtime 派生为 `"{threadNum}_{deviceIndex}"` 字符串，`threadNum ∈ [0, numThreads)`、`deviceIndex ∈ [device_start, device_start + device_per_thread - 1]`（**与 device_start 绑定的绝对设备号**）；唯一 ptag 值数 = `numThreads × device_per_thread`。SetupTG 烤 `numThreads × device_per_thread` 个 SharedMemory key（key = `"${threadNum}_${deviceIndex}"`，内联 GString 拼接，不抽 helper）；WriteTG PreProcessor 按 deviceCode 直接 lookup（无 hash）。fixture 第一 ptag 列可不带 `val_range` / `seed_num`（runtime 完全派生，不再读列种子）。第二 ptag+ 列仍走 val_range / seed_num 派生。详细决策见 OpenSpec DCR `openspec/changes/write-batch-mode-semantics/`（proposal / design / spec）。
   - **NOT NULL 列必须列入**：INSERT 列名列表 = `ts` + 所有 `primary_tag` 列 + `col_num_per_tag` 个子集 data 列 + 显式 NOT NULL data 列（`nullable=false` 的 data 列；LinkedHashSet 保序去重）。NOT NULL data 列必须由生成器列入每组 subset，否则生成的 INSERT 会违反 NOT NULL 约束
   - **JDBC 路径**：`_build_inline_sql_preprocessor_script` 走 bind 分支，生成 `INSERT INTO <table> (ts, ptag, subset_cols) VALUES (?, ?, ...)` + safe `SELECT 1` 兜底（empty group → `ctx.stopThread()`）
   - **schemaless 路径**：InfluxDB Line Protocol body 走 bind 分支，`tag_set` 部分仍按所有 ptag + regular_tag 填，`field_set` 部分只填子集 data 列 + `ts`
 - `col_num_per_tag`：col_tag_bind_mode 下每个 group 包含的 data 列数。`col_tag_bind_mode=true` 时必须 `> 0`（`WriteConfig` 层校验）；同时必须 `≤ data_col_count` 且对应表 `primary_tag_count ≥ 1`（`main entry` 校验）。`col_tag_bind_mode=false` 时忽略
-- `batch_lines`：批次写入记录条数，`batch` 和 `schemaless` 模式下可提供，未提供默认每批次写入 1 条
-- `device_per_thread`：每线程负责写入的设备数，与连接池连接数（`conn_pool_size`）无关。每个线程独立负责一批设备，设备号按线程维度划分
+- `batch_lines`：每条 INSERT SQL（或每 HTTP body）写入的记录条数，**全部 5 mode 都可提供**（write-batch-mode-semantics DCR 2026-08-31 统一语义）：
+  - `single_insert` / `single_prepared`：强制 `= 1`（`WriteConfig.check_single_modes_batch_lines_one` 校验，R-PAR-016 对称扩展）
+  - `batch_insert` / `batch_prepared` / `schemaless`：`≥ 1`，无上限
+  - `schemaless` 下语义为"每个 HTTP body 的 Line 数量"（D-24 已落地）
+  - 业务意图：把**同一 device**的 `batch_lines` 个时间戳拼成 1 条 SQL 入库（KaiwuDB 时序底层每 device 一个文件，跨 device 单 SQL 需同时打开/关闭多个文件性能差）
+  - 时间戳按 `ms_step` 间隔递增生成 `batch_lines` 个（**整步语义** = `+ i × ms_step`，非分摊语义 `+ i × (ms_step / batch_lines)`）
+- `device_per_thread`：每线程负责写入的设备数（**绝对设备号**范围 `[device_start, device_start + device_per_thread - 1]`），与连接池连接数（`conn_pool_size`）无关。每个线程独立负责一批设备，设备号按线程维度划分。**Write TG sampler 内部 `for deviceIndex in device_start..(device_start + device_per_thread - 1)` 遍历当前线程下 dpt 个设备**，每个 device 各写 1 条 INSERT（写 `batch_lines` 行）
 - `num_threads`：写入线程组并发数，也可以设置为 `conn_pool_size`，大于 `conn_pool_size` 时所有写入线程和查询线程共享和复用连接
 
 > **当前版本多表线程数约束**：当 `write_config` 分条目为不同表指定写入配置时，各表的 `num_threads` 必须保持相同。该限制用于简化每秒写入列数据数的计算与控制，并避免多张表使用不同 `num_threads` 时 JMeter 全局同名变量（如 `${num_threads}`）冲突的问题。后续版本将迭代支持按表独立指定 `num_threads`，届时通过表级独立变量名或线程组内常量值解决变量隔离。
@@ -327,7 +332,16 @@ query_config:
 - **写入线程组**：每张表生成独立的写入线程组。`tbl_name: all` 时，所有表各自拥有独立的写入线程组，但共享相同的 `throughput`、`mode`、`batch_lines`、`device_per_thread`、`num_threads` 等配置值；若不同表需要不同的写入参数，则 `write_config` 中需分条目指定表名，每张表可独立配置 `throughput`、`mode`、`batch_lines`、`device_per_thread`、`num_threads`。写入线程组的 `JDBCSampler` 下挂载 `JSR223PreProcessor`，负责：
   - 每个线程首次执行时一次性获取基准时间；
   - 每次写入前，从该表共享的行种子总集中**随机取一个起始行号**，拷贝连续 `batch_lines` 行作为本次写入数据；若 `起始行号 + batch_lines` 超过总集行数，则从总集开头取剩余行（循环回绕）；
-  - 在本地拷贝出的 batch 上**装配时间戳**（时间戳 = 基准时间 + n × ms_step），然后提交写入。
+  - 在本地拷贝出的 batch 上**装配时间戳**（**整步语义**：时间戳 = 基准时间 + `i × ms_step`，i ∈ [0, batch_lines)；write-batch-mode-semantics DCR 2026-08-31 修复 gap #6，原 D-24 分摊语义 `i × (ms_step / batch_lines)` 已废止）；
+  - 每个 `JDBCSampler` / `JSR223PreProcessor` 内部 MUST 按 deviceIndex 范围 `[device_start, device_start + device_per_thread - 1]` 外层 for 循环遍历当前线程下 dpt 个设备，每 cycle 用 `"${threadNum}_${deviceIndex}"` 内联 GString 派生第一 ptag，写 1 条 INSERT SQL（写 `batch_lines` 行 × 1 device）；`ConstantThroughputTimer calcMode=0` 配 throughput 视为 1 sampler = 1 throughput tick，dpt 次 SQL 不重复计入 throughput 调度。
+  - **落库行数公式**：
+    ```
+    rows_per_tick              = batch_lines × device_per_thread
+    rows_per_sec_per_thread    = throughput × batch_lines × device_per_thread / 60
+    rows_per_sec_per_table     = throughput × num_threads × batch_lines × device_per_thread / 60
+    rows_per_sec_cluster       = throughput × num_threads × batch_lines × device_per_thread × 端数 / 60
+    rows_per_sec_per_device    = throughput × batch_lines / 60
+    ```
 - **查询线程组**：`query_config` 中的每个查询条目生成独立的查询线程组，各自挂载独立的 ConstantThroughputTimer，以满足不同查询的不同频率需求。
 - **Timer 作用范围**：ConstantThroughputTimer 挂载在线程组级别，仅对该线程组生效，不参与跨线程组的吞吐量分配
 - **Timer 配置**：`calcMode` 固定为 `0`（This thread only），即每个线程独立计算目标吞吐量。`throughput` 参数值直接使用配置中的数值，**不除以 num_threads**——配置值本身就是每个线程的目标。线程组总吞吐量 = `throughput × num_threads`，集群总吞吐量 = `throughput × num_threads × 端数`。示例如下：
@@ -392,6 +406,7 @@ query_config:
 | PreparedStatement 写入 | T1 | ✅ 已落地 | commit `9fdcf0d` `(feat) JDBC数据源配置生成器，DirectInsert/PrepareInsert语句生成器` — `mode: single_prepared` / `mode: batch_prepared`（shig fixture 默认 `batch_prepared`，smoke 0 errors） |
 | 外键关系生成            | T1 | ✅ 已落地 | commit `8614b90` `feat(ddl-generator): R-3 续 FK 约束 + workshop 100 行` — `ref:db.table.col` + `_build_foreign_key_clause` + `pregenerate_reference_columns`（shig fixture 3 层 FK，FK 23503 验证 / 0 orphans） |
 | 支持无模式写入          | T2 | ✅ 已落地 | commit `d461e40` `feat(rest-schemaless-write): §6.4.2 full fix` — `mode: schemaless` 走 REST/InfluxDB Line Protocol 路径（`iot_monitor.meters` 真集群 smoke 10/10 → 20 行绿） |
+| write-batch-mode-semantics（5 mode 业务含义统一 + batch_lines 全覆盖 + sampler 内 for 循环 dpt + ts 整步语义）| T0/T1/T2 衍生 | ✅ 已落地 | OpenSpec DCR `openspec/changes/write-batch-mode-semantics/` 2026-08-31 起头，8 commit（commit 1 = spec + schema + 4 pytest case）。`batch_lines` 统一覆盖全部 5 mode（`single_*` 强制=1，`batch_*` / `schemaless` ≥1）；`device_per_thread` 真生效（sampler 内 `for deviceIndex in device_start..(device_start+device_per_thread-1)`）；`throughput` 业务语义升级为 per-device SQL/min（落库行数公式 `rows_per_sec_per_device = throughput × batch_lines / 60`）；ts 列按 `ms_step` 间隔整步递增生成 `batch_lines` 个时间戳（原 D-24 分摊语义已修复 gap #6） |
 
 > **策略层已合入**：`src/write_strategies/` 子包（`WriteStrategy` ABC + 5 个具体策略 + `STRATEGY_REGISTRY`，2026-07-10 commit `040e555` 引入）在生产里仅 `get_sampler_type()` / `get_config()` 两方法被消费，且只发生在 `single_prepared` / `batch_prepared` 模式。2026-08-31 commit `ffa6cfd` + `XXX` 把该 3 行 strategy 调用折叠为 `jmx_skeleton_generator.generators.write_groups._PREPARED_MODE_SAMPLER` lookup，删除整个 `write_strategies/` 子包 + `tests/write_strategies/` 测试包（设计迁移记录 `docs/migration-write-strategies.md`）。`schemaless` 模式继续由 `skeleton.py:39` 的 `_is_schemaless` 路由走 REST/HTTP/InfluxDB Line 路径，不经 strategy。
 

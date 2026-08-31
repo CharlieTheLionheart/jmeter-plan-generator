@@ -379,12 +379,19 @@ class WriteConfig(BaseModel):
     col_num_per_tag: int = 0
 
     @model_validator(mode="after")
-    def check_single_insert_batch_lines(self) -> "WriteConfig":
-        """R-PAR-016: single_insert mode requires batch_lines == 1."""
-        if self.mode == "single_insert" and self.batch_lines != 1:
+    def check_single_modes_batch_lines_one(self) -> "WriteConfig":
+        """write-batch-mode-semantics DCR (2026-08-31): `single_*` modes
+        require `batch_lines == 1`. Business semantic — "single" means 1
+        row per INSERT SQL, regardless of API form (direct INSERT or
+        PreparedStatement). R-PAR-016 originally only covered
+        `single_insert`; expanded symmetrically to `single_prepared`.
+        `batch_insert`, `batch_prepared`, and `schemaless` accept any
+        `batch_lines >= 1`.
+        """
+        if self.mode in ("single_insert", "single_prepared") and self.batch_lines != 1:
             raise ValueError(
-                f"single_insert mode requires batch_lines=1, "
-                f"but got batch_lines={self.batch_lines}"
+                f"single_insert / single_prepared modes require batch_lines=1, "
+                f"but got mode={self.mode} batch_lines={self.batch_lines}"
             )
         return self
 
