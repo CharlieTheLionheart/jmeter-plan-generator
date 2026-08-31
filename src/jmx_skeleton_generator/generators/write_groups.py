@@ -524,6 +524,7 @@ def _build_direct_insert_components(
     Raises :class:`direct_insert_write.errors.DirectInsertGenerationError`
     on validation failure.
     """
+    bind_mode = bool(getattr(wc, "col_tag_bind_mode", False))
     if wc.mode == "single_insert":
         # Pre-built SQL (with ``?`` placeholders) is no longer used by the
         # sampler; the preprocessor builds a fully-inlined SQL into
@@ -544,6 +545,7 @@ def _build_direct_insert_components(
             device_per_thread=wc.device_per_thread,
             column_types=column_types,
             batch_lines=wc.batch_lines,
+            col_tag_bind_mode=bind_mode,
         )
         preproc, preproc_hash = jsr223_preprocessor_element(
             name=f"DirectInsertPrep-{wc.tbl_name}",
@@ -569,6 +571,7 @@ def _build_direct_insert_components(
             device_per_thread=wc.device_per_thread,
             column_types=column_types,
             batch_lines=wc.batch_lines,
+            col_tag_bind_mode=bind_mode,
         )
         preproc, preproc_hash = jsr223_preprocessor_element(
             name=f"DirectInsertPrep-{wc.tbl_name}",
