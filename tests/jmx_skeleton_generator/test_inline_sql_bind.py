@@ -72,15 +72,25 @@ def test_bind_mode_emits_subset_columns() -> None:
     assert "device_id" in script
 
 
-def test_bind_mode_emits_correct_group_id_lookup() -> None:
-    """col_tag_bind_mode=True → script computes ``group_id`` via hash + mod."""
+def test_bind_mode_uses_literal_device_code_lookup() -> None:
+    """write-batch-mode-semantics DCR (2026-08-31) bind branch: the
+    bind map is looked up by the literal GString ``"${{threadNum}}_${{d}}"``
+    — NO ``hashCode()`` hash distribution (D-21 superseded). Pre-fix
+    bind path used ``groupId = hash(ptagValues) % num_threads`` which
+    Groovy default ``List.hashCode()`` made degenerate for short
+    numeric-suffixed values.
+    """
     script = _build_inline_sql_preprocessor_script(
         **_minimal_kwargs(col_tag_bind_mode=True, col_num_per_tag=2, num_threads=8)
     )
 
-    assert "hashCode()" in script, script[:1500]
-    assert "% 8" in script or "%numThreads" in script or "% numThreads" in script, (
-        f"expected modulo-by-num_threads pattern; got snippet:\n{script[:2000]}"
+    assert "hashCode()" not in script, (
+        f"D-21 superseded hashCode() — got snippet:\n{script[:2000]}"
+    )
+    # Literal GString template is preserved through the Python
+    # f-string escape (double-brace `${{name}}` outputs `${name}` to Groovy).
+    assert "${threadNum}_${d}" in script, (
+        f"expected literal GString `${'$'}{threadNum}_${'$'}{d}`; got:\n{script[:2000]}"
     )
 
 
@@ -128,10 +138,68 @@ def test_default_mode_unchanged() -> None:
         **_minimal_kwargs(col_tag_bind_mode=False, col_num_per_tag=0)
     )
 
-    assert "__SHARED_MEM_iot_monitor_meters_bind" not in script, (
-        "full-row mode must NOT read the bind namespace"
+
+def test_bind_mode_dpt_for_loop_emits() -> None:
+    """write-batch-mode-semantics DCR (2026-08-31) bind branch: outer
+    ``for (int d = deviceStart; d < deviceStart + devicePerThread; d++)``
+    loop so each sampler tick covers all devices assigned to the
+    current thread (gap #1 fix applied to inline script too).
+    """
+    script = _build_inline_sql_preprocessor_script(
+        **_minimal_kwargs(
+            col_tag_bind_mode=True, col_num_per_tag=2, num_threads=2,
+            device_per_thread=2, batch_lines=5,
+        )
     )
-    assert "__SHARED_MEM_iot_monitor_meters" in script
-    # The full-row path still iterates over ``allRows`` (List<List<String>>);
-    # confirm the legacy path is intact.
-    assert "allRows" in script
+    assert "for (int d = deviceStart; d < deviceStart + devicePerThread; d++)" in script, (
+        f"expected dpt for-loop; got snippet:\n{script[:2000]}"
+    )
+    # Inner batch_lines loop (MultiRowInsert).
+    assert "for (int r = 0; r < batchLines; r++)" in script, (
+        f"expected batch_lines loop; got snippet:\n{script[:2000]}"
+    )
+
+
+def test_bind_mode_整步_ts_formula() -> None:
+    """write-batch-mode-semantics DCR (2026-08-31) bind branch: ts is
+    ``baseTime + r × msStep`` (整步语义 gap #6 fix). Pre-fix used
+    ``baseTime + batchSeq * msStep`` (sampler tick accumulation).
+    """
+    script = _build_inline_sql_preprocessor_script(
+        **_minimal_kwargs(
+            col_tag_bind_mode=True, col_num_per_tag=2, num_threads=2,
+            device_per_thread=2, batch_lines=3, ms_step=1000,
+        )
+    )
+    # Must NOT contain the batchSeq-tick-accumulation form.
+    assert "batchSeq * msStep" not in script, (
+        f"pre-fix batchSeq * msStep still present; got snippet:\n{script[:2000]}"
+    )
+    assert "baseTime + batchSeq" not in script, (
+        f"pre-fix baseTime + batchSeq still present; got snippet:\n{script[:2000]}"
+    )
+    # Must contain the new 整步 formula `baseTime + r * msStep`.
+    assert "baseTime + r * msStep" in script, (
+        f"expected `baseTime + r * msStep` 整步 formula; got snippet:\n{script[:2000]}"
+    )
+
+
+def test_bind_mode_base_time_per_tick() -> None:
+    """write-batch-mode-semantics DCR (2026-08-31) bind branch: baseTime
+    MUST be re-sampled on every sampler tick
+    (``System.currentTimeMillis()`` directly) — NOT cached to a UDV on
+    thread startup. Pre-fix had ``baseTimeKey`` UDV with per-thread
+    init-time stamp plus ``batchSeq * msStep`` per-tick accumulator.
+    """
+    script = _build_inline_sql_preprocessor_script(
+        **_minimal_kwargs(col_tag_bind_mode=True, col_num_per_tag=2, num_threads=2)
+    )
+    assert "baseTime = System.currentTimeMillis()" in script, (
+        f"expected direct System.currentTimeMillis() per-tick sample; got snippet:\n{script[:2000]}"
+    )
+    assert "baseTimeKey" not in script, (
+        f"pre-fix baseTimeKey UDV cache still present; got snippet:\n{script[:2000]}"
+    )
+    assert "batchSeq" not in script, (
+        f"pre-fix batchSeq counter still present; got snippet:\n{script[:2000]}"
+    )

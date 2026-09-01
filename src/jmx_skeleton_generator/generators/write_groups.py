@@ -116,11 +116,7 @@ def _build_inline_sql_preprocessor_script(
     if col_tag_bind_mode:
         # Single-ptag alignment (commit 4 fix 2): the first ptag IS the
         # device column; both SetupTG and Write TG compute
-        # ``ptagValues = [deviceCode]``. ``ptagNames`` only carries the
-        # first ptag name for completeness (used by the LinkedHashSet
-        # column-list construction); multi-ptag tables append additional
-        # 'null' placeholders and are deferred to a follow-up commit
-        # (requires column_namer-aware wiring).
+        # ``deviceCode`` inline.
         ptag_names_groovy = f"'{first_ptag_column}'" if first_ptag_column else "'device_id'"
         not_null_groovy = ", ".join(f"'{c}'" for c in (not_null_data_cols or []))
         bind_rows_key = f"__SHARED_MEM_{db}_{table}_bind"
@@ -139,6 +135,15 @@ def notNullDataCols = [{not_null_groovy}]
 def devicePerThread = {device_per_thread}
 def msStep = {ms_step}
 
+// write-batch-mode-semantics DCR (2026-08-31) bind branch — same
+// shape as the main path: outer dpt for-loop iterates
+// `d in [deviceStart, deviceStart + devicePerThread - 1]` so each
+// sampler tick covers all devices assigned to the current thread;
+// inner rbatch-loop iterates `r in [0, batchLines)` to accumulate
+// `batch_lines` rows per device. Total rows per tick =
+// `device_per_thread × batch_lines`. The bind map is looked up by
+// literal deviceCode (no hash — D-21). ts is the per-tick
+// `baseTime + r × msStep` (整步语义 gap #6 fix).
 def bindGroups = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
     .get(rowsKey) as Map
 if (bindGroups == null || bindGroups.isEmpty()) {{
@@ -153,64 +158,61 @@ if (threadNum < 0) {{
 }}
 def deviceStart = (vars.get('device_start') != null ?
     (vars.get('device_start') as Integer) : 1)
-def batchSeqKey = 'batch_seq_' + rowsKey
-def batchSeq = (vars.get(batchSeqKey) != null ?
-    (vars.get(batchSeqKey) as Integer) : 0)
-vars.put(batchSeqKey, String.valueOf(batchSeq + 1))
-def baseTimeKey = 'base_time_' + rowsKey
-if (vars.get(baseTimeKey) == null) {{
-    vars.put(baseTimeKey, String.valueOf(System.currentTimeMillis()))
-}}
-def baseTime = (vars.get(baseTimeKey) as Long)
-def deviceNumber = calculateDeviceNumber(threadNum as long, deviceStart as long, devicePerThread as long, 0)
-def deviceCode = deviceIdentifier(deviceNumber)
-
-// ptag_tuple mirrors the SetupTG bind sampler (commit 4 fix 2):
-// single-ptag alignment keeps ``hash([deviceCode])`` identical between
-// Setup and Write; multi-ptag deferred.
-def ptagValues = [deviceCode]
-
-int groupId = Math.abs(ptagValues.hashCode()) % numThreads
-def group = bindGroups.get(String.valueOf(groupId)) as Map
-if (group == null) {{
-    log.warn("DirectInsertPrep: no group " + groupId + " in " + rowsKey)
-    vars.put("insert_sql", "SELECT 1")
-    return
-}}
-def colNames = group.get("col_names") as List
-def rowValues = group.get("row_values") as List
-def rowIdx = new Random().nextInt(rowValues.size())
-def cells = rowValues.get(rowIdx) as List
+// write-batch-mode-semantics DCR (2026-08-31): baseTime MUST be
+// re-sampled on every sampler tick — same reasoning as the main path.
+def baseTime = System.currentTimeMillis()
 
 def tsFmt = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSSSSS")
-def tsStr = "'" + tsFmt.format(new java.util.Date(baseTime + batchSeq * msStep)) + "'"
-
-// Column list: ts + ptag + col subset + NOT NULL data cols (LinkedHashSet
-// preserves first-occurrence order; duplicates are dropped).
-def seen = new LinkedHashSet()
-seen.add('ts')
-ptagNames.each {{ seen.add(it) }}
-colNames.each {{ seen.add(it) }}
-notNullDataCols.each {{ if (it) seen.add(it) }}
-def insertCols = seen.toList()
-
-// Value list: ts + ptag + cells + NULL for NOT NULL data cols missing
-// from the group subset (rare — only when NOT NULL col is also out of
-// the bound subset; fall back to "null" literal which KaiwuDB rejects
-// if truly NOT NULL — caller is responsible for keeping NOT NULL cols
-// in the subset).
-def insertVals = [tsStr] + ptagValues.collect {{ "'" + it + "'" }} + cells
-notNullDataCols.each {{ colName ->
-    if (!colNames.contains(colName)) {{
-        insertVals.add("NULL")
-    }}
-}}
-
 def qualifiedTable = db + "." + table
-def colsSql = insertCols.join(", ")
-def valsSql = insertVals.join(", ")
-def sql = "INSERT INTO " + qualifiedTable + " (" + colsSql + ") VALUES (" + valsSql + ")"
-vars.put("insert_sql", sql)
+
+// dpt × batch_lines lines 拼接为 MultiRowInsert 单 SQL（与 main path 一致）。
+// dpt 条 deviceCode 用 inline GString（双花括号转义见 shared_memory_setup.py）。
+def allSqls = []
+for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
+    // Python f-string double-brace escape outputs the literal Groovy
+// GString syntax that the surrounding f-string would otherwise try
+// to resolve as Python identifiers.
+    def deviceCode = f"${{threadNum}}_${{d}}"
+    def group = bindGroups.get(deviceCode) as Map
+    if (group == null) {{
+        log.warn("DirectInsertPrep: no group " + deviceCode + " in " + rowsKey)
+        continue
+    }}
+    def colNames = group.get("col_names") as List
+    def rowValues = group.get("row_values") as List
+
+    // Column list (LinkedHashSet preserves first-occurrence order).
+    def seenLocal = new LinkedHashSet()
+    seenLocal.add('ts')
+    ptagNames.each {{ seenLocal.add(it) }}
+    colNames.each {{ seenLocal.add(it) }}
+    notNullDataCols.each {{ colName -> if (colName) seenLocal.add(colName) }}
+    def insertCols = seenLocal.toList()
+
+    // Inner loop: batch_lines rows per device (整步 ts gap #6 fix).
+    def valsRows = []
+    for (int r = 0; r < batchLines; r++) {{
+        int rowIdx = new Random().nextInt(rowValues.size())
+        def cells = rowValues.get(rowIdx) as List
+        // write-batch-mode-semantics DCR (2026-08-31) gap #6 fix: ts
+        // is `baseTime + r × msStep` (整步语义 — single SQL covers
+        // `batch_lines × msStep` window).
+        long ts = baseTime + r * msStep
+        def tsStr = "'" + tsFmt.format(new java.util.Date(ts)) + "'"
+        def insertVals = [tsStr] + ["'" + deviceCode + "'"] + cells
+        notNullDataCols.each {{ colName ->
+            if (!colNames.contains(colName)) {{
+                insertVals.add("NULL")
+            }}
+        }}
+        valsRows.add("(" + insertVals.join(", ") + ")")
+    }}
+
+    def colsSql = insertCols.join(", ")
+    def valsSql = valsRows.join(", ")
+    allSqls.add("INSERT INTO " + qualifiedTable + " (" + colsSql + ") VALUES " + valsSql)
+}}
+vars.put("insert_sql", String.join("; ", allSqls))
 """
 
     script = f"""\
