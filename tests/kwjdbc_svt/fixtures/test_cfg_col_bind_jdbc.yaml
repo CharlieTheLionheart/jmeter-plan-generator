@@ -22,7 +22,7 @@ conn_config:
 
 write_config:
   - tbl_name: iot_monitor.meters
-    throughput: 60.0
+    throughput: 1.0
     mode: batch_prepared
     batch_lines: 60
     device_per_thread: 2
@@ -30,7 +30,7 @@ write_config:
     col_tag_bind_mode: true
     col_num_per_tag: 5
   - tbl_name: iot_monitor.t_full
-    throughput: 60.0
+    throughput: 1.0
     mode: batch_prepared
     batch_lines: 60
     device_per_thread: 2

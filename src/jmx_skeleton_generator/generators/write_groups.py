@@ -6,17 +6,9 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 from config_parser.models import TestModelConfig, WriteConfig
-from direct_insert_write import (
-    create_jdbc_sampler,
-    create_jsr223_preprocessor_for_write,
-)
 from direct_insert_write.preprocessor_generator import (
     _groovy_str_literal,
     _safe_key_token,
-)
-from direct_insert_write.sql_generator import (
-    generate_batch_insert_sql,
-    generate_single_insert_sql,
 )
 from throughput_control import generate_write_timer
 from utils.preprocessor_helpers import all_groovy_decls
@@ -221,9 +213,8 @@ vars.put("insert_sql", String.join("; ", allSqls))
 def db = {safe_db}
 def table = {safe_table}
 def rowsKey = '{rows_key}'
-// JSR223's per-context ``props`` is destroyed when SetupThreadGroup ends;
-// the SharedMemory loader writes through the global JMeterUtils singleton,
-// so the read here must also go through that singleton.
+// SetupThreadGroup per-context props 在线程结束时销毁；SharedMemory loader
+// 通过 JMeterUtils 全局单例写入，读取也必须经它
 def allRows = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
     .get(rowsKey) as ArrayList
 def columns = [{cols_list}]
@@ -246,97 +237,69 @@ if (threadNum < 0) {{
 }}
 def localDeviceStart = vars.get('device_start') != null ?
     (vars.get('device_start') as Integer) : 0
-
-// write-batch-mode-semantics DCR (2026-08-31): baseTime MUST be
-// re-sampled on every sampler tick as `System.currentTimeMillis()` —
-// NOT cached to a UDV on thread startup. The pre-fix code held
-// `baseTimeKey` (a per-thread init-time stamp) and added a per-tick
-// `batchSeq * msStep` accumulator. Both choices were wrong: ts must
-// reflect the actual write moment so each INSERT SQL covers a real
-// wall-clock window of `batch_lines × ms_step` starting from now.
+// 每个 sampler tick 取一次 baseTime，使本 tick 所有 ts 落在当前 ms 窗口
 def baseTime = System.currentTimeMillis()
 
 def tsFmt = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSSSSS")
 def total = allRows.size()
 
 def rows = []
-// write-batch-mode-semantics DCR (2026-08-31) gap #3 + dpt for fix:
-// outer loop iterates `d in [localDeviceStart, localDeviceStart +
-// devicePerThread - 1]` so each sampler tick covers all devices
-// assigned to the current thread. Each device contributes one
-// batch_lines-row INSERT — total rows per tick = `batch_lines × dpt`.
+// 外层 device_per_thread for：每 device 拼 batch_lines 行；
+// 总行数 = device_per_thread × batch_lines（单 SQL MultiRowInsert）
 for (int d = localDeviceStart; d < localDeviceStart + devicePerThread; d++) {{
-    // write-batch-mode-semantics DCR (2026-08-31): deviceCode is the
-    // inline GString ``threadNum_d`` (Groovy interpolates the two
-    // built-in / loop vars at runtime) — no calculateDeviceNumber
-    // round-trip (the loop index `d` already IS the absolute device
-    // number) and no legacy "device_N" form.
-    // Python f-string double-brace escape outputs the literal Groovy
-    // GString syntax that the surrounding f-string would otherwise
-    // try to resolve as Python identifiers.
     def deviceCode = threadNum.toString() + "_" + d.toString()
     for (int r = 0; r < batchLines; r++) {{
-        def srcRow = allRows.get(new Random().nextInt(total))
-        def rowCopy = new ArrayList(srcRow)
-        // write-batch-mode-semantics DCR (2026-08-31) gap #5 + #6 fix: ts
-        // for one INSERT SQL MUST be `baseTime + r × msStep` (整步语义)
-        // — i.e. one fixed baseTime + per-row `msStep` increment, no
-        // `batchSeq * msStep` tick accumulation. The pre-fix D-24 form
-        // `baseTime + batchSeq * msStep + r * (msStep / batchLines)` had
-        // two bugs: (a) batchSeq accum. makes ts drift forward on every
-        // sampler tick — incompatible with the business intent that each
-        // SQL covers `batch_lines × msStep` wall-clock window; (b)
-        // `msStep / batchLines` is the 分摊 semantics — incompatible
-        // with gap #6.
-        long ts = baseTime + r * msStep
+        // SharedMemory loader 写入的每行是 Object[]（CSV 顺序 cell）
+        def srcRow = allRows.get(new Random().nextInt(total)) as Object[]
+        // Object[] → List 以便 .get(csvIdx) 索引（ArrayList 无 (Object[]) 构造器）
+        def rowCells = srcRow.toList()
+        // 整步：每行 ts 间隔一个 msStep，覆盖 batch_lines × msStep 窗口
+        long ts = baseTime + (long) r * msStep
         def values = new ArrayList()
-        // columns[0] is the ts column (synthesized at write time, not in CSV).
-        // columns[1..] are the CSV columns in their original order. The CSV
-        // header may include the first ptag column with the literal
-        // ``${{device_code}}`` placeholder — we project over the
-        // ptagIndex slot and ignore the CSV cell there.
+        // columns[0] = ts（运行时合成），columns[1..] = CSV 顺序列
         for (int c = 0; c < nCols; c++) {{
             if (c == 0) {{
                 values.add("'" + tsFmt.format(new java.util.Date(ts)) + "'")
             }} else if (c == ptagIndex) {{
                 values.add("'" + deviceCode + "'")
             }} else {{
-                // c=1 in SQL maps to rowCopy[0], c=2 in SQL maps to rowCopy[1], etc.
                 int csvIdx = c - 1
-                if (csvIdx < 0 || csvIdx >= rowCopy.size()) {{
+                if (csvIdx < 0 || csvIdx >= rowCells.size()) {{
                     values.add("NULL")
                 }} else {{
-                    def raw = rowCopy.get(csvIdx)
+                    def raw = rowCells.get(csvIdx)
                     def s = raw == null ? "" : raw.toString()
+                    // strip CSV 残留引号 + null literal
                     if (s.length() >= 2 && s.startsWith('"') && s.endsWith('"')) {{
                         s = s.substring(1, s.length() - 1)
                     }}
                     if (s.equalsIgnoreCase("null") || s.isEmpty()) {{
                         values.add("NULL")
                     }} else {{
-                        // Numeric / bool columns: emit unquoted so KaiwuDB
-                        // does not have to coerce a quoted literal
-                        // (KaiwuDB rejects ``'62'`` for an INT8 column).
+                        // 数值 / bool 列不加引号（KaiwuDB 拒绝 '62' 这种 quoted literal）
                         def colType = (c < typeList.size()) ? typeList.get(c) : ""
-                        def needsQuoting = !(colType == "int2" || colType == "int4" || colType == "int8" || colType == "int" || colType == "tinyint" || colType == "smallint" || colType == "bigint" || colType == "float4" || colType == "float8" || colType == "double" || colType == "float" || colType == "bool" || colType == "boolean")
+                        def needsQuoting = !(colType in ["int2", "int4", "int8", "int",
+                                                         "tinyint", "smallint", "bigint",
+                                                         "float4", "float8", "double", "real",
+                                                         "numeric", "decimal",
+                                                         "bool", "boolean"])
                         if (needsQuoting) {{
                             values.add("'" + s.replace("'", "''") + "'")
-                    }} else {{
-                        values.add(s)
+                        }} else {{
+                            values.add(s)
+                        }}
                     }}
                 }}
             }}
         }}
+        rows.add("(" + String.join(", ", values) + ")")
     }}
-    rows.add("(" + String.join(", ", values) + ")")
-}}
 }}
 
 def qualifiedTable = db + "." + table
 def colsSql = String.join(", ", columns)
 def valuesSql = String.join(", ", rows)
-def sql = "insert into " + qualifiedTable + " (" + colsSql + ") values " + valuesSql
-vars.put("insert_sql", sql)
+vars.put("insert_sql", "INSERT INTO " + qualifiedTable + " (" + colsSql + ") VALUES " + valuesSql)
 """
     return script
 

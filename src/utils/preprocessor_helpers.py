@@ -1,30 +1,29 @@
 """JSR223PreProcessor Groovy helper functions for write-side data assembly.
 
-Design: openspec/changes/direct-insert-write/design.md
+These helpers expose a Groovy source snippet that gets embedded into
+JSR223PreProcessor scripts in
+:mod:`jmx_skeleton_generator.generators.write_groups` and
+:mod:`shared_memory_initializer`. The Python implementations exist
+so callers can unit-test the same algorithms without bootstrapping a
+JMeter/JVM runtime.
 
-These helpers translate to Groovy source snippets embedded in JSR223PreProcessor
-scripts (see ``direct_insert_write.preprocessor_generator``). The Python
-implementations here exist so callers can unit-test the same algorithms without
-bootstrapping a JMeter/JVM runtime.
-
-Four helpers are exposed (names aligned with tasks.md §0.5 / §4):
+Helpers exposed:
 
 - :func:`calculate_timestamps` — per-row timestamp list given base, batch
-  sequence, ms_step, batch_lines.
+  sequence, ms_step, batch_lines. Python-only (not embedded into
+  generated scripts).
 - :func:`calculate_device_number` — device number from thread index,
-  device_start, device_per_thread, and per-row index.
+  device_start, device_per_thread, and per-row index. Embedded as Groovy.
 - :func:`build_device_identifier` — formats ``device_{n}``.
 - :func:`clone_rows` — shallow per-row list clone.
 
-Numeric type policy (closes review.md §1 阻塞项 #1):
+Numeric type policy:
 
-- All timestamp and device-number arithmetic uses **Python ``int``** and
-  emits **Groovy ``long``** at runtime to avoid ``batch_seq * ms_step``
-  overflow on long runs.
-- Inter-timestamp step uses integer division (``ms_step // batch_lines``).
-  When ``ms_step < batch_lines`` the per-row intra-step rounds to 0;
-  callers wanting finer intra-batch separation should ensure
-  ``ms_step >= batch_lines``.
+- All timestamp and device-number arithmetic uses Python ``int`` /
+  Groovy ``long`` to avoid overflow on long-running batches.
+- Inter-timestamp step uses integer division (``ms_step // batch_lines``)
+  in :func:`calculate_timestamps`. When ``ms_step < batch_lines`` the
+  per-row intra-step rounds to 0.
 
 Boundary guarantees:
 
@@ -214,10 +213,15 @@ def groovy_calculate_local_device_start_decl() -> str:
 
 
 def all_groovy_decls() -> str:
-    """Concatenate all helper declarations for embedding in a Groovy script."""
+    """Concatenate all helper declarations for embedding in a Groovy script.
+
+    Only helpers that current generators call are injected here. Helpers
+    kept as Python-only (e.g. :func:`calculate_timestamps`) remain
+    importable for callers that want to replicate the Groovy logic in
+    Python tests, but are not embedded into generated JMX scripts.
+    """
     return "\n".join(
         [
-            groovy_calculate_timestamps_decl(),
             groovy_calculate_device_number_decl(),
             groovy_device_identifier_decl(),
             groovy_clone_rows_decl(),

@@ -7,17 +7,17 @@ conn_config:
   test_duration: 30
 write_config:
   - tbl_name: iot_monitor.t_cnc
-    throughput: 60.0
+    throughput: 1.0
     mode: batch_prepared
     batch_lines: 5
     device_per_thread: 2
     num_threads: 4
 query_config:
   - query: "select last(col_float4_1) from iot_monitor.t_cnc where iot_monitor.t_cnc.ptag_varchar_1=?"
-    throughput: 4.0
+    throughput: 1.0
     num_threads: 2
   - query: "select count(1) from iot_monitor.t_cnc where iot_monitor.t_cnc.rtag_varchar_1=? group by iot_monitor.t_cnc.rtag_varchar_1"
-    throughput: 2.0
+    throughput: 1.0
     num_threads: 2
   - query: "select ptag_varchar_1, max(col_int8_1) from iot_monitor.t_cnc where rtag_varchar_1=? group by ptag_varchar_1"
     throughput: 1.0

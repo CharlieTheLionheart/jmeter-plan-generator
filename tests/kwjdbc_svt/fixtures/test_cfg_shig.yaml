@@ -17,13 +17,13 @@ conn_config:
 
 write_config:
   - tbl_name: db_shig.t_cnc
-    throughput: 120.0
+    throughput: 1.0
     mode: batch_prepared
     batch_lines: 50
     device_per_thread: 1
     num_threads: 4
   - tbl_name: db_shig.t_electmeter
-    throughput: 120.0
+    throughput: 1.0
     mode: batch_prepared
     batch_lines: 50
     device_per_thread: 1
@@ -40,7 +40,7 @@ query_config:
         AND ts > NOW() - INTERVAL '1 hour'
       ORDER BY ts DESC
       LIMIT 100
-    throughput: 4.0
+    throughput: 1.0
     num_threads: 1
 
   # Q2: last_row t_cnc
@@ -48,7 +48,7 @@ query_config:
       SELECT last_row(*)
       FROM db_shig.t_cnc
       WHERE ptag_varchar_1 = ?
-    throughput: 2.0
+    throughput: 1.0
     num_threads: 1
 
   # Q3: last_row t_electmeter
@@ -57,7 +57,7 @@ query_config:
       FROM db_shig.t_electmeter
       WHERE ptag_varchar_1 = ?
       GROUP BY ptag_varchar_1
-    throughput: 2.0
+    throughput: 1.0
     num_threads: 1
 
   # Q4: max/min/avg cur_a (col_float4_4) + op_group rtag filter
@@ -123,7 +123,7 @@ query_config:
       HAVING COUNT(*) > 5
       ORDER BY unbalance_count DESC
       LIMIT 10
-    throughput: 0.016666667
+    throughput: 1.0
     num_threads: 1
 
   # Q9: cur_a quality (LLM2) - time_bucket + STDDEV
@@ -138,7 +138,7 @@ query_config:
       GROUP BY time_bucket, ptag_varchar_1
       HAVING STDDEV(col_float4_4) > 0
       ORDER BY time_bucket DESC, cur_a_stddev DESC
-    throughput: 0.016666667
+    throughput: 1.0
     num_threads: 1
 
   # Q10: cnc status + energy consumption (LLM3) - JOIN t_cnc/t_electmeter
@@ -164,7 +164,7 @@ query_config:
         ON e.ts BETWEEN c.ts - INTERVAL '500ms' AND c.ts + INTERVAL '500ms'
       ORDER BY c.ts DESC
       LIMIT 100
-    throughput: 0.016666667
+    throughput: 1.0
     num_threads: 2
 
   # Q11: cur_a healthy status (LLM4) - FILTER + time_bucket
@@ -179,7 +179,7 @@ query_config:
       GROUP BY ptag_varchar_1, time_window
       ORDER BY time_window DESC
       LIMIT 60
-    throughput: 0.016666667
+    throughput: 1.0
     num_threads: 1
 
   # Q12: electmeter start-end status UNION (LLM5)
@@ -211,5 +211,5 @@ query_config:
           WHERE ptag_varchar_1 = ?
             AND ts > NOW() - INTERVAL '1 hour'
         )
-    throughput: 0.016666667
+    throughput: 1.0
     num_threads: 1

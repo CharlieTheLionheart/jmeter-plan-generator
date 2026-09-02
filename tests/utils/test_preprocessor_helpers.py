@@ -156,21 +156,21 @@ class TestCloneRows:
 class TestGroovyDecls:
     def test_all_groovy_decls_contains_aligned_helpers(self):
         decls = all_groovy_decls()
-        # Tasks.md §0.5 / §4 mandates these names.
-        assert "calculateTimestamps" in decls
+        # 当前 generator 仍调用的 Groovy helper
         assert "calculateDeviceNumber" in decls
         assert "deviceIdentifier" in decls
         assert "cloneRows" in decls
 
     def test_helper_declares_long_types(self):
-        # Closes review.md §1 阻塞项 #1: long arithmetic for batch_seq*ms_step.
+        # calculateDeviceNumber 接受 long 参数避免运行时 overflow
         decls = all_groovy_decls()
-        assert "long base_time_ms" in decls
-        assert "long ms_step" in decls
-        assert "long batch_seq" in decls
+        assert "long thread_num" in decls
+        assert "long device_start" in decls
+        assert "long device_per_thread" in decls
 
     def test_helper_includes_division_guard(self):
         decls = all_groovy_decls()
+        # 至少一个 helper 含 >0 边界守卫
         assert "must be > 0" in decls
 
     def test_calculate_local_device_start_decl_is_emitted(self):

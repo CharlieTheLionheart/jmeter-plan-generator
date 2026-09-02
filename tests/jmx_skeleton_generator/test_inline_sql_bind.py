@@ -1,18 +1,13 @@
 """Tests for ``_build_inline_sql_preprocessor_script`` col_tag_bind_mode branch.
 
-Per OpenSpec change ``col-tag-bind-write`` (2026-08-05) tasks.md §4:
-- When ``col_tag_bind_mode=True``, the preprocessor reads
-  ``__SHARED_MEM_{db}_{table}_bind`` (the bind-namespaced map), computes
-  ``group_id = hash(ptag_tuple) mod num_threads`` (where ``ptag_tuple``
-  includes ``device_code`` from ``${device_start}`` + ``device_per_thread``),
-  picks the subset column list + row values for that group, and emits an
-  inline INSERT that includes ``ts`` + every ``primary_tag`` + the subset
-  ``data_col`` + any explicitly ``NOT NULL`` ``data_col``.
-- Empty / missing groups must produce a safe ``-- no group ...`` SQL
-  (no exception), so the JDBC sampler logs a clean error rather than
-  triggering a Groovy crash mid-batch.
-- When ``col_tag_bind_mode`` is False the script body must be
-  byte-identical to the pre-change behavior.
+Behavior under test:
+- ``col_tag_bind_mode=True``: preprocessor reads the bind-namespaced
+  shared memory, looks up the deviceCode's group directly, and emits
+  an inline INSERT covering ts + every primary_tag + the subset
+  data_col + any explicit NOT NULL data_col.
+- Empty / missing groups produce a safe fallback SQL so the JDBC
+  sampler logs a clean error rather than crashing mid-batch.
+- ``col_tag_bind_mode=False`` falls back to the full-row path.
 """
 
 from __future__ import annotations
@@ -73,32 +68,20 @@ def test_bind_mode_emits_subset_columns() -> None:
 
 
 def test_bind_mode_uses_literal_device_code_lookup() -> None:
-    """write-batch-mode-semantics DCR (2026-08-31) bind branch: the
-    bind map is looked up by the deviceCode string — NO
-    ``hashCode()`` hash distribution (D-21 superseded). Pre-fix bind
-    path used ``groupId = hash(ptagValues) % num_threads`` which
-    Groovy default ``List.hashCode()`` made degenerate for short
-    numeric-suffixed values.
+    """deviceCode 用显式 toString() 拼接，不用 GString `${a}_${b}`。
 
-    2026-09-01: switched from the simple-identifier GString form
-    ``${threadNum}_${d}`` to explicit ``toString()`` concatenation
-    because the JSR223 + GroovyScriptEngineImpl 3.0.20 wrapper
-    incorrectly compiles a simple-identifier GString as a
-    ``$(closure)`` method call (`MissingMethodException: $()`).
-    ``obj.toString() + "_" + obj.toString()`` is parsed as a
-    plain string concatenation and avoids the bug.
+    JSR223 + GroovyScriptEngineImpl 3.0.20 把简单标识符 GString 编译为
+    ``$(closure)`` 方法调用（``MissingMethodException: $()``）；用
+    ``obj.toString() + "_" + obj.toString()`` 走普通字符串拼接绕过这个
+    编译器 bug。
     """
     script = _build_inline_sql_preprocessor_script(
         **_minimal_kwargs(col_tag_bind_mode=True, col_num_per_tag=2, num_threads=8)
     )
 
     assert "hashCode()" not in script, (
-        f"D-21 superseded hashCode() — got snippet:\n{script[:2000]}"
+        f"bind map must be looked up by literal deviceCode; got snippet:\n{script[:2000]}"
     )
-    # deviceCode is built via explicit `toString()` concatenation
-    # instead of a Groovy GString (see docstring). The literal
-    # string ``threadNum.toString() + "_" + d.toString()`` must
-    # appear in the generated inline-script body.
     assert "threadNum.toString() + \"_\" + d.toString()" in script, (
         f"expected explicit toString() concatenation deviceCode line; "
         f"got snippet:\n{script[:2000]}"
@@ -151,11 +134,7 @@ def test_default_mode_unchanged() -> None:
 
 
 def test_bind_mode_dpt_for_loop_emits() -> None:
-    """write-batch-mode-semantics DCR (2026-08-31) bind branch: outer
-    ``for (int d = deviceStart; d < deviceStart + devicePerThread; d++)``
-    loop so each sampler tick covers all devices assigned to the
-    current thread (gap #1 fix applied to inline script too).
-    """
+    """每个 sampler tick 覆盖 device_per_thread 个 device（外层 dpt for）。"""
     script = _build_inline_sql_preprocessor_script(
         **_minimal_kwargs(
             col_tag_bind_mode=True, col_num_per_tag=2, num_threads=2,
@@ -165,43 +144,33 @@ def test_bind_mode_dpt_for_loop_emits() -> None:
     assert "for (int d = deviceStart; d < deviceStart + devicePerThread; d++)" in script, (
         f"expected dpt for-loop; got snippet:\n{script[:2000]}"
     )
-    # Inner batch_lines loop (MultiRowInsert).
+    # MultiRowInsert：内层 batch_lines 行
     assert "for (int r = 0; r < batchLines; r++)" in script, (
         f"expected batch_lines loop; got snippet:\n{script[:2000]}"
     )
 
 
-def test_bind_mode_整步_ts_formula() -> None:
-    """write-batch-mode-semantics DCR (2026-08-31) bind branch: ts is
-    ``baseTime + r × msStep`` (整步语义 gap #6 fix). Pre-fix used
-    ``baseTime + batchSeq * msStep`` (sampler tick accumulation).
-    """
+def test_bind_mode_step_per_row_ts_formula() -> None:
+    """ts = baseTime + r * msStep，每行间隔一个 msStep（整步语义）。"""
     script = _build_inline_sql_preprocessor_script(
         **_minimal_kwargs(
             col_tag_bind_mode=True, col_num_per_tag=2, num_threads=2,
             device_per_thread=2, batch_lines=3, ms_step=1000,
         )
     )
-    # Must NOT contain the batchSeq-tick-accumulation form.
     assert "batchSeq * msStep" not in script, (
-        f"pre-fix batchSeq * msStep still present; got snippet:\n{script[:2000]}"
+        f"batchSeq tick accumulator must not appear; got snippet:\n{script[:2000]}"
     )
     assert "baseTime + batchSeq" not in script, (
-        f"pre-fix baseTime + batchSeq still present; got snippet:\n{script[:2000]}"
+        f"baseTime + batchSeq form must not appear; got snippet:\n{script[:2000]}"
     )
-    # Must contain the new 整步 formula `baseTime + r * msStep`.
     assert "baseTime + r * msStep" in script, (
-        f"expected `baseTime + r * msStep` 整步 formula; got snippet:\n{script[:2000]}"
+        f"expected `baseTime + r * msStep`; got snippet:\n{script[:2000]}"
     )
 
 
 def test_bind_mode_base_time_per_tick() -> None:
-    """write-batch-mode-semantics DCR (2026-08-31) bind branch: baseTime
-    MUST be re-sampled on every sampler tick
-    (``System.currentTimeMillis()`` directly) — NOT cached to a UDV on
-    thread startup. Pre-fix had ``baseTimeKey`` UDV with per-thread
-    init-time stamp plus ``batchSeq * msStep`` per-tick accumulator.
-    """
+    """baseTime 每个 sampler tick 直接取 System.currentTimeMillis()，不缓存。"""
     script = _build_inline_sql_preprocessor_script(
         **_minimal_kwargs(col_tag_bind_mode=True, col_num_per_tag=2, num_threads=2)
     )
@@ -209,8 +178,8 @@ def test_bind_mode_base_time_per_tick() -> None:
         f"expected direct System.currentTimeMillis() per-tick sample; got snippet:\n{script[:2000]}"
     )
     assert "baseTimeKey" not in script, (
-        f"pre-fix baseTimeKey UDV cache still present; got snippet:\n{script[:2000]}"
+        f"UDV cache key must not appear; got snippet:\n{script[:2000]}"
     )
     assert "batchSeq" not in script, (
-        f"pre-fix batchSeq counter still present; got snippet:\n{script[:2000]}"
+        f"batchSeq counter must not appear; got snippet:\n{script[:2000]}"
     )

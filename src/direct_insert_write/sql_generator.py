@@ -1,21 +1,21 @@
-"""SQL generation for direct INSERT (single + batch) write samplers.
+"""SQL generation for relational-table init batch INSERTs.
 
 Design: openspec/changes/direct-insert-write/design.md
 Spec:    openspec/changes/direct-insert-write/specs/direct-insert-write/spec.md
 
-The two public emitters are:
+Produces the multi-row ``INSERT INTO ... VALUES (?, ?), (?, ?), ...``
+template consumed by :mod:`jmx_skeleton_generator.generators.ddl_setup`
+for the one-time relational init sampler. The write TG path
+(``single_insert`` / ``batch_insert``) is wired through
+:func:`jmx_skeleton_generator.generators.write_groups._build_inline_sql_preprocessor_script`
+which emits an inline SQL string at runtime.
 
-- :func:`generate_single_insert_sql` — one row per execution.
-- :func:`generate_batch_insert_sql` — fixed-row-count batch VALUES tuples.
-
-Both follow project-wide conventions enforced in :mod:`ddl_generator`:
+Conventions enforced here:
 
 - Table names use the qualified form ``database.table``.
 - All identifiers and SQL keywords are lower-cased.
-- :class:`DirectInsertGenerationError` (a subclass of
-  :class:`ddl_generator.generator.DdlGenerationError`) is raised on
-  validation failures. Callers can catch the project-wide
-  ``DdlGenerationError`` or the more specific ``DirectInsertGenerationError``.
+- :class:`DirectInsertGenerationError` is raised on validation
+  failures.
 """
 
 from __future__ import annotations
@@ -63,45 +63,6 @@ def _normalize_columns(columns: Iterable[str]) -> List[str]:
             )
         out.append(_identifier_or_keyword(col))
     return out
-
-
-# ---------------------------------------------------------------------------
-# Single INSERT
-# ---------------------------------------------------------------------------
-
-def generate_single_insert_sql(
-    table_name: str,
-    columns: Iterable[str],
-) -> str:
-    """Generate ``insert into db.table (col1, col2) values (?, ?)``.
-
-    Parameters
-    ----------
-    table_name:
-        Qualified table name in the form ``database.table``.
-    columns:
-        Ordered column list. First column is the timestamp column by
-        convention (see design.md §"时间戳计算公式").
-
-    Returns
-    -------
-    SQL string with ``?`` placeholders, one per column.
-
-    Raises
-    ------
-    DirectInsertGenerationError
-        When ``columns`` is empty or ``table_name`` is not qualified.
-    """
-    cols = _normalize_columns(columns)
-    if not cols:
-        raise DirectInsertGenerationError(
-            "generate_single_insert_sql requires at least one column"
-        )
-    db, table = _split_qualified(table_name)
-    qualified = f"{_identifier_or_keyword(db)}.{_identifier_or_keyword(table)}"
-    placeholders = ", ".join(["?"] * len(cols))
-    cols_list = ", ".join(cols)
-    return f"insert into {qualified} ({cols_list}) values ({placeholders})"
 
 
 # ---------------------------------------------------------------------------
