@@ -172,7 +172,7 @@ for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
     // Python f-string double-brace escape outputs the literal Groovy
 // GString syntax that the surrounding f-string would otherwise try
 // to resolve as Python identifiers.
-    def deviceCode = f"${{threadNum}}_${{d}}"
+    def deviceCode = threadNum.toString() + "_" + d.toString()
     def group = bindGroups.get(deviceCode) as Map
     if (group == null) {{
         log.warn("DirectInsertPrep: no group " + deviceCode + " in " + rowsKey)
@@ -274,7 +274,7 @@ for (int d = localDeviceStart; d < localDeviceStart + devicePerThread; d++) {{
     // Python f-string double-brace escape outputs the literal Groovy
     // GString syntax that the surrounding f-string would otherwise
     // try to resolve as Python identifiers.
-    def deviceCode = f"${{threadNum}}_${{d}}"
+    def deviceCode = threadNum.toString() + "_" + d.toString()
     for (int r = 0; r < batchLines; r++) {{
         def srcRow = allRows.get(new Random().nextInt(total))
         def rowCopy = new ArrayList(srcRow)
@@ -684,7 +684,7 @@ for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
     // inline GString — Python f-string double-brace escape outputs
     // the literal Groovy GString syntax that the surrounding f-string
     // would otherwise try to resolve as Python identifiers.
-    def deviceCode = f"${{threadNum}}_${{d}}"
+    def deviceCode = threadNum.toString() + "_" + d.toString()
     def group = bindGroups.get(deviceCode) as Map
     if (group == null) {{
         log.warn("BatchPreparedBindPrep: no row for deviceCode " + deviceCode + " in " + rowsKey)
@@ -836,7 +836,7 @@ def batchRows = new ArrayList<Object[]>()
 for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
     // inline GString — Python f-string double-brace escape outputs
     // the literal Groovy GString syntax.
-    def deviceCode = f"${{threadNum}}_${{d}}"
+    def deviceCode = threadNum.toString() + "_" + d.toString()
     for (int i = 0; i < batchLines; i++) {{
         def srcRow = sharedRows.get((startIdx + i) % totalRows)
         def rowCopy = srcRow.clone() as Object[]

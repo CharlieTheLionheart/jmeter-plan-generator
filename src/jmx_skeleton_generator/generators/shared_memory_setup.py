@@ -250,7 +250,7 @@ for (int t = 0; t < numThreads; t++) {{
         // The new format binds `deviceIndex` to the absolute device
         // number (with device_start), so multi-end cooperative runs no
         // longer collide on deviceCode.
-        def deviceCode = f"${{t}}_${{deviceIndex}}"
+        def deviceCode = t.toString() + "_" + deviceIndex.toString()
         // col_names offset: D-18/D-21 used `t` as the per-thread loop
         // index, but that mapped onto the same offset for all `b` values
         // (every device in a thread got the same column subset). Use the

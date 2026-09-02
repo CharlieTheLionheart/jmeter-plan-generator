@@ -74,11 +74,19 @@ def test_bind_mode_emits_subset_columns() -> None:
 
 def test_bind_mode_uses_literal_device_code_lookup() -> None:
     """write-batch-mode-semantics DCR (2026-08-31) bind branch: the
-    bind map is looked up by the literal GString ``"${{threadNum}}_${{d}}"``
-    — NO ``hashCode()`` hash distribution (D-21 superseded). Pre-fix
-    bind path used ``groupId = hash(ptagValues) % num_threads`` which
+    bind map is looked up by the deviceCode string — NO
+    ``hashCode()`` hash distribution (D-21 superseded). Pre-fix bind
+    path used ``groupId = hash(ptagValues) % num_threads`` which
     Groovy default ``List.hashCode()`` made degenerate for short
     numeric-suffixed values.
+
+    2026-09-01: switched from the simple-identifier GString form
+    ``${threadNum}_${d}`` to explicit ``toString()`` concatenation
+    because the JSR223 + GroovyScriptEngineImpl 3.0.20 wrapper
+    incorrectly compiles a simple-identifier GString as a
+    ``$(closure)`` method call (`MissingMethodException: $()`).
+    ``obj.toString() + "_" + obj.toString()`` is parsed as a
+    plain string concatenation and avoids the bug.
     """
     script = _build_inline_sql_preprocessor_script(
         **_minimal_kwargs(col_tag_bind_mode=True, col_num_per_tag=2, num_threads=8)
@@ -87,10 +95,13 @@ def test_bind_mode_uses_literal_device_code_lookup() -> None:
     assert "hashCode()" not in script, (
         f"D-21 superseded hashCode() — got snippet:\n{script[:2000]}"
     )
-    # Literal GString template is preserved through the Python
-    # f-string escape (double-brace `${{name}}` outputs `${name}` to Groovy).
-    assert "${threadNum}_${d}" in script, (
-        f"expected literal GString `${'$'}{threadNum}_${'$'}{d}`; got:\n{script[:2000]}"
+    # deviceCode is built via explicit `toString()` concatenation
+    # instead of a Groovy GString (see docstring). The literal
+    # string ``threadNum.toString() + "_" + d.toString()`` must
+    # appear in the generated inline-script body.
+    assert "threadNum.toString() + \"_\" + d.toString()" in script, (
+        f"expected explicit toString() concatenation deviceCode line; "
+        f"got snippet:\n{script[:2000]}"
     )
 
 
