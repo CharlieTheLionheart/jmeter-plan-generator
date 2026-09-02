@@ -98,7 +98,7 @@ def _minimal_cfg() -> dict:
             {
                 "tbl_name": "iot_monitor.t_cnc",
                 "throughput": 1000.0,
-                "mode": "single_insert",
+                "mode": "direct",
                 "batch_lines": 1,
                 "device_per_thread": 1,
                 "num_threads": 5,
@@ -441,7 +441,7 @@ class TestEndToEnd:
                 {
                     "tbl_name": "iot_monitor.t_cnc",
                     "throughput": 1000.0,
-                    "mode": "single_insert",
+                    "mode": "direct",
                     "num_threads": 1,
                 }
             ],

@@ -87,7 +87,7 @@ def test_schemaless_mode_missing_rest_api_raises_error():
 
 def test_jdbc_mode_missing_rest_api_no_error():
     """mode=batch_prepared + missing rest_api → JDBC path runs without error."""
-    cfg = _cfg("batch_prepared")
+    cfg = _cfg("prepare")
     # Should NOT raise RestConfigError; may raise other generator errors
     # (e.g., missing ddl_statements / model) but those are not the gate.
     try:

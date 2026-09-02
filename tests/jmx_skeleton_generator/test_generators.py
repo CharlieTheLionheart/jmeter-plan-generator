@@ -237,12 +237,12 @@ class TestGenerateWriteThreadGroups:
         """Without a TestModelConfig, single_insert falls back to skip
         (preserves pre-2026-07-15 contract for callers that don't have
         model metadata handy)."""
-        cfg = [self._write_cfg("single_insert", "iot_monitor.t_cnc")]
+        cfg = [self._write_cfg("direct", "iot_monitor.t_cnc")]
         result = generate_write_thread_groups(cfg, {})
         assert result == []
 
     def test_batch_insert_mode_skipped_without_model(self):
-        cfg = [self._write_cfg("batch_insert", "iot_monitor.t_cnc")]
+        cfg = [self._write_cfg("direct", "iot_monitor.t_cnc")]
         result = generate_write_thread_groups(cfg, {})
         assert result == []
 
@@ -250,7 +250,7 @@ class TestGenerateWriteThreadGroups:
         """When model is provided, single_insert now produces a write
         ThreadGroup per spec §"Generate JDBCSampler for single_insert
         and batch_insert modes"."""
-        cfg = [self._write_cfg("single_insert", "iot_monitor.t_cnc")]
+        cfg = [self._write_cfg("direct", "iot_monitor.t_cnc")]
         result = generate_write_thread_groups(cfg, {}, model=self._make_ts_model())
         tags = [e.tag.split("}")[-1] for e in _walk(result)]
         assert "ThreadGroup" in tags
@@ -262,7 +262,7 @@ class TestGenerateWriteThreadGroups:
         cfg = [
             WriteConfig(
                 tbl_name="iot_monitor.t_cnc",
-                mode="batch_insert",
+                mode="direct",
                 num_threads=10,
                 batch_lines=5,
             )
@@ -279,7 +279,7 @@ class TestGenerateWriteThreadGroups:
         PreProcessor populates with a fully-inline INSERT). This sidesteps
         the JMeter ``?`` placeholder limitations and the
         ``Timestamp.valueOf`` string-format quirks on KaiwuDB."""
-        cfg = [self._write_cfg("single_insert", "iot_monitor.t_cnc")]
+        cfg = [self._write_cfg("direct", "iot_monitor.t_cnc")]
         result = generate_write_thread_groups(cfg, {}, model=self._make_ts_model())
         for e in result:
             if e.tag.endswith("JDBCSampler"):
@@ -289,25 +289,25 @@ class TestGenerateWriteThreadGroups:
                 break
 
     def test_single_prepared_mode_generates_thread_group(self):
-        cfg = [self._write_cfg("single_prepared")]
+        cfg = [self._write_cfg("prepare")]
         result = generate_write_thread_groups(cfg, {})
         tags = [e.tag.split("}")[-1] for e in result]
         assert "ThreadGroup" in tags
 
     def test_batch_prepared_mode_generates_thread_group(self):
-        cfg = [self._write_cfg("batch_prepared")]
+        cfg = [self._write_cfg("prepare")]
         result = generate_write_thread_groups(cfg, {})
         tags = [e.tag.split("}")[-1] for e in result]
         assert "ThreadGroup" in tags
 
     def test_thread_group_has_throughput_timer(self):
-        cfg = [self._write_cfg("batch_prepared")]
+        cfg = [self._write_cfg("prepare")]
         result = generate_write_thread_groups(cfg, {})
         tags = [e.tag.split("}")[-1] for e in _walk(result)]
         assert "ConstantThroughputTimer" in tags
 
     def test_template_used_as_query(self):
-        cfg = [self._write_cfg("single_prepared", "mydb.mytable")]
+        cfg = [self._write_cfg("prepare", "mydb.mytable")]
         templates = {"mydb.mytable": "insert into mydb.mytable (a) values (?)"}
         result = generate_write_thread_groups(cfg, templates)
         for e in result:
@@ -317,7 +317,7 @@ class TestGenerateWriteThreadGroups:
                 break
 
     def test_num_threads_from_config(self):
-        cfg = [WriteConfig(tbl_name="db.t", mode="single_prepared", num_threads=42)]
+        cfg = [WriteConfig(tbl_name="db.t", mode="prepare", num_threads=42)]
         result = generate_write_thread_groups(cfg, {})
         for e in result:
             if e.tag.endswith("ThreadGroup"):

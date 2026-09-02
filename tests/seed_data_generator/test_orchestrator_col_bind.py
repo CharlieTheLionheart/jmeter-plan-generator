@@ -92,7 +92,7 @@ def _make_test_config(
             write_configs.append(
                 WriteConfig(
                     tbl_name=key,
-                    mode="batch_prepared",
+                    mode="prepare",
                     col_tag_bind_mode=bind,
                     col_num_per_tag=2 if bind else 0,
                 )

@@ -17,7 +17,7 @@ from config_parser.models import (
 logger = logging.getLogger(__name__)
 
 # Valid prepared write modes that require template generation
-_PREPARED_MODES = frozenset(("single_prepared", "batch_prepared"))
+_PREPARED_MODES = frozenset(("prepare",))
 
 
 def requires_prepared_insert_templates(write_config: Optional[List[WriteConfig]]) -> bool:

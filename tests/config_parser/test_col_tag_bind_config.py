@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from config_parser.models import WriteConfig
 
 
-def _minimal(mode: str = "batch_prepared") -> dict:
+def _minimal(mode: str = "prepare") -> dict:
     """Return the minimum required fields for a valid WriteConfig."""
     return {"tbl_name": "iot_monitor.meters", "mode": mode}
 
@@ -60,10 +60,10 @@ def test_true_with_negative_per_tag_rejected() -> None:
 @pytest.mark.parametrize(
     "mode",
     [
-        "single_insert",
-        "batch_insert",
-        "single_prepared",
-        "batch_prepared",
+        "direct",
+        "direct",
+        "prepare",
+        "prepare",
         "schemaless",
     ],
 )

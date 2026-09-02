@@ -8,7 +8,7 @@ conn_config:
 write_config:
   - tbl_name: iot_monitor.t_cnc
     throughput: 1.0
-    mode: batch_prepared
+    mode: prepare
     batch_lines: 5
     device_per_thread: 2
     num_threads: 4

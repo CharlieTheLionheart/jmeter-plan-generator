@@ -96,14 +96,14 @@ class TestDefaultValue:
 class TestConfigParserValidation:
     def test_write_throughput_zero_rejected(self):
         with pytest.raises(ValidationError):
-            WriteConfig(tbl_name="db.t", throughput=0, mode="single_insert")
+            WriteConfig(tbl_name="db.t", throughput=0, mode="direct")
 
     def test_write_throughput_negative_rejected(self):
         with pytest.raises(ValidationError):
-            WriteConfig(tbl_name="db.t", throughput=-1, mode="single_insert")
+            WriteConfig(tbl_name="db.t", throughput=-1, mode="direct")
 
     def test_write_throughput_positive_accepted(self):
-        cfg = WriteConfig(tbl_name="db.t", throughput=120, mode="single_insert")
+        cfg = WriteConfig(tbl_name="db.t", throughput=120, mode="direct")
         assert cfg.throughput == 120
 
     def test_query_throughput_zero_rejected(self):

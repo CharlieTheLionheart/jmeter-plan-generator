@@ -135,7 +135,7 @@ class TestNoOrchestrationOutput:
     """
 
     def _scratch_jmx_xml(self) -> str:
-        wc = WriteConfig(tbl_name="db.t", mode="single_prepared", num_threads=1)
+        wc = WriteConfig(tbl_name="db.t", mode="prepare", num_threads=1)
         results = generate_write_thread_groups([wc], {})
         return "".join(ET.tostring(e, encoding="unicode") for e in results)
 

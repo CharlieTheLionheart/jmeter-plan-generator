@@ -204,7 +204,7 @@ class TestBatchPreparedWriteUdvPlumbsColumnTypes:
         wc = WriteConfig(
             tbl_name="iot_monitor.t_cnc",
             throughput=60.0,
-            mode="batch_prepared",
+            mode="prepare",
             batch_lines=5,
             device_per_thread=2,
             num_threads=4,
@@ -270,7 +270,7 @@ class TestBatchPreparedThreadGroupResolvesColumnTypes:
         wc = WriteConfig(
             tbl_name="iot_monitor.t_cnc",
             throughput=60.0,
-            mode="batch_prepared",
+            mode="prepare",
             batch_lines=5,
             device_per_thread=2,
             num_threads=4,

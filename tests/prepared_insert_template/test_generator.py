@@ -33,39 +33,39 @@ class TestRequiresPreparedInsertTemplates:
         assert requires_prepared_insert_templates([]) is False
 
     def test_only_single_insert(self):
-        cfg = [WriteConfig(tbl_name="t", mode="single_insert")]
+        cfg = [WriteConfig(tbl_name="t", mode="direct")]
         assert requires_prepared_insert_templates(cfg) is False
 
     def test_only_batch_insert(self):
-        cfg = [WriteConfig(tbl_name="t", mode="batch_insert")]
+        cfg = [WriteConfig(tbl_name="t", mode="direct")]
         assert requires_prepared_insert_templates(cfg) is False
 
     def test_single_prepared(self):
-        cfg = [WriteConfig(tbl_name="t", mode="single_prepared")]
+        cfg = [WriteConfig(tbl_name="t", mode="prepare")]
         assert requires_prepared_insert_templates(cfg) is True
 
     def test_batch_prepared(self):
-        cfg = [WriteConfig(tbl_name="t", mode="batch_prepared")]
+        cfg = [WriteConfig(tbl_name="t", mode="prepare")]
         assert requires_prepared_insert_templates(cfg) is True
 
     def test_mixed_modes_with_prepared(self):
         cfg = [
-            WriteConfig(tbl_name="t1", mode="single_insert"),
-            WriteConfig(tbl_name="t2", mode="batch_prepared"),
-            WriteConfig(tbl_name="t3", mode="single_prepared"),
+            WriteConfig(tbl_name="t1", mode="direct"),
+            WriteConfig(tbl_name="t2", mode="prepare"),
+            WriteConfig(tbl_name="t3", mode="prepare"),
         ]
         assert requires_prepared_insert_templates(cfg) is True
 
     def test_mixed_modes_without_prepared(self):
         cfg = [
-            WriteConfig(tbl_name="t1", mode="single_insert"),
-            WriteConfig(tbl_name="t2", mode="batch_insert"),
+            WriteConfig(tbl_name="t1", mode="direct"),
+            WriteConfig(tbl_name="t2", mode="direct"),
         ]
         assert requires_prepared_insert_templates(cfg) is False
 
     def test_missing_mode_key(self):
         # WriteConfig requires mode; construct via model_validator workaround
-        cfg = [WriteConfig(tbl_name="t", mode="batch_insert")]
+        cfg = [WriteConfig(tbl_name="t", mode="direct")]
         assert requires_prepared_insert_templates(cfg) is False
 
 
@@ -278,7 +278,7 @@ class TestPreparedInsertTemplateGenerator:
                 )
             ],
         )
-        write_cfg = [WriteConfig(tbl_name="ts_table", mode="batch_insert")]
+        write_cfg = [WriteConfig(tbl_name="ts_table", mode="direct")]
         gen = PreparedInsertTemplateGenerator(model, write_cfg, {"ts_db.ts_table": ["a"]})
         assert gen.generate() == {}
 
@@ -292,7 +292,7 @@ class TestPreparedInsertTemplateGenerator:
                 )
             ],
         )
-        write_cfg = [WriteConfig(tbl_name="t_cnc", mode="single_prepared")]
+        write_cfg = [WriteConfig(tbl_name="t_cnc", mode="prepare")]
         gen = PreparedInsertTemplateGenerator(
             model, write_cfg, {"iot_monitor.t_cnc": ["ts", "ptag_int8_1", "col_int8_1"]}
         )
@@ -319,7 +319,7 @@ class TestPreparedInsertTemplateGenerator:
             ],
             ts_dbs=[],
         )
-        write_cfg = [WriteConfig(tbl_name="rel_table", mode="batch_prepared")]
+        write_cfg = [WriteConfig(tbl_name="rel_table", mode="prepare")]
         gen = PreparedInsertTemplateGenerator(model, write_cfg, {"rel_db.rel_table": ["a"]})
         assert gen.generate() == {}
 
@@ -331,7 +331,7 @@ class TestPreparedInsertTemplateGenerator:
                 TsDbConfig(name="db2", tables=[self._ts_table("t2")]),
             ],
         )
-        write_cfg = [WriteConfig(tbl_name="t1", mode="batch_prepared")]
+        write_cfg = [WriteConfig(tbl_name="t1", mode="prepare")]
         gen = PreparedInsertTemplateGenerator(
             model, write_cfg, {"db1.t1": ["a"], "db2.t2": ["b"]}
         )
@@ -397,7 +397,7 @@ class TestBoundaryConditions:
                 TsDbConfig(name="empty_db", tables=[]),
             ],
         )
-        write_cfg = [WriteConfig(tbl_name="t", mode="batch_prepared")]
+        write_cfg = [WriteConfig(tbl_name="t", mode="prepare")]
         gen = PreparedInsertTemplateGenerator(model, write_cfg, {})
         assert gen.generate() == {}
 
@@ -406,7 +406,7 @@ class TestBoundaryConditions:
             rel_dbs=[],
             ts_dbs=[TsDbConfig(name="empty_db", tables=[])],
         )
-        write_cfg = [WriteConfig(tbl_name="t", mode="batch_prepared")]
+        write_cfg = [WriteConfig(tbl_name="t", mode="prepare")]
         gen = PreparedInsertTemplateGenerator(model, write_cfg, {})
         assert gen.generate() == {}
 
@@ -436,7 +436,7 @@ class TestBoundaryConditions:
                 )
             ],
         )
-        write_cfg = [WriteConfig(tbl_name="t", mode="batch_prepared")]
+        write_cfg = [WriteConfig(tbl_name="t", mode="prepare")]
         cols = {"db.t": ["select", "from", "where"]}
         gen = PreparedInsertTemplateGenerator(model, write_cfg, cols)
         result = gen.generate()
@@ -465,7 +465,7 @@ class TestBoundaryConditions:
             ],
             ts_dbs=[],
         )
-        write_cfg = [WriteConfig(tbl_name="rel_table", mode="batch_insert")]
+        write_cfg = [WriteConfig(tbl_name="rel_table", mode="direct")]
         gen = PreparedInsertTemplateGenerator(model, write_cfg, {})
         result = gen.generate()
         assert result == {}

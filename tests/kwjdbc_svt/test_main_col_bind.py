@@ -69,7 +69,7 @@ def _mixed_cfg(bind_table: str = "iot_monitor.t_cnc") -> dict:
             {
                 "tbl_name": bind_table,
                 "throughput": 1000.0,
-                "mode": "batch_prepared",
+                "mode": "prepare",
                 "batch_lines": 1,
                 "device_per_thread": 1,
                 "num_threads": 1,
@@ -79,7 +79,7 @@ def _mixed_cfg(bind_table: str = "iot_monitor.t_cnc") -> dict:
             {
                 "tbl_name": "iot_monitor.t_alt",
                 "throughput": 1000.0,
-                "mode": "batch_prepared",
+                "mode": "prepare",
                 "batch_lines": 1,
                 "device_per_thread": 1,
                 "num_threads": 1,

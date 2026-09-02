@@ -129,13 +129,11 @@
 
 - `tbl_name`：表名，`all` 表示所有表使用相同的写入配置，每张表生成独立的写入线程组；若不同表需要不同的写入参数，则需分条目指定表名，每张表可独立配置
 - `throughput`：**每个设备的目标吞吐量**（per-device-per-minute，单位次/分钟 SQL 触发频率）。`ConstantThroughputTimer` 配 `calcMode=0`（This thread only），配 `throughput` = 每线程每分钟 sampler 触发 = 每设备每分钟 SQL 数（因 1 sampler = `device_per_thread` 个 SQL 自动覆盖 dpt 个设备）。每张表的写入线程组独立挂载 ConstantThroughputTimer，Timer 仅对该线程组生效
-- `mode`：数据写入模式（按"每条 INSERT SQL 写多少行"业务语义重定义，write-batch-mode-semantics DCR 2026-08-31）：
-  - `single_insert`：单条直接 INSERT 写入，**1 行/SQL**（如 `insert into t values (?, ?)`）
-  - `batch_insert`：批量直接 INSERT 写入，**N 行/SQL**（如 `insert into t values (?,?),(?,?),(?,?)`，N 由 `batch_lines` 决定）
-  - `single_prepared`：单条 PreparedStatement 写入，**1 行/SQL**（`PreparedStatement.setXxx(...)` × 1）
-  - `batch_prepared`：批量 PreparedStatement 写入，**N 行/SQL**（`addBatch() × N` + `executeBatch()`，N 由 `batch_lines` 决定）
-  - `schemaless`：无模式写入，**N Lines/HTTP body**（N 个 InfluxDB Line + `\n` 分隔，N 由 `batch_lines` 决定）
-- `col_tag_bind_mode`：列标签绑定模式（**每表独立**，与 `mode` 正交，5 种 mode 全部适用，含 `schemaless`）。`true` 时启用**列子集** INSERT：每张 col_tag_bind 表只写 `col_num_per_tag` 列（hash 分组后从列种子文件随机抽取），而不是全 data 列；`false`（默认）保持全列 INSERT 行为
+- `mode`：数据写入模式（按"每条 INSERT SQL 写多少行 + 走哪种 server-side 通道"业务语义；5 mode → 3 mode 收敛，2026-09-02）：
+  - `direct`：直接 INSERT 写入（`Update Statement` + inline SQL 字符串）。`batch_lines=1` = 单行 INSERT，`batch_lines=N` = MultiRowInsert VALUES `(...), (...), ...`。
+  - `prepare`：PreparedStatement 写入（`addBatch() × batch_lines` + `executeBatch()` + `?` bind）。`batch_lines=1` = 单行 addBatch + executeBatch，`batch_lines=N` = N 行 addBatch + executeBatch。
+  - `schemaless`：无模式写入（InfluxDB Line Protocol over HTTPS）。`batch_lines=N` = N 行 Line + `\n` 分隔 body。
+- `col_tag_bind_mode`：列标签绑定模式（**每表独立**，与 `mode` 正交，3 种 mode 全部适用，含 `schemaless`）。`true` 时启用**列子集** INSERT：每张 col_tag_bind 表只写 `col_num_per_tag` 列（hash 分组后从列种子文件随机抽取），而不是全 data 列；`false`（默认）保持全列 INSERT 行为
   - **每张表独立**：同一 model 中不同表的 `col_tag_bind_mode` 可独立配置（`write_config[]` 数组里分别配各自的 `tbl_name`），与 `mode` 正交
   - **适用范围**：仅时序表（`ts_dbs` 下的 table）。关系表（`rel_dbs`）无 primary tag 概念，hash 分组语义无定义；启用则 `main entry` 校验抛 `ValueError`
   - **hash 分组**：每张 col_tag_bind 表按 `hash(ptag_tuple) mod num_threads` 划分为 `num_threads` 个 group，每个 group 写一份列子集到 `__SHARED_MEM_{db}_{table}_bind`；SetupTG 加载列种子文件后写入该 SharedMemory key，Write TG 运行时按 `ptag_tuple` 的 hash 选取对应 group 的列子集。**已被 D-21 commit `fcaef6f` 推翻 —— SetupTG 改为按 deviceCode 直接烤 SharedMemory key，不再 hash。完整新规约见 OpenSpec DCR `openspec/changes/write-batch-mode-semantics/`，下方「ptag #1 runtime 派生」子项作现行实现。**
@@ -144,9 +142,9 @@
   - **JDBC 路径**：`_build_inline_sql_preprocessor_script` 走 bind 分支，生成 `INSERT INTO <table> (ts, ptag, subset_cols) VALUES (?, ?, ...)` + safe `SELECT 1` 兜底（empty group → `ctx.stopThread()`）
   - **schemaless 路径**：InfluxDB Line Protocol body 走 bind 分支，`tag_set` 部分仍按所有 ptag + regular_tag 填，`field_set` 部分只填子集 data 列 + `ts`
 - `col_num_per_tag`：col_tag_bind_mode 下每个 group 包含的 data 列数。`col_tag_bind_mode=true` 时必须 `> 0`（`WriteConfig` 层校验）；同时必须 `≤ data_col_count` 且对应表 `primary_tag_count ≥ 1`（`main entry` 校验）。`col_tag_bind_mode=false` 时忽略
-- `batch_lines`：每条 INSERT SQL（或每 HTTP body）写入的记录条数，**全部 5 mode 都可提供**（write-batch-mode-semantics DCR 2026-08-31 统一语义）：
-  - `single_insert` / `single_prepared`：强制 `= 1`（`WriteConfig.check_single_modes_batch_lines_one` 校验，R-PAR-016 对称扩展）
-  - `batch_insert` / `batch_prepared` / `schemaless`：`≥ 1`，无上限
+- `batch_lines`：每条 INSERT SQL（或每 HTTP body）写入的记录条数，**3 种 mode 都可提供**（write-batch-mode-semantics DCR 2026-08-31 统一语义，2026-09-02 mode 收敛）：
+  - 任意 mode：`≥ 1`，无上限
+  - 业务约定（不强制）：`direct` + `batch_lines=1` = 单行 INSERT；`direct` + `batch_lines>1` = MultiRowInsert；`prepare` + `batch_lines=1` = 单 addBatch；`prepare` + `batch_lines>1` = 多 addBatch。校验交给业务侧而非 schema 层
   - `schemaless` 下语义为"每个 HTTP body 的 Line 数量"（D-24 已落地）
   - 业务意图：把**同一 device**的 `batch_lines` 个时间戳拼成 1 条 SQL 入库（KaiwuDB 时序底层每 device 一个文件，跨 device 单 SQL 需同时打开/关闭多个文件性能差）
   - 时间戳按 `ms_step` 间隔递增生成 `batch_lines` 个（**整步语义** = `+ i × ms_step`，非分摊语义 `+ i × (ms_step / batch_lines)`）

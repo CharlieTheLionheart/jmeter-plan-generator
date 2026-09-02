@@ -25,7 +25,7 @@ from jmx_skeleton_generator.generators.shared_memory_setup import (
 def _write_cfg(*, tbl_name: str, bind: bool, per_tag: int = 2) -> WriteConfig:
     return WriteConfig(
         tbl_name=tbl_name,
-        mode="batch_prepared",
+        mode="prepare",
         batch_lines=1,
         device_per_thread=1,
         num_threads=1,

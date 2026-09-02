@@ -51,7 +51,7 @@ def _valid_cfg() -> dict:
             {
                 "tbl_name": "t_workshop",
                 "throughput": 1000,
-                "mode": "single_insert",
+                "mode": "direct",
                 "num_threads": 10,
             }
         ],
@@ -287,7 +287,7 @@ def test_interval_reverse_order(tmp_path: Path) -> None:
 def test_write_num_threads_inconsistent(tmp_path: Path) -> None:
     data = _valid_cfg()
     data["write_config"].append(
-        {"tbl_name": "t_motor", "throughput": 1000, "mode": "single_insert", "batch_lines": 1, "num_threads": 5}
+        {"tbl_name": "t_motor", "throughput": 1000, "mode": "direct", "batch_lines": 1, "num_threads": 5}
     )
     path = _write_yaml(tmp_path, "test_cfg.yaml", data)
     with pytest.raises(ConfigParserError, match="num_threads"):

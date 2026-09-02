@@ -58,7 +58,7 @@ class TestJMXAssembler:
     def test_assemble_add_write_thread_groups(self):
         tp_elems, udv_elems = self._make_tp_and_udv()
         asm = JMXAssembler()
-        cfg = [WriteConfig(tbl_name="mydb.t", mode="batch_prepared", num_threads=5)]
+        cfg = [WriteConfig(tbl_name="mydb.t", mode="prepare", num_threads=5)]
         asm.add_many(generate_write_thread_groups(cfg, {"mydb.t": "insert into mydb.t (a) values (?)"}))
         root = asm.assemble(tp_elems[0], tp_elems[1], udv_elems)
         xml = to_string(root)
@@ -134,7 +134,7 @@ class TestJMXWriter:
 
 
 class TestJMXSkeletonGenerator:
-    def _make_test_config(self, write_mode="batch_prepared"):
+    def _make_test_config(self, write_mode="prepare"):
         conn = ConnConfig(db_url="jdbc:kaiwudb://localhost/defaultdb")
         write_cfg = [WriteConfig(tbl_name="mydb.t", mode=write_mode, num_threads=5)]
         query_cfg = [QueryConfig(query="SELECT * FROM mydb.t", num_threads=1)]
@@ -171,7 +171,7 @@ class TestJMXSkeletonGenerator:
 
     def test_generate_includes_write_thread_group(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            test_config = self._make_test_config(write_mode="batch_prepared")
+            test_config = self._make_test_config(write_mode="prepare")
             gen = JMXSkeletonGenerator(
                 test_config=test_config,
                 prepared_templates={"mydb.t": "insert into mydb.t (a) values (?)"},
@@ -208,7 +208,7 @@ class TestJMXSkeletonGenerator:
             TsTableConfig,
         )
         with tempfile.TemporaryDirectory() as tmpdir:
-            test_config = self._make_test_config(write_mode="single_insert")
+            test_config = self._make_test_config(write_mode="direct")
             table = TsTableConfig(
                 name="t",
                 data_col_count=1,
@@ -234,7 +234,7 @@ class TestJMXSkeletonGenerator:
 
     def test_generate_empty_ddl_skips_setup_thread_group(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            test_config = self._make_test_config(write_mode="batch_prepared")
+            test_config = self._make_test_config(write_mode="prepare")
             gen = JMXSkeletonGenerator(
                 test_config=test_config,
                 ddl_statements=[],  # empty
@@ -249,7 +249,7 @@ class TestJMXSkeletonGenerator:
 
     def test_generate_with_no_prepared_templates(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            test_config = self._make_test_config(write_mode="batch_prepared")
+            test_config = self._make_test_config(write_mode="prepare")
             gen = JMXSkeletonGenerator(
                 test_config=test_config,
                 ddl_statements=["CREATE DATABASE mydb"],

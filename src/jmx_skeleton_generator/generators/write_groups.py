@@ -26,12 +26,12 @@ from utils.xml_helpers import (
 logger = logging.getLogger(__name__)
 
 # Mode → (JMeter sampler tag, JDBC usePrepared flag).
-# single_prepared uses JDBCSampler w/ usePrepared=true (driver-side bind),
-# batch_prepared uses JSR223Sampler for addBatch/executeBatch (typed-binding
-# dispatch lives in _build_batch_prepared_sampler_body).
+# `prepare` mode (PreparedStatement.addBatch + executeBatch): typed-binding
+# dispatch lives in _build_batch_prepared_sampler_body. The sampler is a
+# JSR223Sampler regardless of `batch_lines` (1-row vs N-rows is purely a
+# business-level batch size; the JMeter-side sampler shape is identical).
 _PREPARED_MODE_SAMPLER: Dict[str, Tuple[str, bool]] = {
-    "single_prepared": ("JDBCSampler", True),
-    "batch_prepared":  ("JSR223Sampler", False),
+    "prepare": ("JSR223Sampler", False),
 }
 
 
@@ -490,10 +490,12 @@ def _build_direct_insert_components(
     on validation failure.
     """
     bind_mode = bool(getattr(wc, "col_tag_bind_mode", False))
-    if wc.mode == "single_insert":
-        # Pre-built SQL (with ``?`` placeholders) is no longer used by the
-        # sampler; the preprocessor builds a fully-inlined SQL into
-        # ``vars.insert_sql`` and the sampler references ``${insert_sql}``.
+    if wc.mode == "direct":
+        # `direct` mode: inline SQL string (`INSERT ... VALUES (...), (...)`)
+        # assembled by the JSR223PreProcessor and emitted via a
+        # JDBCSampler `Update Statement`. `batch_lines` controls whether
+        # the SQL emits a single VALUES tuple (=1) or N tuples (MultiRowInsert);
+        # the sampler + preprocessor shape is identical regardless of N.
         sampler, samp_hash = jdbc_sampler_element(
             name=f"Write-{wc.tbl_name}",
             query="${insert_sql}",
@@ -518,32 +520,6 @@ def _build_direct_insert_components(
             script_language="groovy",
             cache_key="true",
             testname=f"[Write] {wc.tbl_name} - direct insert preprocessor",
-        )
-    elif wc.mode == "batch_insert":
-        sampler, samp_hash = jdbc_sampler_element(
-            name=f"Write-{wc.tbl_name}",
-            query="${insert_sql}",
-            data_source="jdbcConfig",
-            query_type="Update Statement",
-            testname=f"[Write] {wc.tbl_name}",
-        )
-        db, table = _split_qualified_table(wc.tbl_name)
-        script = _build_inline_sql_preprocessor_script(
-            db=db,
-            table=table,
-            columns=columns,
-            first_ptag_column=first_ptag_column,
-            device_per_thread=wc.device_per_thread,
-            column_types=column_types,
-            batch_lines=wc.batch_lines,
-            col_tag_bind_mode=bind_mode,
-        )
-        preproc, preproc_hash = jsr223_preprocessor_element(
-            name=f"DirectInsertPrep-{wc.tbl_name}",
-            script=script,
-            script_language="groovy",
-            cache_key="true",
-            testname=f"[Write] {wc.tbl_name} - batch insert preprocessor",
         )
     else:
         raise ValueError(f"_build_direct_insert_components called with mode={wc.mode!r}")
@@ -1003,7 +979,7 @@ def generate_write_thread_groups(
     for wc in write_config:
         fqn = wc.tbl_name.lower()
 
-        if wc.mode in ("single_insert", "batch_insert"):
+        if wc.mode == "direct":
             # Direct-INSERT path: requires model metadata.
             if model is None:
                 logger.warning(
@@ -1040,7 +1016,7 @@ def generate_write_thread_groups(
             results.extend([tg, tg_hash])
             continue
 
-        if wc.mode not in ("single_prepared", "batch_prepared"):
+        if wc.mode != "prepare":
             # Unknown / future modes (e.g. schemaless) are skipped here;
             # schema-level rejection happens in WriteConfig validator.
             logger.warning(
