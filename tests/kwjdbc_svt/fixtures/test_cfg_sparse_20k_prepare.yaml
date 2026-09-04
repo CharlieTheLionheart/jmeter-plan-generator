@@ -1,0 +1,24 @@
+# sparse 20000 + JDBC prepare + 20 thread × 50 dpt + batch_lines=60 + throughput=1
+# 5min × 1/min × 20 thread × 50 dpt × 60 lines = 300000 rows 预期
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 100
+  device_start: 1
+  test_duration: 300
+
+write_config:
+  - tbl_name: db_sparse_20k.t_metrics
+    throughput: 1.0
+    mode: prepare
+    batch_lines: 60
+    device_per_thread: 50
+    num_threads: 20
+    col_tag_bind_mode: true
+    col_num_per_tag: 20
+
+query_config:
+  - query: "select count(*) from db_sparse_20k.t_metrics;"
+    throughput: 1.0
+    num_threads: 1
