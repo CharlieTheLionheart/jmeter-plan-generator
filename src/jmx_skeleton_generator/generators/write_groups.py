@@ -124,7 +124,7 @@ def ptagNames = [{ptag_names_groovy}]
 def colNumPerTag = {col_num_per_tag}
 def numThreads = {num_threads}
 def notNullDataCols = [{not_null_groovy}]
-def devicePerThread = {device_per_thread}
+def devicePerThread = (vars.get('device_per_thread') as Integer) ?: {device_per_thread}
 def msStep = {ms_step}
 
 // write-batch-mode-semantics DCR (2026-08-31) bind branch — same
@@ -222,7 +222,7 @@ def typeList = {type_list_groovy}
 def nCols = columns.size()
 def ptagIndex = {ptag_index}
 def batchLines = {batch_lines}
-def devicePerThread = {device_per_thread}
+def devicePerThread = (vars.get('device_per_thread') as Integer) ?: {device_per_thread}
 def msStep = {ms_step}
 
 if (allRows == null || allRows.isEmpty()) {{
@@ -434,6 +434,7 @@ def _build_write_udv(
         "batch_lines": str(wc.batch_lines),
         "ms_step": str(ms_step),
         "first_ptag": first_ptag,
+        "device_per_thread": str(wc.device_per_thread),
     }
     if column_types:
         # Comma-separated; the sampler does ``.split(',')`` at runtime
@@ -586,7 +587,7 @@ def _build_batch_prepared_bind_preprocessor_body(
 // column to either the baked ptag list or the per-deviceCode cell list.
 def tableName = '{safe_table}'
 def rowsKey = '{rows_key}'
-def devicePerThread = {device_per_thread}
+def devicePerThread = (vars.get('device_per_thread') as Integer) ?: {device_per_thread}
 def batchLines = {batch_lines}
 def msStep = {ms_step}L
 def allColumns = {all_columns_groovy}
