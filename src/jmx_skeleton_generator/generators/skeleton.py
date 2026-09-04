@@ -106,6 +106,14 @@ class JMXSkeletonGenerator:
                 generate_user_defined_variables(
                     self.test_config.conn_config,
                     seed_dir=str(Path(self.output_dir) / "seeds"),
+                    **(
+                        {
+                            "login_user": self.test_config.rest_api_config.login_user,
+                            "login_password": self.test_config.rest_api_config.login_password,
+                        }
+                        if self.test_config.rest_api_config is not None
+                        else {}
+                    ),
                 ),
             )
             return JMXWriter(self.output_dir).write(root)
