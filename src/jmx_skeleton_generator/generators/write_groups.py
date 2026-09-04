@@ -99,11 +99,10 @@ def _build_inline_sql_preprocessor_script(
     # Map SQL column index → KaiwuDB/JDBC type. Used to decide which
     # cells can be emitted unquoted (numeric / bool) vs. as string
     # literals. Empty list = treat every cell as a string.
-    type_list_groovy = (
-        "[" + ", ".join(f"'{t.lower()}'" for t in column_types) + "]"
-        if column_types
-        else "[]"
-    )
+    # NOTE: stored in UDV ``column_types`` (comma-separated, line 444),
+    # NOT baked as Groovy list literal — 20000 cols would overflow
+    # Java/Groovy single-string 65535 char limit. Prep body reads via
+    # ``vars.get('column_types').split(',')``.
     # col-tag-bind-write (2026-08-05): bind-mode Groovy branch.
     if col_tag_bind_mode:
         # Single-ptag alignment (commit 4 fix 2): the first ptag IS the
@@ -218,7 +217,7 @@ def rowsKey = '{rows_key}'
 def allRows = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
     .get(rowsKey) as ArrayList
 def columns = [{cols_list}]
-def typeList = {type_list_groovy}
+def typeList = (vars.get('column_types') ?: '').split(',')
 def nCols = columns.size()
 def ptagIndex = {ptag_index}
 def batchLines = {batch_lines}
@@ -831,9 +830,20 @@ def _build_batch_prepared_sampler_body(
     ``insert_sql`` and ``column_types`` are baked in by the generator
     (F-3 UDV-pollution fix).
     """
-    column_types_groovy = (
-        _groovy_str_literal(",".join(column_types)) if column_types else "''"
-    )
+    # F-3 UDV-pollution fix: sampler must NOT read column_types from vars.
+    # But single Groovy string literal is capped at 65535 chars (Java
+    # compiler limit), and 20000+ cols join string overflows. Same chunk
+    # strategy as ``insert_sql`` below: split into 16k-char chunks,
+    # bake as a Groovy list literal, ``.join('')`` at runtime.
+    if column_types:
+        joined_types = ",".join(column_types)
+        type_chunks = [
+            _groovy_str_literal(joined_types[start : start + 16_000])
+            for start in range(0, len(joined_types), 16_000)
+        ]
+        column_types_groovy = "[\n        " + ",\n        ".join(type_chunks) + "\n    ].join('')"
+    else:
+        column_types_groovy = "''"
     insert_sql_chunks = [
         _groovy_str_literal(insert_sql[start : start + 16_000])
         for start in range(0, len(insert_sql), 16_000)
