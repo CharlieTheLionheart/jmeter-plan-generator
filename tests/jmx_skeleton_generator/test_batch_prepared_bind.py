@@ -1,32 +1,12 @@
-"""Tests for ``_build_batch_prepared_preprocessor_body`` col_tag_bind_mode branch.
+"""Tests for batch_prepared col_tag_bind_mode D-28 (per-device partial INSERT).
 
-Per OpenSpec change ``col-tag-bind-write`` (2026-08-05) tasks.md §4 +
-D-27 follow-up (2026-08-17): D-17 smoke revealed that the
-``batch_prepared`` JSR223PreProcessor does NOT route through the bind
-path even when ``col_tag_bind_mode=True``. The preprocessor keeps
-reading ``__SHARED_MEM_{db}_{table}`` (full-row map) while the SetupTG
-bind sampler writes only ``__SHARED_MEM_{db}_{table}_bind``. This
-mismatch yields a ``NullPointerException: Cannot invoke method size()
-on null object`` mid-batch on every Write TG iteration.
-
-The fix extends ``_build_batch_prepared_preprocessor_body`` and its
-wrapper ``build_batch_prepared_preprocessor_script`` with a
-``col_tag_bind_mode`` switch so that batch_prepared + col_tag_bind_mode
-takes the same deviceCode-keyed per-deviceCode row dict (D-21) as the
-schemaless bind path in ``rest_write_groups.py``.
-
-These tests pin the contract:
-
-- ``col_tag_bind_mode=True`` → script reads the ``_bind`` namespace.
-- ``col_tag_bind_mode=True`` → script looks up by literal ``deviceCode``
-  (D-21 per-deviceCode key — no hash distribution; mirrors the
-  schemaless bind path).
-- ``col_tag_bind_mode=True`` → script still emits
-  ``vars.putObject("__BATCH_ROWS_<tableName>", ...)`` (sampler-side
-  contract).
-- ``col_tag_bind_mode=False`` (or absent) → byte-identical to the
-  pre-change behavior (reads ``__SHARED_MEM_*``, no ``deviceCode``
-  keying, no ``_bind`` key).
+Per-device partial INSERT SQL — each (threadNum, d) device gets its
+own ``insert into db.t (ts, ptag, c1..cN) values (?,?,…)`` template
+(typically 5-7 columns) and the sampler body runs an independent
+``prepareStatement → setXxx → addBatch → executeBatch → close`` cycle
+per device. Replaces the D-27 single-template full-row + null-fill
+path which OOM'd the JMeter client at 12 GB heap on sparse_20k
+(metrics +60M-parameter batch buffer per tick).
 """
 
 from __future__ import annotations
@@ -34,163 +14,166 @@ from __future__ import annotations
 import pytest
 
 from jmx_skeleton_generator.generators.write_groups import (
+    _build_batch_prepared_bind_preprocessor_body,
     _build_batch_prepared_preprocessor_body,
+    _build_batch_prepared_sampler_body,
     build_batch_prepared_preprocessor_script,
 )
 
 
-# ---------------------------------------------------------------------------
-# Minimal kwargs. The legacy default keeps the original column list
-# (ts + ptag + 5 data cols) so byte-equality assertions are tight.
-# ``all_columns`` matches the PreparedInsertTemplateGenerator contract
-# (``[ts, *ptag_names, *data_col_names]``); ``ptag_count`` is the count
-# of primary-tag columns (here 1: ptag_varchar_1).
-# ---------------------------------------------------------------------------
-
-
-def _minimal_kwargs(**overrides) -> dict:
+def _minimal_bind_kwargs(**overrides) -> dict:
     base = {
         "table_name": "iot_monitor.meters",
-        "first_ptag": "ptag_varchar_1",
+        "ptag_names": ["ptag_varchar_1"],
+        "ptag_col_types": ["varchar"],
+        "col_type_buckets": {
+            "col_int8": ["int8", "bigint", "int", "int2", "int4", "tinyint", "smallint"],
+        },
         "batch_lines": 1,
         "ms_step": 1000,
-        "all_columns": [
-            "ts",
-            "ptag_varchar_1",
-            "col_int8_1",
-            "col_int8_2",
-            "col_int8_3",
-            "col_int8_4",
-            "col_int8_5",
-        ],
-        "ptag_count": 1,
         "device_per_thread": 1,
     }
     base.update(overrides)
     return base
 
 
-def test_bind_mode_reads_bind_namespaced_memory() -> None:
-    """col_tag_bind_mode=True must read ``__SHARED_MEM_*_bind`` (the
-    SetupTG bind sampler writes there, not the full-row map).
+def _minimal_full_kwargs(**overrides) -> dict:
+    """Legacy non-bind kwargs (no col_tag_bind_mode)."""
+    base = {
+        "table_name": "iot_monitor.meters",
+        "first_ptag": "ptag_varchar_1",
+        "batch_lines": 1,
+        "ms_step": 1000,
+        "device_per_thread": 1,
+    }
+    base.update(overrides)
+    return base
+
+
+# ---------------------------------------------------------------------------
+# D-28: per-device partial INSERT prep body
+# ---------------------------------------------------------------------------
+
+def test_bind_mode_writes_per_device_preps_not_legacy_batch_rows() -> None:
+    """col_tag_bind_mode=True must emit per-device entries into
+    ``__BATCH_PREPS_<tableName>`` (not the legacy
+    ``__BATCH_ROWS_<tableName>``).
     """
-    script = _build_batch_prepared_preprocessor_body(
-        **_minimal_kwargs(col_tag_bind_mode=True)
+    script = _build_batch_prepared_bind_preprocessor_body(
+        **_minimal_bind_kwargs()
     )
-    assert "__SHARED_MEM_iot_monitor_meters_bind" in script, (
-        "bind-mode prep must read the bind-namespaced shared memory map"
+    assert "__BATCH_PREPS_${tableName}" in script
+    assert "__BATCH_ROWS" not in script
+
+
+def test_bind_mode_reads_bind_namespaced_memory() -> None:
+    """col_tag_bind_mode=True must read ``__SHARED_MEM_*_bind``."""
+    script = _build_batch_prepared_bind_preprocessor_body(
+        **_minimal_bind_kwargs()
     )
-    # Legacy full-row key (without _bind) must NOT appear, otherwise the
-    # prep tries to read a null map and throws NPE on .size().
-    assert '__SHARED_MEM_iot_monitor_meters")' not in script, (
-        "bind-mode prep must not read the full-row SharedMemory key"
-    )
+    assert "__SHARED_MEM_iot_monitor_meters_bind" in script
 
 
 def test_bind_mode_uses_devicecode_key_no_hash_distribution() -> None:
-    """col_tag_bind_mode=True must look up the bind map by literal
-    ``deviceCode`` (D-21 per-deviceCode key), NOT by
-    ``hashCode() mod numThreads``. The SetupTG bakes one entry per
-    deviceCode so any hash distribution would introduce a
-    Setup-vs-Write skew bug (regression on 2026-08-14).
+    """bind map must be looked up by literal deviceCode (D-21), no
+    hash distribution.
     """
-    script = _build_batch_prepared_preprocessor_body(
-        **_minimal_kwargs(col_tag_bind_mode=True)
+    script = _build_batch_prepared_bind_preprocessor_body(
+        **_minimal_bind_kwargs()
     )
-    assert "deviceCode" in script, "bind-mode prep must derive deviceCode"
-    # ``bindGroups.get(deviceCode) as Map`` — match on the variable
-    # lookup regardless of the trailing cast (Groovy Map cast is a
-    # convenience for downstream field access).
-    assert "bindGroups.get(deviceCode)" in script, (
-        "bind-mode prep must look up the bind map by deviceCode literal"
-    )
-    # No hash distribution anywhere in the bind path. The Groovy script
-    # computes ``int groupId = ... % numThreads`` is forbidden (D-21);
-    # only the per-deviceCode ``bindGroups.get(deviceCode)`` lookup is
-    # allowed.
-    assert "groupId" not in script, (
-        "bind-mode prep must NOT introduce a groupId index (D-21 contract)"
-    )
+    assert "bindGroups.get(deviceCode)" in script
+    assert "groupId" not in script
 
 
-def test_bind_mode_writes_batch_rows_for_sampler_consumption() -> None:
-    """col_tag_bind_mode=True must still emit
-    ``vars.putObject("__BATCH_ROWS_<tableName>", ...)`` so the existing
-    batch_prepared JSR223Sampler can consume the rows.
-
-    The actual emit is ``putObject("__BATCH_ROWS_${tableName}", ...)``
-    (Groovy G-string interpolation — runtime substitution), which is
-    functionally identical to the non-bind prep's emit. The sampler
-    reads ``vars.getObject("__BATCH_ROWS_<table>")`` with the same
-    key, so the runtime contract holds.
+def test_bind_mode_per_device_partial_sql_contains_subset_columns() -> None:
+    """Per-device SQL must reference the per-deviceCode ``col_names``
+    subset (no hard-coded full-column list).
     """
-    script = _build_batch_prepared_preprocessor_body(
-        **_minimal_kwargs(col_tag_bind_mode=True)
+    script = _build_batch_prepared_bind_preprocessor_body(
+        **_minimal_bind_kwargs()
     )
-    # Both forms are acceptable — the generator uses interpolation,
-    # but a literal ``tableName`` reference inside a Groovy G-string is
-    # also valid.
-    assert (
-        'putObject("__BATCH_ROWS_${tableName}"' in script
-        or 'putObject("__BATCH_ROWS_iot_monitor.meters"' in script
-    ), (
-        "bind-mode prep must still feed the batch_prepared sampler via "
-        "__BATCH_ROWS_<tableName>"
-    )
+    # placeholders come from insertCols.size() (1 ts + 1 ptag + colNumPerTag data)
+    assert "placeholders" in script
+    # The script builds partial SQL via insertCols.join — proving the
+    # per-device path is used (the legacy D-27 path hard-coded
+    # allColumns.size()).
+    assert "insertCols" in script
+    assert "insert into " in script
 
 
 def test_bind_mode_safe_default_when_groups_empty() -> None:
-    """Empty / missing bind groups must produce a safe no-op (no
-    exception), so the JDBC sampler logs a clean error rather than
-    triggering a Groovy crash mid-batch.
-    """
-    script = _build_batch_prepared_preprocessor_body(
-        **_minimal_kwargs(col_tag_bind_mode=True)
+    """Empty / missing bind groups must produce a safe no-op."""
+    script = _build_batch_prepared_bind_preprocessor_body(
+        **_minimal_bind_kwargs()
     )
     assert "log.warn" in script
-    assert "__BATCH_ROWS" in script
-    # The empty-groups guard must bail out before calling .size() /
-    # .get() on a possibly-null Map.
     assert "bindGroups == null" in script or "bindGroups.isEmpty" in script
 
 
-def test_default_mode_unchanged_when_bind_false() -> None:
-    """Regression: when ``col_tag_bind_mode=False`` the prep must read
-    ``__SHARED_MEM_<table>`` (NOT ``_bind``) and must NOT key by
-    ``deviceCode``.
+def test_bind_mode_requires_ptag_names_and_col_type_buckets() -> None:
+    """Missing ptag_names / ptag_col_types / col_type_buckets must raise (D-28)."""
+    with pytest.raises(ValueError, match="ptag_names"):
+        _build_batch_prepared_preprocessor_body(
+            **_minimal_full_kwargs(col_tag_bind_mode=True)
+        )
+
+
+# ---------------------------------------------------------------------------
+# D-28: per-device sampler body (independent prepareStatement→close cycle)
+# ---------------------------------------------------------------------------
+
+def test_sampler_bind_mode_iterates_per_device_with_withcloseable() -> None:
+    """Sampler bind branch must run prepareStatement→withCloseable per
+    device so the JDBC driver batch buffer is released immediately.
     """
-    script = _build_batch_prepared_preprocessor_body(
-        **_minimal_kwargs(col_tag_bind_mode=False)
+    script = _build_batch_prepared_sampler_body(
+        table_name="iot_monitor.meters",
+        insert_sql="insert into iot_monitor.meters (ts) values (?)",
+        col_tag_bind_mode=True,
     )
-    assert "__SHARED_MEM_iot_monitor_meters_bind" not in script, (
-        "non-bind mode must NOT read the bind namespace"
-    )
-    # The full-row SharedMemory key is built via
-    # ``__SHARED_MEM_" + tableName.replace('.', '_')`` (Groovy string
-    # concat) — check the prefix literal rather than a closed-quote form.
-    assert '__SHARED_MEM_" + tableName.replace' in script, (
-        "non-bind mode must reference the full-row shared memory"
-    )
-    # Non-bind path uses the SharedMemory row map (``sharedRows``),
-    # NOT the bind map.
-    assert "bindGroups.get(deviceCode)" not in script, (
-        "non-bind mode must NOT key the bind map"
-    )
+    # Outer for-loop over preps (one entry per device)
+    assert "for (int d = 0; d < preps.size" in script
+    # Per-device prepareStatement + withCloseable
+    assert "conn.prepareStatement(sql).withCloseable" in script
+    # The per-device entry is closed by withCloseable before the next
+    # device's prepareStatement — the sampler never accumulates more
+    # than one device's batch buffer at a time.
+    assert script.count("withCloseable") >= 2  # conn + pstmt
 
 
-def test_default_mode_unchanged_without_kwarg() -> None:
-    """Backward compatibility: omitting ``col_tag_bind_mode`` entirely
-    must keep the existing prep behavior (this is the F-3 baseline
-    that all existing fixtures rely on).
+def test_sampler_bind_mode_does_not_use_legacy_batch_rows() -> None:
+    """Sampler bind branch must read ``__BATCH_PREPS_<table>``, not the
+    legacy ``__BATCH_ROWS_<table>``.
     """
-    script = _build_batch_prepared_preprocessor_body(**_minimal_kwargs())
-    assert "__SHARED_MEM_iot_monitor_meters_bind" not in script
-    assert "bindGroups.get(deviceCode)" not in script
+    script = _build_batch_prepared_sampler_body(
+        table_name="iot_monitor.meters",
+        insert_sql="insert into iot_monitor.meters (ts) values (?)",
+        col_tag_bind_mode=True,
+    )
+    assert "__BATCH_PREPS" in script
+    assert "__BATCH_ROWS" not in script
 
 
-def test_wrapper_script_propagates_bind_mode() -> None:
-    """``build_batch_prepared_preprocessor_script`` must thread the
-    ``col_tag_bind_mode`` switch through to the body builder.
+def test_sampler_default_mode_unchanged() -> None:
+    """Backward compat: ``col_tag_bind_mode=False`` (or absent) must
+    keep the existing single-pstmt full-row path.
+    """
+    script = _build_batch_prepared_sampler_body(
+        table_name="iot_monitor.meters",
+        insert_sql="insert into iot_monitor.meters (ts) values (?)",
+    )
+    assert "__BATCH_ROWS" in script
+    assert "__BATCH_PREPS" not in script
+
+
+# ---------------------------------------------------------------------------
+# Wrapper signature
+# ---------------------------------------------------------------------------
+
+def test_wrapper_threads_bind_mode_with_new_kwargs() -> None:
+    """``build_batch_prepared_preprocessor_script`` must accept the new
+    ``ptag_names`` / ``ptag_col_types`` / ``col_type_buckets`` kwargs
+    and thread bind mode through to the body builder.
     """
     script = build_batch_prepared_preprocessor_script(
         table_name="iot_monitor.meters",
@@ -198,14 +181,10 @@ def test_wrapper_script_propagates_bind_mode() -> None:
         batch_lines=1,
         ms_step=1000,
         col_tag_bind_mode=True,
-        all_columns=[
-            "ts",
-            "ptag_varchar_1",
-            "col_int8_1",
-            "col_int8_2",
-        ],
-        ptag_count=1,
+        ptag_names=["ptag_varchar_1"],
+        ptag_col_types=["varchar"],
+        col_type_buckets={"col_int8": ["int8", "bigint", "int", "int2", "int4", "tinyint", "smallint"]},
         device_per_thread=1,
     )
-    assert "__SHARED_MEM_iot_monitor_meters_bind" in script
+    assert "__BATCH_PREPS" in script
     assert "bindGroups.get(deviceCode)" in script

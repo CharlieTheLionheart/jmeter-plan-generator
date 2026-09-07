@@ -315,6 +315,53 @@ def _split_qualified_table(fqn: str) -> Tuple[str, str]:
     return db.lower(), table.lower()
 
 
+# Per spec §3 "时序表数据类型" the supported data types are:
+# int2 / int4 / int8 / float4 / float8 / bool / char / varchar /
+# timestamp / timestamptz. numeric / decimal are NOT supported on
+# ts tables (sparse_20k fixture maps them to float8 in the model).
+_TYPE_BUCKETS: Dict[str, List[str]] = {
+    "col_int8": ["int8", "bigint", "int", "int2", "int4", "tinyint", "smallint"],
+    "col_int4": ["int4", "int", "int2", "int8", "bigint", "tinyint", "smallint"],
+    "col_int2": ["int2", "smallint", "int", "int4", "int8", "bigint", "tinyint"],
+    "col_int1": ["tinyint", "smallint", "int2", "int", "int4", "int8", "bigint"],
+    "col_float4": ["float4", "real", "float", "float8", "double"],
+    "col_float8": ["float8", "double", "real", "float", "float4"],
+    "col_bool": ["bool", "boolean"],
+    "col_char": ["char", "varchar"],
+    "col_varchar": ["varchar", "char"],
+    "col_text": ["text", "varchar"],
+    "col_timestamp": ["timestamp", "timestamptz"],
+    "col_timestamptz": ["timestamptz", "timestamp"],
+}
+
+
+def _col_name_prefix_type_buckets(
+    data_col_names: List[str],
+    col_types_by_name: Dict[str, str],
+) -> Dict[str, List[str]]:
+    """Return column-name prefix → JDBC type bucket list.
+
+    For each data column, strip the trailing ``_<index>`` suffix and
+    look up the prefix in :data:`_TYPE_BUCKETS`. If the prefix is
+    unknown, fall back to the column's own declared type. The returned
+    map contains at most one entry per unique prefix (typically 5-12
+    for a ts table) — far smaller than baking the full per-name map
+    (sparse_20k's 19998 col_types_by_name would overflow the JVM
+    65 KB Groovy method-body limit).
+    """
+    out: Dict[str, List[str]] = {}
+    for col_name in data_col_names:
+        u = col_name.rfind("_")
+        prefix = col_name[:u] if u > 0 else col_name
+        if prefix in out:
+            continue
+        if prefix in _TYPE_BUCKETS:
+            out[prefix] = list(_TYPE_BUCKETS[prefix])
+        else:
+            out[prefix] = [col_types_by_name.get(col_name, "varchar")]
+    return out
+
+
 def _resolve_ts_table_metadata(
     model: TestModelConfig,
     fqn: str,
@@ -529,148 +576,110 @@ def _build_direct_insert_components(
 def _build_batch_prepared_bind_preprocessor_body(
     *,
     table_name: str,
-    all_columns: List[str],
-    ptag_count: int,
+    ptag_names: List[str],
+    ptag_col_types: List[str],
+    col_type_buckets: Dict[str, List[str]],
     batch_lines: int,
     ms_step: int,
     device_per_thread: int,
 ) -> str:
-    """Groovy body for ``batch_prepared`` + ``col_tag_bind_mode=True``.
+    """Per-device partial INSERT SQL for batch_prepared + col_tag_bind_mode.
 
-    D-27 (2026-08-17): the legacy ``_build_batch_prepared_preprocessor_body``
-    hardcoded a ``__SHARED_MEM_<table>`` lookup, which only works for
-    the full-row SetupTG path. Under ``col_tag_bind_mode=True`` the
-    SetupTG only writes the bind-namespaced map
-    (``__SHARED_MEM_<table>_bind``, keyed by deviceCode per D-21), so
-    the legacy prep script triggered a ``NullPointerException: Cannot
-    invoke method size() on null object`` mid-batch.
-
-    This helper emits the bind-mode prep script:
-
-    - Reads the bind map (per-deviceCode row dicts).
-    - Picks the current device's row by literal deviceCode key (D-21 —
-      no hash distribution; mirrors the schemaless bind path in
-      ``rest_write_groups.py:219``).
-    - Emits ``[ts, *ptag_values, *data_col_values...]`` rows aligned
-      with the baked INSERT template ``all_columns`` (set by
-      ``PreparedInsertTemplateGenerator``). Data columns NOT in the
-      per-deviceCode ``col_names`` subset are filled with ``null`` so
-      the sampler can still bind every ``?`` placeholder; the bind path
-      keeps NOT NULL columns inside the subset (see tasks §4.4).
-    - Stashes the rows in ``vars.putObject("__BATCH_ROWS_<table>", ...)``
-      so the existing batch_prepared JSR223Sampler consumes them
-      unchanged.
-
-    Notes:
-
-    - ``table_name`` is the qualified ``db.table`` string. ``all_columns``
-      is the full ordered list ``[ts_name, *ptag_names, *data_col_names]``
-      matching the baked INSERT template column order; ``ptag_count``
-      is the number of primary-tag columns (used to slice ``ptag_values``
-      from the bind row dict).
-    - ``device_per_thread`` and ``ms_step`` are baked to mirror the
-      SetupTG and the non-bind prep script.
+    ``col_type_buckets`` maps a column-name prefix (e.g. ``"col_int8"``)
+    to its JDBC type bucket (e.g. ``["int", "int2", "int4", "int8",
+    "tinyint", "smallint", "bigint"]``). At runtime the prep body
+    inspects each per-device column name, strips the trailing
+    ``_<index>`` suffix, and looks up the prefix — this is
+    O(prefix_count) baked in (typically 5-9 prefixes for a ts table)
+    instead of O(data_col_count) full map. Avoids baking a 20000+ entry
+    Groovy map literal that overflows the JVM 65 KB method-body limit
+    (groovyjarjarasm MethodTooLargeException at compile time).
     """
     safe_table = table_name.replace("\\", "\\\\").replace("'", "\\'")
     safe_db = "'" + safe_table.split(".", 1)[0].replace("\\", "\\\\").replace("'", "\\'") + "'"
     safe_just_table = "'" + safe_table.split(".", 1)[1].replace("\\", "\\\\").replace("'", "\\'") + "'"
     rows_key = f"__SHARED_MEM_{safe_table.replace('.', '_')}_bind"
-    all_columns_groovy = "[" + ", ".join(f"'{c}'" for c in all_columns) + "]"
+    ptag_names_groovy = "[" + ", ".join(f"'{p}'" for p in ptag_names) + "]"
+    ptag_col_types_groovy = "[" + ", ".join(f"'{t}'" for t in ptag_col_types) + "]"
+    bucket_items = ", ".join(
+        f"'{prefix}': [{', '.join(f'\"{b}\"' for b in buckets)}]"
+        for prefix, buckets in sorted(col_type_buckets.items())
+    )
 
-    return f"""// JSR223PreProcessor (groovy): batch_prepared + col_tag_bind_mode (D-27)
-// Reads the per-deviceCode bind map and emits rows aligned 1-to-1 with
-// the baked INSERT template column order (set by
-// PreparedInsertTemplateGenerator). ptag columns live at the END of the
-// INSERT list — driven by ``ColumnNamer`` which orders ptag after data —
-// so the row is built by walking ``allColumns`` and dispatching each
-// column to either the baked ptag list or the per-deviceCode cell list.
-def tableName = '{safe_table}'
+    return f"""def tableName = '{safe_table}'
+def dbName = {safe_db}
+def tableOnly = {safe_just_table}
 def rowsKey = '{rows_key}'
+def ptagNames = {ptag_names_groovy}
+def ptagColTypes = {ptag_col_types_groovy}
+def colTypeBuckets = [{bucket_items}]
 def devicePerThread = (vars.get('device_per_thread') as Integer) ?: {device_per_thread}
 def batchLines = {batch_lines}
 def msStep = {ms_step}L
-def allColumns = {all_columns_groovy}
-def ptagCount = {ptag_count}
 
 def bindGroups = org.apache.jmeter.util.JMeterUtils.getJMeterProperties().get(rowsKey) as Map
 if (bindGroups == null || bindGroups.isEmpty()) {{
     log.warn("BatchPreparedBindPrep: bind groups empty for " + rowsKey)
-    vars.putObject("__BATCH_ROWS_${{tableName}}", new ArrayList())
+    vars.putObject("__BATCH_PREPS_${{tableName}}", new ArrayList())
     return
 }}
 
 def deviceStart = (vars.get('device_start') != null ? (vars.get('device_start') as Long) : 1L)
 def threadNum = ctx.getThreadNum()
-if (threadNum < 0) {{
-    threadNum = (vars.get('__threadNum') as Integer) ?: 0
-}}
-// write-batch-mode-semantics DCR (2026-08-31): baseTime MUST be
-// re-sampled on every sampler tick — same reasoning as the main path.
+if (threadNum < 0) {{ threadNum = (vars.get('__threadNum') as Integer) ?: 0 }}
 def baseTime = System.currentTimeMillis()
 
-def batchRows = new ArrayList<Object[]>()
-// write-batch-mode-semantics DCR (2026-08-31) gap #1 + dpt for fix:
-// outer loop iterates `d in [deviceStart, deviceStart + devicePerThread - 1]`
-// so each sampler tick covers all devices assigned to the current
-// thread. Per device, the existing ``for (int i = 0; i < batchLines; i++)``
-// inner loop accumulates ``batchLines`` rows — total rows per tick =
-// `device_per_thread × batch_lines`. The bind map is looked up by
-// literal deviceCode (no hash — D-21). ts is the per-tick `baseTime +
-// i × msStep` (整步语义 gap #6 fix; pre-fix used
-// `batchSeq * msStep + i * msStep / batchLines` which accumulated per
-// tick AND averaged time across rows — both bugs).
+def allPreps = new ArrayList()
+def randomGen = new Random()
+def qualifiedTable = dbName + "." + tableOnly
 for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
-    // inline GString — Python f-string double-brace escape outputs
-    // the literal Groovy GString syntax that the surrounding f-string
-    // would otherwise try to resolve as Python identifiers.
     def deviceCode = threadNum.toString() + "_" + d.toString()
     def group = bindGroups.get(deviceCode) as Map
     if (group == null) {{
-        log.warn("BatchPreparedBindPrep: no row for deviceCode " + deviceCode + " in " + rowsKey)
+        log.warn("BatchPreparedBindPrep: no row for deviceCode " + deviceCode)
         continue
     }}
     def colNames = group.get("col_names") as List
     def rowValues = group.get("row_values") as List
     def ptagValuesByRow = group.get("ptag_values") as List
     if (ptagValuesByRow == null || ptagValuesByRow.isEmpty()) {{
-        // Backwards compatibility — pre-D-13 SetupTG baked only ptag_names;
-        // fall back to ``[deviceCode]`` so single-ptag tables still bind.
         ptagValuesByRow = [[deviceCode]]
     }}
 
-    int totalCols = allColumns.size()
-    for (int i = 0; i < batchLines; i++) {{
-        int rowIdx = (int)(Math.abs((long)((deviceCode.hashCode() ^ (i * 31L)) as int)) % Math.max(1, rowValues.size()))
-        def cells = rowValues.get(rowIdx) as List
-        def outRow = new Object[totalCols]
-        // write-batch-mode-semantics DCR (2026-08-31) gap #6 fix: ts is
-        // `baseTime + i × msStep` (整步语义 — single SQL covers
-        // `batchLines × msStep` window). Pre-fix `batchSeq * msStep +
-        // i * msStep / batchLines` was both the batchSeq-tick-accum
-        // bug AND the 分摊 semantics bug.
-        outRow[0] = new java.sql.Timestamp(baseTime + (long)(i * msStep))
-        // ptag list for this row — all batchLines rows for one deviceCode
-        // share the same ptag sublist (the device_id is constant per
-        // Write TG iteration), so picking ptagValuesByRow[i % size] is
-        // index-aligned with the SetupTG's bake order.
-        def ptagRow = ptagValuesByRow.get(i % ptagValuesByRow.size()) as List
-        if (ptagRow == null) {{ ptagRow = [deviceCode] }}
-        int cellCount = (cells == null) ? 0 : cells.size()
-        for (int c = 1; c < totalCols; c++) {{
-            String colName = allColumns.get(c) as String
-            boolean isPtag = (colName != null) && colName.startsWith("ptag_")
-            if (isPtag) {{
-                outRow[c] = (ptagCount >= 1 && ptagRow != null && !ptagRow.isEmpty()) ? ptagRow.get(0) : deviceCode
-            }} else {{
-                int subsetIdx = (colNames == null) ? -1 : colNames.indexOf(colName)
-                outRow[c] = (subsetIdx >= 0 && subsetIdx < cellCount) ? cells.get(subsetIdx) : null
-            }}
-        }}
-        batchRows.add(outRow)
+    def lookupType = {{ String n ->
+        int u = n.lastIndexOf('_')
+        String prefix = (u > 0) ? n.substring(0, u) : n
+        def buckets = colTypeBuckets.get(prefix) as List
+        return (buckets != null && !buckets.isEmpty()) ? buckets.get(0) : 'varchar'
     }}
+
+    def insertCols = ['ts'] + ptagNames + colNames
+    def insertColTypes = ['timestamp'] + ptagColTypes + colNames.collect(lookupType)
+    def placeholders = (1..insertCols.size()).collect {{ '?' }}.join(', ')
+    def sql = "insert into " + qualifiedTable + " (" + insertCols.join(', ') + ") values (" + placeholders + ")"
+
+    def rows = new ArrayList()
+    int rowStartIdx = randomGen.nextInt(rowValues.size())
+    for (int r = 0; r < batchLines; r++) {{
+        int idx = (rowStartIdx + r) % rowValues.size()
+        def cells = rowValues.get(idx) as List
+        def ptagRow = ptagValuesByRow.get(r % ptagValuesByRow.size()) as List
+        if (ptagRow == null) {{ ptagRow = [deviceCode] }}
+        def row = new ArrayList()
+        row.add(new java.sql.Timestamp(baseTime + (long)(r * msStep)))
+        row.add((ptagRow != null && !ptagRow.isEmpty()) ? ptagRow.get(0) : deviceCode)
+        for (int i = 0; i < colNames.size(); i++) {{
+            row.add((cells != null && i < cells.size()) ? cells.get(i) : null)
+        }}
+        rows.add(row)
+    }}
+
+    allPreps.add([deviceCode: deviceCode, sql: sql, colTypes: insertColTypes, rows: rows])
 }}
-vars.putObject("__BATCH_ROWS_${{tableName}}", batchRows)
+vars.putObject("__BATCH_PREPS_${{tableName}}", allPreps)
 """
+
+
 
 
 def _build_batch_prepared_preprocessor_body(
@@ -679,52 +688,30 @@ def _build_batch_prepared_preprocessor_body(
     batch_lines: int,
     ms_step: int,
     *,
-    # col-tag-bind-write D-27 (2026-08-17): batch_prepared + col_tag_bind_mode
-    # branch. When ``col_tag_bind_mode=True`` the preprocessor reads the
-    # ``__SHARED_MEM_{db}_{table}_bind`` map (SetupTG bind sampler), looks up
-    # the per-deviceCode row dict (D-21 per-deviceCode key — no hash
-    # distribution), and emits a row in the batch_prepared sampler's
-    # contract: ``[ts, *ptag_values, *data_col_values...]`` aligned with the
-    # baked ``insertSql`` column order. Data columns NOT in the per-group
-    # subset are filled with ``null`` so the sampler can still bind every
-    # ``?`` placeholder; KaiwuDB rejects ``NULL`` only for ``NOT NULL`` data
-    # columns, and the bind path keeps NOT NULL columns inside the subset
-    # (see tasks §4.4).
     col_tag_bind_mode: bool = False,
-    all_columns: Optional[List[str]] = None,
-    ptag_count: int = 0,
     device_per_thread: int = 1,
+    ptag_names: Optional[List[str]] = None,
+    ptag_col_types: Optional[List[str]] = None,
+    col_type_buckets: Optional[Dict[str, List[str]]] = None,
 ) -> str:
     """Compose the Groovy body for the batch_prepared JSR223PreProcessor.
 
-    All per-ThreadGroup values (table_name, first_ptag, batch_lines,
-    ms_step) are baked into the script as Groovy literals so the script
-    never has to read them from ``vars``. Reading them from a per-group
-    ``Arguments`` UDV turned out to be unsafe: JMeter's per-thread
-    ``JMeterVariables`` does NOT scope UDV definitions inside a
-    ThreadGroup, so when two Write ThreadGroups both define
-    ``table_name``/``insert_sql``/``column_types``, the second
-    ThreadGroup's thread sees the first ThreadGroup's value
-    (regression on 2026-07-20, F-3). Deriving ``table_name`` from
-    ``ctx.getThreadGroup().getName()`` and baking the rest in removes
-    the UDV dependency entirely.
-
-    col-tag-bind-write D-27 (2026-08-17): when ``col_tag_bind_mode=True``
-    the script takes an early-return bind path. ``all_columns`` must be
-    the full column list ``[ts, *ptag_names..., *data_col_names...]``
-    aligned with the baked INSERT template (set by
-    ``PreparedInsertTemplateGenerator``); ``ptag_count`` is the number of
-    primary-tag columns prepended to the data columns (typically 1 for
-    KaiwuDB single-ptag tables, can be higher for multi-ptag ones).
+    Per-ThreadGroup values (table_name, first_ptag, batch_lines, ms_step)
+    are baked in as Groovy literals — JMeter's per-thread JMeterVariables
+    does NOT scope UDV definitions inside a ThreadGroup, so two Write
+    ThreadGroups would otherwise read each other's UDVs (F-3).
     """
-    # tableName comes from the ThreadGroup's own name (set by the
-    # generator: ``Write-{qualified_table}``). This is the JMeter-side
-    # identity for the running thread and is never shared.
     if col_tag_bind_mode:
+        if not ptag_names or not ptag_col_types or not col_type_buckets:
+            raise ValueError(
+                "col_tag_bind_mode=True requires ptag_names, ptag_col_types, "
+                "and col_type_buckets"
+            )
         return _build_batch_prepared_bind_preprocessor_body(
             table_name=table_name,
-            all_columns=all_columns or [],
-            ptag_count=ptag_count,
+            ptag_names=ptag_names,
+            ptag_col_types=ptag_col_types,
+            col_type_buckets=col_type_buckets,
             batch_lines=batch_lines,
             ms_step=ms_step,
             device_per_thread=device_per_thread,
@@ -799,30 +786,19 @@ vars.putObject("__BATCH_ROWS_${{tableName}}", batchRows)
 """
 
 # Groovy scripts for batch_prepared JSR223Sampler (JDBC batch 执行).
-#
-# F-1 typed-binding fix: the sampler reads ``vars.get("column_types")``
-# (comma-separated, aligned with the INSERT column order — populated
-# by ``_build_write_udv``) and dispatches each cell to the matching
-# JDBC ``setXxx``. Generic ``setObject(String)`` cannot let the
-# KaiwuDB driver infer INT8/FLOAT4, so without this dispatch the
-# sampler aborts every batch with ``could not resolve "20" as INT8
-# type``. Type buckets:
-#   - integer / bigint / smallint / tinyint / int2 / int4 / int8 →
-#     ``setLong``
-#   - float / float4 / float8 / double / real / numeric / decimal →
-#     ``setDouble``
-#   - timestamp / timestamptz → ``setTimestamp``
-#   - bool / boolean → ``setBoolean``
-#   - everything else (varchar, char, …) → ``setString``
-#
-# The ``column_types`` UDV is OPTIONAL — when missing, the sampler
-# falls back to ``setString`` for every cell so unit tests / lightweight
-# callers that don't supply a model still get a working (varchar-only)
-# sampler. End-to-end smoke callers always supply it via the model.
+# F-1 typed-binding fix: dispatch each cell to the matching JDBC
+# ``setXxx`` because generic ``setObject(String)`` cannot let the
+# KaiwuDB driver infer INT8/FLOAT4. Type buckets:
+#   int / int2 / int4 / int8 / tinyint / smallint / bigint → setLong
+#   float / float4 / float8 / double / real / numeric / decimal → setDouble
+#   timestamp / timestamptz → setTimestamp
+#   bool / boolean → setBoolean
+#   everything else (varchar, char, …) → setString
 def _build_batch_prepared_sampler_body(
     table_name: str,
     insert_sql: str,
     column_types: Optional[List[str]] = None,
+    col_tag_bind_mode: bool = False,
 ) -> str:
     """Compose the Groovy body for the batch_prepared JSR223Sampler.
 
@@ -830,11 +806,58 @@ def _build_batch_prepared_sampler_body(
     ``insert_sql`` and ``column_types`` are baked in by the generator
     (F-3 UDV-pollution fix).
     """
+    if col_tag_bind_mode:
+        # Bind mode: per-device partial INSERT. The preprocessor stored
+        # ``__BATCH_PREPS_<table>`` as List<Map{deviceCode, sql, colTypes,
+        # rows}>. Each device gets its own prepareStatement→addBatch→
+        # executeBatch→close cycle so the JDBC driver batch buffer is
+        # bounded per-device instead of accumulating the whole tick.
+        return f"""// batch_prepared sampler (bind mode: per-device partial INSERT)
+import org.apache.jmeter.protocol.jdbc.config.DataSourceElement
+
+def tableName = {_groovy_str_literal(table_name)}
+def preps = vars.getObject("__BATCH_PREPS_${{tableName}}") as List
+if (preps == null || preps.isEmpty()) {{
+    log.warn("No bind preps for " + tableName)
+    return
+}}
+
+DataSourceElement.getConnection("jdbcConfig").withCloseable {{ conn ->
+    for (int d = 0; d < preps.size(); d++) {{
+        def prep = preps.get(d) as Map
+        def sql = prep.sql as String
+        def colTypes = prep.colTypes as List<String>
+        def rows = prep.rows as List
+        conn.prepareStatement(sql).withCloseable {{ pstmt ->
+            for (int r = 0; r < rows.size(); r++) {{
+                def row = rows.get(r) as List
+                for (int c = 0; c < row.size(); c++) {{
+                    def value = row.get(c)
+                    if (value == null) {{ pstmt.setObject(c + 1, null); continue }}
+                    def type = (c < colTypes.size()) ? (colTypes.get(c) ?: "").trim().toLowerCase() : ""
+                    if (type in ["int", "int2", "int4", "int8", "tinyint", "smallint", "bigint"]) {{
+                        pstmt.setLong(c + 1, Long.parseLong(value.toString()))
+                    }} else if (type in ["float", "float4", "float8", "double", "real", "numeric", "decimal"]) {{
+                        pstmt.setDouble(c + 1, Double.parseDouble(value.toString()))
+                    }} else if (type in ["timestamp", "timestamptz"]) {{
+                        pstmt.setTimestamp(c + 1, value as java.sql.Timestamp)
+                    }} else if (type in ["bool", "boolean"]) {{
+                        pstmt.setBoolean(c + 1, Boolean.parseBoolean(value.toString()))
+                    }} else {{
+                        pstmt.setString(c + 1, value.toString())
+                    }}
+                }}
+                pstmt.addBatch()
+            }}
+            pstmt.executeBatch()
+        }}
+    }}
+}}
+"""
     # F-3 UDV-pollution fix: sampler must NOT read column_types from vars.
-    # But single Groovy string literal is capped at 65535 chars (Java
+    # Single Groovy string literal is capped at 65535 chars (Java
     # compiler limit), and 20000+ cols join string overflows. Same chunk
-    # strategy as ``insert_sql`` below: split into 16k-char chunks,
-    # bake as a Groovy list literal, ``.join('')`` at runtime.
+    # strategy as ``insert_sql`` below: split into 16k-char chunks.
     if column_types:
         joined_types = ",".join(column_types)
         type_chunks = [
@@ -856,11 +879,6 @@ def tableName = {_groovy_str_literal(table_name)}
 def insertSql = {insert_sql_literal}
 def batchRows = vars.getObject("__BATCH_ROWS_${{tableName}}") as ArrayList<Object[]>
 
-// Comma-separated type list aligned with INSERT column order. When
-// absent, fall back to all-varchar (setString). Numeric cells then
-// still work at the JDBC layer because setString(string) coerces
-// only for some drivers — KaiwuDB does NOT coerce, so the typed
-// list is required for INT8/FLOAT4 columns to resolve.
 def columnTypes = ({column_types_groovy}).split(',') as List<String>
 
 def rowCount = batchRows.size()
@@ -890,7 +908,6 @@ DataSourceElement.getConnection("jdbcConfig").withCloseable {{ conn ->
                 }} else if (type in ["bool", "boolean"]) {{
                     pstmt.setBoolean(colIdx + 1, Boolean.parseBoolean(value.toString()))
                 }} else {{
-                    // varchar / char / unknown — stringify and bind.
                     pstmt.setString(colIdx + 1, value.toString())
                 }}
             }}
@@ -909,27 +926,14 @@ def build_batch_prepared_preprocessor_script(
     ms_step: int,
     *,
     col_tag_bind_mode: bool = False,
-    all_columns: Optional[List[str]] = None,
-    ptag_count: int = 0,
     device_per_thread: int = 1,
+    ptag_names: Optional[List[str]] = None,
+    ptag_col_types: Optional[List[str]] = None,
+    col_type_buckets: Optional[Dict[str, List[str]]] = None,
 ) -> str:
-    """Compose the Groovy body for the batch_prepared JSR223PreProcessor.
+    """Compose the batch_prepared JSR223PreProcessor Groovy body.
 
-    Prepends :func:`utils.preprocessor_helpers.all_groovy_decls` so
-    that ``calculateLocalDeviceStart`` and the rest of the shared
-    helpers are visible at runtime. Single source of truth for
-    device-number arithmetic — see tasks §2.3.
-
-    All per-ThreadGroup values (table_name, first_ptag, batch_lines,
-    ms_step) are baked into the script body so the script does not
-    have to read them from ``vars``. F-3 UDV-pollution fix
-    (regression on 2026-07-20).
-
-    D-27 (2026-08-17): threads the ``col_tag_bind_mode`` switch through
-    to :func:`_build_batch_prepared_preprocessor_body`. ``all_columns``,
-    ``ptag_count``, and ``device_per_thread`` are only used when
-    ``col_tag_bind_mode=True`` (otherwise the legacy full-row path
-    applies and ignores them).
+    Prepends ``all_groovy_decls()`` for shared helpers.
     """
     body = _build_batch_prepared_preprocessor_body(
         table_name=table_name,
@@ -937,9 +941,10 @@ def build_batch_prepared_preprocessor_script(
         batch_lines=batch_lines,
         ms_step=ms_step,
         col_tag_bind_mode=col_tag_bind_mode,
-        all_columns=all_columns,
-        ptag_count=ptag_count,
         device_per_thread=device_per_thread,
+        ptag_names=ptag_names,
+        ptag_col_types=ptag_col_types,
+        col_type_buckets=col_type_buckets,
     )
     return f"{all_groovy_decls()}\n{body}"
 
@@ -1096,26 +1101,29 @@ def generate_write_thread_groups(
             column_types=column_types,
         )
 
-        # col-tag-bind-write D-27 (2026-08-17): when the write_config
-        # asks for bind mode, derive the bind-aware prep parameters from
-        # the model so the per-table row layout matches the baked
-        # INSERT template column order (``PreparedInsertTemplateGenerator``
-        # emits ``[ts, *ptag, *data]``).
+        # col-tag-bind-write: when bind mode is on, derive per-device
+        # prep parameters from the model. ``ptag_names`` / ``ptag_col_types``
+        # are the per-ptag list baked into the per-device INSERT. The data
+        # column types are bucketed by column-name prefix
+        # (e.g. ``col_int8`` → ``["int","int2","int4","int8",...]``) and
+        # looked up at runtime — avoids baking a 20000+ entry Groovy map
+        # literal that overflows the JVM 65 KB method-body limit
+        # (groovyjarjarasm MethodTooLargeException at compile time).
         bind_mode = bool(getattr(wc, "col_tag_bind_mode", False))
-        bind_all_columns = columns if bind_mode else None
-        bind_ptag_count = (
-            # Count ptag columns by name pattern (ptag_*) — single source
-            # of truth is the model's primary_tags list, but matching by
-            # name keeps the hot path free of extra model traversals.
-            sum(1 for c in (columns or []) if c.startswith("ptag_"))
-            if bind_mode
-            else 0
-        )
+        bind_ptag_names: Optional[List[str]] = None
+        bind_ptag_col_types: Optional[List[str]] = None
+        bind_col_type_buckets: Optional[Dict[str, List[str]]] = None
+        if bind_mode and columns is not None and column_types is not None:
+            col_types_by_name = dict(zip(columns, column_types))
+            ptag_names = [c for c in columns if c.startswith("ptag_")]
+            bind_ptag_names = ptag_names
+            bind_ptag_col_types = [col_types_by_name.get(p, "varchar") for p in ptag_names]
+            bind_col_type_buckets = _col_name_prefix_type_buckets(
+                [c for c in columns if not c.startswith("ptag_") and c != "ts"],
+                col_types_by_name,
+            )
 
         if sampler_type == "JSR223Sampler":
-            # batch_prepared 使用 JSR223Sampler + 预置 Groovy 体（设计文档 §3.6）；
-            # 预置体由 strategy 注册表之外的 jmx_skeleton_generator 维护，
-            # 体现 write_groups 与 strategy 的协作边界。
             preprocessor, preproc_hash = jsr223_preprocessor_element(
                 name=f"batch_prepared-{wc.tbl_name}-pre",
                 script=build_batch_prepared_preprocessor_script(
@@ -1124,9 +1132,10 @@ def generate_write_thread_groups(
                     batch_lines=wc.batch_lines,
                     ms_step=ms_step,
                     col_tag_bind_mode=bind_mode,
-                    all_columns=bind_all_columns,
-                    ptag_count=bind_ptag_count,
                     device_per_thread=wc.device_per_thread,
+                    ptag_names=bind_ptag_names,
+                    ptag_col_types=bind_ptag_col_types,
+                    col_type_buckets=bind_col_type_buckets,
                 ),
                 script_language=script_language,
                 testname=f"[Write] {wc.tbl_name} - batch_prepared preprocessor",
@@ -1137,6 +1146,7 @@ def generate_write_thread_groups(
                     table_name=wc.tbl_name,
                     insert_sql=template,
                     column_types=column_types,
+                    col_tag_bind_mode=bind_mode,
                 ),
                 script_language=script_language,
                 testname=f"[Write] {wc.tbl_name}",
