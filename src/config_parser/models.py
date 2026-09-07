@@ -342,7 +342,11 @@ class RestApiConfig(BaseModel):
     ca_cert_path: Optional[str] = None
     http_port: int = Field(default=8080, ge=1, le=65535)
     login_user: str
-    login_password: str = ""
+    # YAML 空值（``login_password: ``）解析为 ``None``，不是空字符串。d461e40
+    # 强制 root 必须有非空密码是在 **server 端 Login API** 层面，cfg 字段
+    # 只做语法兼容。运行时 ddl_setup.py:387 ``vars.get("login_password")``
+    # 拿到 None 时会 log.error 退出，业务上仍受 d461e40 约束。
+    login_password: Optional[str] = None
     login_url_path: str = "/restapi/login"
     ddl_url_path: str = "/restapi/ddl"
     write_url_path: str = "/restapi/influxdb"
@@ -356,6 +360,16 @@ class RestApiConfig(BaseModel):
         if not self.ca_cert_path:
             raise RestConfigError.missing_ca_cert()
         return self
+
+    @field_validator("login_password", mode="before")
+    @classmethod
+    def _empty_password_to_str(cls, v):
+        # YAML 空值（``login_password: ``）解析为 ``None``，但下游
+        # ddl_setup.py:387 / ddl_setup.py:332 直接 ``str`` 拼接 + base64
+        # 编码，None 会让 Login 接口发空 Authorization header → server
+        # 端 401。强制转 ``""`` 让 cfg 写法宽容（YAML 留空即视为无密码
+        # 用户，TLS 模式下 server 端仍按 d461e40 强制校验）。
+        return "" if v is None else v
 
 
 class WriteConfig(BaseModel):
