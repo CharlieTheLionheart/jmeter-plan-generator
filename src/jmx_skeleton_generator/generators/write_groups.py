@@ -601,8 +601,10 @@ def _build_batch_prepared_bind_preprocessor_body(
     rows_key = f"__SHARED_MEM_{safe_table.replace('.', '_')}_bind"
     ptag_names_groovy = "[" + ", ".join(f"'{p}'" for p in ptag_names) + "]"
     ptag_col_types_groovy = "[" + ", ".join(f"'{t}'" for t in ptag_col_types) + "]"
+    # f-string expressions cannot contain backslashes (Python <3.12) — use
+    # double-quoted Groovy literals via the %s format and assemble with str.join.
     bucket_items = ", ".join(
-        f"'{prefix}': [{', '.join(f'\"{b}\"' for b in buckets)}]"
+        "'{p}': [{inner}]".format(p=prefix, inner=", ".join('"%s"' % b for b in buckets))
         for prefix, buckets in sorted(col_type_buckets.items())
     )
 
