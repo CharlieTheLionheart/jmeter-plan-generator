@@ -1,0 +1,36 @@
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 100
+  device_start: 1
+  test_duration: 600
+
+rest_api_config:
+  https_mode: tls
+  ca_cert_path: /data/stability_certs/ca.crt
+  http_port: 8080
+  login_user: root1
+  login_password: Znbase@1234
+  login_url_path: /restapi/login
+  ddl_url_path: /restapi/ddl
+  write_url_path: /restapi/influxdb
+  query_url_path: /restapi/query
+  default_db: db_sparse_20k
+  timezone: null
+  pre_create_tables: true
+
+write_config:
+  - tbl_name: db_sparse_20k.t_metrics
+    throughput: 0.2
+    mode: schemaless
+    batch_lines: 1
+    device_per_thread: 1
+    num_threads: 20
+    col_tag_bind_mode: true
+    col_num_per_tag: 20
+
+query_config:
+  - query: "select count(*) from db_sparse_20k.t_metrics;"
+    throughput: 1.0
+    num_threads: 1

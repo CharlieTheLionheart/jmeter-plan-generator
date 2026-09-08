@@ -524,7 +524,7 @@ create table table_name (
    稀疏表语法（KaiwuDB 2.4.1+）：`create sparse table table_name (...) tags(...) primary tags(...)`，仅时序引擎支持；列数上限 20000，普通时序表上限 4096。
 
 2. 参数说明：
-- 第一列必须是时间戳列，且列名必须为 k_timestamp，数据类型为 timestamp 或 timestamptz，且必须设置为 not null。
+- 第一列必须是时间戳列，数据类型为 timestamp 或 timestamptz，且必须设置为 not null。
 - 数据列（column_name）：存储时序数据的具体数值。
 - 标签列（tags）：存储元数据信息（如设备 ID、地理位置等）。
 - 主标签必须命名为 primary_tag，且数据类型必须为 varchar，同时设置为 not null。

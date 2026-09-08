@@ -1,6 +1,3 @@
-# 稀疏表 20000 列 + JDBC prepare path 模型 (sparse cap 上限)
-# 9 类等分（按 spec L421-423 排除 nchar/timestamp/timestamptz/geometry/text）
-# 20000 / 9 ≈ 2222 cols per type
 ts_dbs:
   - name: db_sparse_20k
     if_not_exists: true
@@ -17,14 +14,14 @@ ts_dbs:
         ts_col:
           name: ts
           type: timestamp
-          ms_step: 1000
+          ms_step: 5000
         primary_tag_count: 1
         primary_tags:
           - col_type: varchar(32)
             type_proportion: 1.0
         regular_tag_count: 0
         regular_tags: []
-        data_col_count: 19998
+        data_col_count: 19999
         data_cols:
           - col_type: int2
             type_proportion: 0.111111111
