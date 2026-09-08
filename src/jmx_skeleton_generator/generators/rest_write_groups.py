@@ -191,6 +191,12 @@ def _build_rest_write_preprocessor_script(
     ptag_names_groovy = ", ".join(f'"{n}"' for n in ptag_names)
     tag_names_groovy = ", ".join(f'"{n}"' for n in tag_names)
     field_names_groovy = ", ".join(f'"{n}"' for n in field_names)
+    # ts column name follows model ``ts_col.name``; InfluxDB Line Protocol puts it at line tail to avoid server `pq: multiple assignments to the same column`.
+    ts_col_name = (
+        ts_table.ts_col.name
+        if (ts_table is not None and ts_table.ts_col is not None and ts_table.ts_col.name)
+        else "ts"
+    )
 
     # col-tag-bind-write (2026-08-05): bind-mode early return.
     # Replaces steps 1-5 with: read ``__SHARED_MEM_*_bind``, look up
@@ -266,10 +272,10 @@ def _build_rest_write_preprocessor_script(
             "        for (int i = 0; i < colNames.size(); i++) {\n"
             "            fieldMap[colNames[i]] = formatFieldValue(cells[i])\n"
             "        }\n"
-            "        // gap #6 fix: ts = baseTime + b × msStep (整步语义).\n"
-            "        fieldMap['ts'] = (baseTime + (long)(b * msStep))\n"
+            f"        def tsValue = (baseTime + (long)(b * msStep))\\n"
             "        if (!firstLine) { sb.append('\\n') }\n"
             "        sb.append(buildLine(measurement, tagMap, fieldMap))\n"
+            "        sb.append(' ').append(tsValue)\n"
             "        firstLine = false\n"
             "    }\n"
             "}\n"
@@ -344,13 +350,11 @@ def _build_rest_write_preprocessor_script(
         "                fieldMap[name] = formatFieldValue(value)\n"
         "            }\n"
         "        }\n"
-        "        // write-batch-mode-semantics DCR (2026-08-31) gap #6 fix:\n"
-        "        // ts = baseTime + b × msStep (整步语义). Pre-fix used\n"
-        "        // `System.currentTimeMillis() + b` (only 1 ms window).\n"
-        "        fieldMap['ts'] = (baseTime + (long)(b * msStep))\n"
+        f"        def tsValue = (baseTime + (long)(b * msStep))\\n"
         "        tagMap.replaceAll { k, v -> v == '\\${device_code}' ? deviceCode : v }\n"
         "        if (!firstLine) { sb.append('\\n') }\n"
         "        sb.append(buildLine(measurement, tagMap, fieldMap))\n"
+        "        sb.append(' ').append(tsValue)\n"
         "        firstLine = false\n"
         "    }\n"
         "}\n"

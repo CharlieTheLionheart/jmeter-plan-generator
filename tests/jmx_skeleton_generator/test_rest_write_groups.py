@@ -546,14 +546,14 @@ def test_preprocessor_script_handles_rows_empty_gracefully():
 # ---------------------------------------------------------------------------
 
 
-def test_buildline_puts_ts_as_explicit_field_no_trailing_timestamp():
-    """``buildLine`` 必须把 ``ts`` 写进 fields map（``ts=<ms>`` 显式字段），
-    **禁止**走 InfluxDB Line trailing timestamp 格式（KaiwuDB 不识别）。
+def test_buildline_puts_ts_only_as_trailing_timestamp():
+    """``buildLine`` 写 InfluxDB Line body — ts 在 line 末，**不在** fieldMap
+    （KaiwuDB REST API 把字段名匹配 ts 列的 field 也算到该列，重复
+    即 ``pq: multiple assignments to the same column``）。
 
     验证：
-      (1) ``buildLine`` 定义体内不含 ``sb.append(' ').append(tsNanos)`` 模式
-      (2) ``buildLine`` 体内含 ``fieldMap`` 遍历时把 ``ts`` 加进去的逻辑
-      (3) caller 不再传 tsNanos 单独参数（改用 ``fieldMap['ts'] = ...``）
+      (1) script 不含 ``fieldMap['ts'] =`` 或 ``fieldMap.put('ts'``（ts 不进 field_map）
+      (2) script 含 ``sb.append(' ').append(tsValue)``（ts 在 line 末）
     """
     elems = generate_rest_write_thread_group(
         _single_table_model(),
@@ -562,16 +562,14 @@ def test_buildline_puts_ts_as_explicit_field_no_trailing_timestamp():
     preps = _collect_jsr223_preps(elems)
     script = _prop_map(preps[0])["script"]
 
-    # 反例：trailing timestamp 形式
-    assert "sb.append(' ').append(tsNanos)" not in script, (
-        f"buildLine 不能再用 trailing timestamp 形式, got:\n{script}"
+    assert "fieldMap['ts']" not in script, (
+        f"ts 必须只在 line 末，不在 fieldMap, got:\n{script}"
     )
-    assert "sb.append(' ').append(tsMillis)" not in script, (
-        f"buildLine 不能再用 trailing timestamp 形式（任何参数名都不行）, got:\n{script}"
+    assert "fieldMap.put('ts'" not in script, (
+        f"ts 必须只在 line 末，不在 fieldMap, got:\n{script}"
     )
-    # 正例：ts 作为 field 加进 fields map
-    assert "fieldMap['ts']" in script or "fieldMap.put('ts'" in script, (
-        f"prep script 必须把 ts 加进 fieldMap 作为显式字段, got:\n{script}"
+    assert "sb.append(' ').append(tsValue)" in script, (
+        f"line 末必须有 tsValue append, got:\n{script}"
     )
 
 
