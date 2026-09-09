@@ -329,6 +329,14 @@ KaiwuDB REST 端口默认 8081（容器内 HTTP 服务端口；TLS 模式 HTTPS 
 > - schemaless fixture `test_model_schemaless.yaml` 必须把 `ts_dbs[0].name` 改成时序库名（典型 `iot_monitor`），DDL-1 才会真正 `CREATE TS DATABASE`；DDL-2 才会真正 `CREATE TIMESERIES TABLE <tsdb>.meters`。
 > - `test_cfg_schemaless_tls.yaml` 的 `rest_api_config.default_db` / `write_config[].tbl_name` / `query_config[].query` 必须全部对齐到同一个时序库名。
 > - 当前 fixture 若三个字段仍是 `defaultdb`，smoke 必败 `pq: can not create timeseries table in relational database "defaultdb"`（DDL-2 拒，Query 缺表 → NumberFormatException 链）。
+>
+> **§6.1.1 时间戳精度约束（2026-09-09 落定）**：
+>
+> - **InfluxDB Line `<timestamp>` 字段单位是纳秒**（19 位整数，如 `1788859817368000000`），schemaless 生成器在 `_build_rest_write_preprocessor_script` 把 `baseTime + b*msStep` 乘以 `1000 * 1000` 拼到 line tail。
+> - KaiwuDB **DDL `timestamp` 默认是 `TIMESTAMPTZ(3)`（ms 精度）**，19 位 ns 会被 server 拒：`pq: value "<ns>" out of range for type TIMESTAMPTZ(3)`（每条 Write 100% err）。
+> - schemaless fixture `test_model_*.yaml` 必须把 `ts_col.type` 显式声明为 `timestamp(9)`（=`TIMESTAMPTZ(9)` ns 精度），DDL-2 才会 `CREATE ... k_timestamp TIMESTAMP(9) NOT NULL`，与 InfluxDB Line ns timestamp 匹配。`TsColConfig.type` Literal 已扩到 8 个：`timestamp` / `timestamptz` / `timestamp(3|6|9)` / `timestamptz(3|6|9)`。
+> - 实测（curl）：ms 时间戳 `1788859817368` → `code:0, rows:1` ✓；ns 时间戳 `1788859817368000000` → `code:-1, out of range` ✗。
+> - **JDBC 路径不受影响**：JDBC bind path 用 `PreparedStatement.setTimestamp()` 传 `Timestamp` 对象（java.sql 精度自适应），不涉及 line tail 数值。
 
 ### 6.2 跑 jmeter
 

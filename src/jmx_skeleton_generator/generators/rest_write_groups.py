@@ -272,7 +272,7 @@ def _build_rest_write_preprocessor_script(
             "        for (int i = 0; i < colNames.size(); i++) {\n"
             "            fieldMap[colNames[i]] = formatFieldValue(cells[i])\n"
             "        }\n"
-            f"        def tsValue = (baseTime + (long)(b * msStep))\\n"
+            f"        def tsValue = (baseTime + (long)(b * msStep)) * 1000 * 1000 \n"
             "        if (!firstLine) { sb.append('\\n') }\n"
             "        sb.append(buildLine(measurement, tagMap, fieldMap))\n"
             "        sb.append(' ').append(tsValue)\n"

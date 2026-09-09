@@ -1,0 +1,66 @@
+# 稀疏表 100 列 + schemaless 模型（D-29 调试）
+# 9 类等分（按 spec §3.1 排除 nchar/timestamp/timestamptz/geometry/text）
+# 100 / 9 ≈ 11 cols per type — 验证 schemaless bind path + ns timestamp 业务语义。
+# ts_col.type 必须显式 timestamp(9)（=TIMESTAMP(9) ns 精度），与 InfluxDB Line
+# 19 位 ns 时间戳匹配；TIMESTAMP(3) 默认 ms 精度会拒 ns 写入。
+ts_dbs:
+  - name: db_sparse_100
+    if_not_exists: true
+    retentions: 1d
+    partition_interval: 1d
+    comment: 稀疏表 100 列 + schemaless
+    tables:
+      - name: t_metrics
+        if_not_exists: true
+        with_hash: 4
+        retentions: 1d
+        comment: 100 列稀疏测量表（schemaless path）
+        sparse: true
+        ts_col:
+          name: k_timestamp
+          type: timestamp(9)
+          ms_step: 1000
+        primary_tag_count: 1
+        primary_tags:
+          - col_type: varchar(32)
+            type_proportion: 1.0
+        regular_tag_count: 0
+        regular_tags: []
+        data_col_count: 100
+        data_cols:
+          - col_type: int2
+            type_proportion: 0.111111111
+            val_range: "[0,100)"
+            seed_num: 100
+          - col_type: int4
+            type_proportion: 0.111111111
+            val_range: "[0,100)"
+            seed_num: 100
+          - col_type: int8
+            type_proportion: 0.111111111
+            val_range: "[0,1000)"
+            seed_num: 100
+          - col_type: float4
+            type_proportion: 0.111111111
+            val_range: "[0.0,1000.0)"
+            seed_num: 100
+          - col_type: float8
+            type_proportion: 0.111111111
+            val_range: "[0.0,10000.0)"
+            seed_num: 100
+          - col_type: bool
+            type_proportion: 0.111111111
+            val_range: "enum:true,false"
+            seed_num: 10
+          - col_type: char(30)
+            type_proportion: 0.111111111
+            val_range: "enum:C00,C01,C02,C03,C04,C05,C06,C07,C08,C09"
+            seed_num: 10
+          - col_type: varchar(64)
+            type_proportion: 0.111111111
+            val_range: "enum:V00,V01,V02,V03,V04,V05,V06,V07,V08,V09"
+            seed_num: 10
+          - col_type: float8
+            type_proportion: 0.111111112
+            val_range: "[0.0,1000.0)"
+            seed_num: 100

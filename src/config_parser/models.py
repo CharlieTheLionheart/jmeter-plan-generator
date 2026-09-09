@@ -125,7 +125,7 @@ class TsColConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    type: Literal["timestamp", "timestamptz"]
+    type: Literal["timestamp", "timestamptz", "timestamp(3)", "timestamp(6)", "timestamp(9)", "timestamptz(3)", "timestamptz(6)", "timestamptz(9)"]
     ms_step: int = Field(ge=1)
 
 

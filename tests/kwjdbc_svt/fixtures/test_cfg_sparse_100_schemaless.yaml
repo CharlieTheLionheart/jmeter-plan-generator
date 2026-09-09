@@ -11,12 +11,12 @@ rest_api_config:
   ca_cert_path: /data/stability_certs/ca.crt
   http_port: 8080
   login_user: root
-  login_password:
+  login_password: root123
   login_url_path: /restapi/login
   ddl_url_path: /restapi/ddl
   write_url_path: /restapi/influxdb
   query_url_path: /restapi/query
-  default_db: iot_monitor
+  default_db: db_sparse_100
   timezone: null
   pre_create_tables: true
 
