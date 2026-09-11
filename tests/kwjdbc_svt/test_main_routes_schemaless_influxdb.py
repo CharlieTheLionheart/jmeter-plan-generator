@@ -19,7 +19,7 @@ from utils.rest_errors import RestConfigError
 def _cfg(mode, rest=None):
     return TestConfig(
         conn_config=ConnConfig(db_url="jdbc:kaiwudb://localhost:26257/defaultdb"),
-        write_config=[WriteConfig(tbl_name="t", mode=mode)],
+        write_config=[WriteConfig(tbl_name="defaultdb.meters", mode=mode)],
         rest_api_config=rest,
     )
 

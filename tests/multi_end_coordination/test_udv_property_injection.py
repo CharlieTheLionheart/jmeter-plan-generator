@@ -5,8 +5,9 @@ Closes multi-end-coordination review §1 by exercising:
 - ``device_start`` UDV field becomes the literal string
   ``"${__P(device_start,1)}"`` (NOT a numeric literal such as ``"1"``).
 - ``device_per_thread`` follows the same pattern.
-- ``write_throughput`` remains a string literal (``"120"``) — only the
-  device-startup fields become function references.
+- ``write_throughput`` is NOT a UDV — throughput is baked into each
+  write ``ConstantThroughputTimer`` as the per-table
+  ``WriteConfig.throughput`` cfg literal (no UDV indirection).
 - The generated JMX contains no orchestration-output sampler / listener
   (multi-end tasks §3.2 reverse-direction test).
 """
@@ -49,24 +50,18 @@ class TestDeviceStartUdv:
         assert props["device_per_thread"] == "${__P(device_per_thread,1)}"
 
 
-class TestWriteThroughputOverridable:
-    """write_throughput is also exposed via ${__P(...)} per F-15.
+class TestWriteThroughputAbsent:
+    """write_throughput UDV is gone (cfg-write-throughput-literal, 2026-09-11).
 
-    Earlier this field was a hardcoded literal ``"120"`` so
-    ``-Jwrite_throughput=N`` was silently ignored. F-15 (2026-07-21)
-    made every UDV default go through ``${__P(name,default)}`` so
-    CLI ``-J`` overrides take effect.
+    Per-table throughput is baked into the ``ConstantThroughputTimer``
+    at generation time. ``-Jwrite_throughput=N`` no longer affects
+    sampler tick rate; the operator edits ``cfg.write_config[].throughput``
+    and re-runs ``python -m kwjdbc_svt.main``.
     """
 
-    def test_write_throughput_default_is_120(self):
-        """Default value baked into the ${__P(...)} reference is 120."""
+    def test_write_throughput_not_in_udv(self):
         props = _udv_props(_udv_results())
-        assert props["write_throughput"] == "${__P(write_throughput,120)}"
-
-    def test_write_throughput_adopts_property_syntax(self):
-        """write_throughput is wrapped in ${__P(...)} like every other UDV."""
-        props = _udv_props(_udv_results())
-        assert "${__P(write_throughput" in props["write_throughput"]
+        assert "write_throughput" not in props
 
 
 class TestAllUdvsAdoptPropertySyntax:
@@ -80,7 +75,7 @@ class TestAllUdvsAdoptPropertySyntax:
             # a different cluster / credentials via ``-J<name>=...``.
             "db_url", "db_username", "db_password",
             "conn_pool_size", "device_start", "device_per_thread",
-            "test_duration", "write_throughput",
+            "test_duration",
         ],
     )
     def test_udv_uses_property_reference(self, udv_name: str):

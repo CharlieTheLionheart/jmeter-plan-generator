@@ -17,7 +17,7 @@ OpenSpec §3（task-3-brief.md）7 个 case (a)-(g)：
         字段转义规则）
   - utils/xml_helpers.http_request_sampler_element / jsr223_preprocessor_element
         / thread_group_element（既有 helper）
-  - throughput_control.generate_write_timer（既有，控 ``${write_throughput}``）
+  - throughput_control.generate_write_timer（既有，烤死 cfg ``WriteConfig.throughput`` 字面量）
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ from config_parser.models import (
     TestModelConfig,
     TsDbConfig,
     TsTableConfig,
+    WriteConfig,
 )
 from jmx_skeleton_generator.generators.rest_write_groups import (
     generate_rest_write_thread_group,
@@ -174,6 +175,21 @@ def _multi_table_model() -> TestModelConfig:
     )
 
 
+def _single_table_write_configs() -> List[WriteConfig]:
+    """write_configs matching ``_single_table_model`` (table=db_iot.meters)."""
+    return [
+        WriteConfig(tbl_name="db_iot.meters", throughput=60.0, mode="schemaless"),
+    ]
+
+
+def _multi_table_write_configs() -> List[WriteConfig]:
+    """write_configs matching ``_multi_table_model`` (db_iot.{meters,voltage})."""
+    return [
+        WriteConfig(tbl_name="db_iot.meters", throughput=60.0, mode="schemaless"),
+        WriteConfig(tbl_name="db_iot.voltage", throughput=60.0, mode="schemaless"),
+    ]
+
+
 # ---------------------------------------------------------------------------
 # (a) 单 measurement → 1 个 sampler 单元 + Timer + TG
 # ---------------------------------------------------------------------------
@@ -183,6 +199,7 @@ def test_single_measurement_emits_one_sampler_unit():
     elems = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=_default_rest_api(),
+        write_configs=_single_table_write_configs(),
     )
 
     # 顶层应为 [TG, hashTree, TG, hashTree, ...]；这里 N=1 → 2 个顶层元素
@@ -212,6 +229,7 @@ def test_multiple_measurements_emit_n_sampler_units():
     elems = generate_rest_write_thread_group(
         _multi_table_model(),
         rest_api_config=_default_rest_api(),
+        write_configs=_multi_table_write_configs(),
     )
 
     tg_list = _collect_thread_groups(elems)
@@ -241,6 +259,7 @@ def test_tag_set_matches_ptag_produces_correct_line():
     elems = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=_default_rest_api(),
+        write_configs=_single_table_write_configs(),
     )
 
     preps = _collect_jsr223_preps(elems)
@@ -348,6 +367,7 @@ def test_sampler_body_is_request_body_var_ref():
     elems = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=_default_rest_api(),
+        write_configs=_single_table_write_configs(),
     )
 
     samplers = _collect_http_samplers(elems)
@@ -377,6 +397,7 @@ def test_groovy_script_contains_required_helpers():
     elems = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=_default_rest_api(),
+        write_configs=_single_table_write_configs(),
     )
 
     preps = _collect_jsr223_preps(elems)
@@ -403,6 +424,7 @@ def test_path_includes_db_and_optional_tz():
     elems_no_tz = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=cfg_no_tz,
+        write_configs=_single_table_write_configs(),
     )
     samplers = _collect_http_samplers(elems_no_tz)
     assert len(samplers) == 1
@@ -416,6 +438,7 @@ def test_path_includes_db_and_optional_tz():
     elems_tz = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=cfg_tz,
+        write_configs=_single_table_write_configs(),
     )
     samplers_tz = _collect_http_samplers(elems_tz)
     assert len(samplers_tz) == 1
@@ -444,6 +467,7 @@ def test_customized_ssl_context_only_when_tls():
     elems_tls = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=_default_rest_api(https_mode="tls", ca_cert_path="/tmp/cert"),
+        write_configs=_single_table_write_configs(),
     )
     for sampler in _collect_http_samplers(elems_tls):
         props = _prop_map(sampler)
@@ -465,6 +489,7 @@ def test_http_samplers_domain_and_port_have_property_defaults():
     elems = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=_default_rest_api(),
+        write_configs=_single_table_write_configs(),
     )
     for sampler in _collect_http_samplers(elems):
         props = _prop_map(sampler)
@@ -558,6 +583,7 @@ def test_buildline_puts_ts_only_as_trailing_timestamp():
     elems = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=_default_rest_api(),
+        write_configs=_single_table_write_configs(),
     )
     preps = _collect_jsr223_preps(elems)
     script = _prop_map(preps[0])["script"]
@@ -584,6 +610,7 @@ def test_prep_uses_currentTimeMillis_not_nanoTime():
     elems = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=_default_rest_api(),
+        write_configs=_single_table_write_configs(),
     )
     preps = _collect_jsr223_preps(elems)
     script = _prop_map(preps[0])["script"]
@@ -621,6 +648,7 @@ def test_write_sampler_has_body_code_jsr223_assertion():
     elems = generate_rest_write_thread_group(
         _single_table_model(),
         rest_api_config=_default_rest_api(),
+        write_configs=_single_table_write_configs(),
     )
     samplers = _collect_http_samplers(elems)
     assert len(samplers) == 1, f"expected 1 Write sampler, got {len(samplers)}"
@@ -662,3 +690,24 @@ def test_write_sampler_has_body_code_jsr223_assertion():
     raise AssertionError(
         "无法定位 Write sampler 配对 hashTree — sampler 结构异常"
     )
+
+
+# ---------------------------------------------------------------------------
+# cfg-write-throughput-literal (2026-09-11): write throughput is baked
+# into ConstantThroughputTimer from WriteConfig.throughput (no UDV).
+# ---------------------------------------------------------------------------
+
+
+def test_rest_write_groups_missing_wc_raises():
+    """A TsTableConfig without a matching WriteConfig entry must fail fast.
+
+    The schemaless write path requires every ts_table to have a per-table
+    ``WriteConfig`` because the ``ConstantThroughputTimer`` now bakes the
+    cfg ``throughput`` literal (no UDV fallback).
+    """
+    with pytest.raises(ValueError, match=r"missing write_config for ts_table db_iot\.meters"):
+        generate_rest_write_thread_group(
+            _single_table_model(),
+            rest_api_config=_default_rest_api(),
+            write_configs=[],  # explicit empty list
+        )
