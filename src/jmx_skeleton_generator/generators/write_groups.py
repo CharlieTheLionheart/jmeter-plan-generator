@@ -1017,7 +1017,7 @@ def generate_write_thread_groups(
                 )
                 continue
 
-            timer, timer_hash = generate_write_timer()
+            timer, timer_hash = generate_write_timer(throughput=wc.throughput)
             sampler, samp_hash, preproc, preproc_hash = _build_direct_insert_components(
                 wc, columns, first_ptag, ts_col_jdbc_type=ts_jdbc, column_types=column_types,
             )
@@ -1062,7 +1062,7 @@ def generate_write_thread_groups(
             scheduler=True,
         )
 
-        timer, timer_hash = generate_write_timer()
+        timer, timer_hash = generate_write_timer(throughput=wc.throughput)
 
         # Per-thread-group UDV: prepared-mode Groovy reads
         # ``vars.get("table_name"|"insert_sql"|"batch_lines"|"ms_step")``.

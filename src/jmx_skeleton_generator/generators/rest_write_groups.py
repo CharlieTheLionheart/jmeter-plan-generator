@@ -6,8 +6,8 @@ Spec:    openspec/changes/rest-schemaless-write/specs/schemaless-write/spec.md
 For every ``TsTableConfig`` in ``test_model_config.ts_dbs`` this module
 emits one JMeter ``ThreadGroup`` whose children are:
 
-- ``ConstantThroughputTimer``  (write_throughput UDV; reused from
-  ``throughput_control.generate_write_timer``)
+- ``ConstantThroughputTimer``  (cfg ``wc.throughput`` literal; reused
+  from ``throughput_control.generate_write_timer``)
 - ``JSR223PreProcessor``       (per-row InfluxDB Line builder; helpers
   ``escapeLineValue`` / ``escapeTagValue`` / ``formatFieldValue`` /
   ``buildLine`` are emitted inline so each measurement is independent)
@@ -19,13 +19,9 @@ The Groovy script reads rows + column names from
 ``__SHARED_MEM_{db}_{table}`` and ``__SHARED_MEM_{db}_{table}_columns``
 populated by the shared-memory loader.
 
-Note on ``throughput_qps``: the existing
-``throughput_control.generate_write_timer`` signature has no
-``throughput_qps`` kwarg and uses the literal ``${write_throughput}``
-UDV. To keep this task scope-tight (no edits to ``throughput_control/``)
-``throughput_qps`` is reserved for future use; an integer value logs a
-warning and is otherwise ignored — callers should pass
-``-Jwrite_throughput=N`` on the JMeter CLI.
+Note on ``throughput_qps``: per-table ``WriteConfig.throughput`` is the
+source of truth — ``throughput_qps`` is reserved for future use; an
+integer value logs a warning and is otherwise ignored.
 """
 
 from __future__ import annotations
@@ -381,7 +377,7 @@ def generate_rest_write_thread_group(
 ) -> List:
     """Generate one ThreadGroup per TsTableConfig, each with:
 
-    - ConstantThroughputTimer (write_throughput UDV)
+    - ConstantThroughputTimer (cfg ``wc.throughput`` literal)
     - JSR223PreProcessor (per-row InfluxDB Line builder)
     - HTTPSamplerProxy (P0-B POST + HeaderManager, body=${request_body})
 
@@ -400,23 +396,29 @@ def generate_rest_write_thread_group(
     name:
         ThreadGroup display name prefix (default ``"REST Write"``).
     throughput_qps:
-        Reserved for future use. ``None`` uses ``write_throughput`` UDV;
-        integer value is currently **ignored** (warning logged) — extend
-        ``throughput_control.generate_write_timer`` to honor it. Do not
-        modify throughput_control/ in this task.
+        Reserved for future use. ``None`` uses ``cfg.write_config[].throughput``
+        for the per-table write sampler; integer value is currently
+        **ignored** (warning logged) — extend this module to honor it.
 
     Returns
     -------
     Flat list ``[ThreadGroup, hashTree, ThreadGroup, hashTree, ...]``
     with one TG per TsTableConfig. Empty list when ``ts_dbs`` is empty.
+
+    Raises
+    ------
+    ValueError:
+        When a ``TsTableConfig`` from ``test_model_config`` has no
+        matching entry in ``write_configs``. The schemaless write path
+        requires every ts_table to have a per-table ``WriteConfig``
+        because the ``ConstantThroughputTimer`` now bakes the cfg
+        ``throughput`` literal (no UDV fallback).
     """
     if throughput_qps is not None:
         logger.warning(
             "throughput_qps=%d is currently ignored by "
-            "rest_write_groups.generate_rest_write_thread_group "
-            "(extend throughput_control.generate_write_timer to honor it); "
-            "use -Jwrite_throughput=%d on the JMeter CLI to override the UDV.",
-            throughput_qps,
+            "rest_write_groups.generate_rest_write_thread_group; "
+            "the per-table WriteConfig.throughput is the source of truth.",
             throughput_qps,
         )
 
@@ -452,6 +454,11 @@ def generate_rest_write_thread_group(
         for ts_table in ts_db.tables:
             fqn = f"{ts_db.name}.{ts_table.name}"
             wc = write_cfg_by_table.get(fqn)
+            if wc is None:
+                raise ValueError(
+                    f"missing write_config for ts_table {fqn}; "
+                    f"rest_write_groups requires every ts_table to have a WriteConfig entry"
+                )
             col_tag_bind_mode = bool(wc and wc.col_tag_bind_mode)
             col_num_per_tag = int(wc.col_num_per_tag) if wc else 0
             num_threads = int(wc.num_threads) if wc else 1
@@ -467,7 +474,7 @@ def generate_rest_write_thread_group(
                 batch_lines=int(wc.batch_lines) if wc else 1,
             )
 
-            timer, timer_hash = generate_write_timer()
+            timer, timer_hash = generate_write_timer(throughput=wc.throughput)
 
             tg_name = f"{name}_{ts_table.name}"
             tg_testname = f"[{name}] {ts_table.name}"
