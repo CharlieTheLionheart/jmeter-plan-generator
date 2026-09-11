@@ -85,7 +85,6 @@ rm -f jmeter.log
 timeout 30 "$JMETER" -n -t /tmp/jmeter-smoke/out/test_plan.jmx \
     -Jtest_duration=3 -Jnum_threads=1 \
     -Jdevice_start=1 -Jdevice_per_thread=1 \
-    -Jwrite_throughput=60 \
     -j /tmp/jmeter-smoke/jmeter.log 2>&1 | tail -10
 ```
 
@@ -139,7 +138,6 @@ done
     -Jtest_duration=5 -Jnum_threads=1 \
     -Jdb_url=jdbc:kaiwudb://localhost:26257/defaultdb \
     -Jdb_username=root \
-    -Jwrite_throughput=120 \
     -j /tmp/jmeter-smoke/jmeter-live.log 2>&1 | tail -10
 ```
 
@@ -348,7 +346,6 @@ timeout 60 jmeter -n -t /tmp/jmeter-smoke/schemaless-out/test_plan.jmx \
     -Jrest_api.hostname=127.0.0.1 \
     -Jrest_api.http_port=8081 \
     -Jrest_api.ca_cert_path=/abs/path/to/ca.crt \
-    -Jwrite_throughput=60 \
     -j /tmp/jmeter-smoke/jmeter-schemaless.log 2>&1 | tail -10
 ```
 
@@ -366,6 +363,8 @@ timeout 60 jmeter -n -t /tmp/jmeter-smoke/schemaless-out/test_plan.jmx \
 | (c) Query round-trip `rows >= 1` | 同 (b)，query TG sample |
 | (d) DB `count(*) from meters` 匹配 | `docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs -e "select count(*) from defaultdb.meters"` |
 | (e) `device_id` ptag 列非 NULL + 范围 `device_1..device_10` | `select distinct device_id from defaultdb.meters` |
+
+> **⚠️ cfg-write-throughput-literal (2026-09-11)**：`-Jwrite_throughput=N` 已**失效**（`${write_throughput}` UDV 已移除）。如需调整 sampler 速率，改 cfg `write_config[].throughput` 后重生成 JMX。
 
 ### 6.4 调试 / 排错（TLS smoke 中增量补充）
 

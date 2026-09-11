@@ -37,8 +37,11 @@ default value (1 for both).
 The following fields are still baked-in literals at generation time and
 must be edited by hand if you want to override them outside the JMX
 file: `db_url`, `db_username`, `db_password`, `conn_pool_size`,
-`test_duration`, `write_throughput`. (`write_throughput` is rendered as
-the literal `"120"`; -J override would not propagate.)
+`test_duration`. `write_throughput` is no longer a UDV (removed
+2026-09-11, cfg-write-throughput-literal) — each write
+`ConstantThroughputTimer` embeds the per-table `WriteConfig.throughput`
+cfg literal directly, so to retune throughput edit cfg and re-run
+`python -m kwjdbc_svt.main`.
 
 ## 2. Multi-end: computing each instance's `device_start`
 

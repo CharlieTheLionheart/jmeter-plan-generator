@@ -207,11 +207,12 @@ open /tmp/jmeter-report/index.html
 | `num_threads` | 4 | 写入/查询线程数 |
 | `device_start` | 1 | 多端协同设备号基准 |
 | `device_per_thread` | 1 | 每线程设备数 |
-| `write_throughput` | 120 | 每写入线程目标（次/分钟） |
 | `conn_pool_size` | 4 | 连接池大小 |
 | `db_url` | - | JDBC URL（必须 `defaultdb`） |
 | `db_username` | root | DB 用户名 |
 | `db_password` | "" | DB 密码 |
+
+> **写入线程组吞吐量**：自 2026-09-11 cfg-write-throughput-literal 起，写入 `ConstantThroughputTimer.throughput` 直接烤死 cfg `write_config[].throughput` 字面数值（samples/min/thread）。**没有** `-Jwrite_throughput=N` 入口 — 修改 cfg 后重生成 JMX 即生效。
 
 ---
 
@@ -284,7 +285,7 @@ A: `db_url` 必须连 `defaultdb`（系统库永远在），不能连业务库�
 A: F-17 server bug。换 `kwdb-x86_64-master:latest` (nightly)，详见 [docs/issues/F17.md](docs/issues/F17.md)。
 
 **Q: 吞吐实测与 config 不符**
-A: 检查 `-Jwrite_throughput` 与 `-Jnum_threads`。`throughput` 是**每线程**目标，线程组总 = `throughput × num_threads`（spec §2.2 修正后口径）。
+A: 自 2026-09-11 cfg-write-throughput-literal 起，写入 timer 的 `timeout` 直接烤死 cfg `write_config[].throughput` 字面量；`-Jwrite_throughput` 已**移除**（不会生效）。`throughput` 是**每线程**目标，线程组总 = `throughput × num_threads`。要调整写入速率：改 cfg `write_config[].throughput` 后重生成 JMX。
 
 ---
 

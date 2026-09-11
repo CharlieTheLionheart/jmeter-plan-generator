@@ -129,12 +129,9 @@
       <stringProp name="Argument.desc">起始设备编号,用于分布客户端创建,default: 1</stringProp>
       <stringProp name="Argument.metadata">=</stringProp>
     </elementProp>
-    <elementProp name="write_throughput" elementType="Argument">
-      <stringProp name="Argument.name">write_throughput</stringProp>
-      <stringProp name="Argument.value">${__P(user.write.throughput,60)}</stringProp>
-      <stringProp name="Argument.metadata">=</stringProp>
-      <stringProp name="Argument.desc">写入吞吐量/min, default: 60</stringProp>
-    </elementProp>
+    <!-- write_throughput UDV was removed 2026-09-11 (cfg-write-throughput-literal);
+         per-table WriteConfig.throughput is baked into each write
+         ConstantThroughputTimer as a literal string (samples/min/thread). -->
     <elementProp name="write_duration" elementType="Argument">
       <stringProp name="Argument.name">write_duration</stringProp>
       <stringProp name="Argument.value">${__P(user.write.duration,60)}</stringProp>
@@ -364,7 +361,7 @@ SampleResult.setIgnore()</stringProp>
 ```xml
 <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer"
                           testname="Constant Throughput Timer" enabled="true">
-  <stringProp name="throughput">${__BeanShell(${write_throughput} / ${num_threads},)}</stringProp>
+  <stringProp name="throughput">60</stringProp>
   <intProp name="calcMode">0</intProp>
   <boolProp name="legacyMode">false</boolProp>
 </ConstantThroughputTimer>
@@ -375,7 +372,7 @@ SampleResult.setIgnore()</stringProp>
 
 | Property | 类型 | 说明 |
 |----------|------|------|
-| `throughput` | string | 目标吞吐量（每分钟采样数）。通常按总吞吐除以线程数配置，如 `${__BeanShell(${write_throughput} / ${num_threads},)}` |
+| `throughput` | string | 目标吞吐量（每分钟采样数）。kwjdbc-svt 烤死为 cfg `WriteConfig.throughput` / `QueryConfig.throughput` 字面数值（无 UDV / `__BeanShell` 派生）；其它工具的派生公式不属本项目范围 |
 | `calcMode` | int | 计算模式，固定为 `0`（This thread only），必须在 XML 中显式配置 |
 | `legacyMode` | bool | 是否使用旧版计算模式（建议 `false`） |
 

@@ -140,7 +140,7 @@ status: final
 ```
 [ThreadGroup, num_threads=T, duration=test_duration, scheduler]
   │
-  ├─ConstantThroughputTimer (write_throughput UDV)
+  ├─ConstantThroughputTimer (cfg `wc.throughput` 字面量)
   │
   ├─JSR223PreProcessor (Groovy: 列子集 INSERT)   ← 修改 _build_inline_sql_...
   │   // 1. 读 SharedMemory

@@ -440,7 +440,7 @@ rest_api:
 | `batch_prepared` 模式假设单 prepared statement + N bind | `mode: schemaless_influxdb` 时**无 batch**，每行独立 HTTP POST。`batch_size` / `batch_prepared` 等 JDBC 模式参数失效 |
 | SetupTG 仅做共享内存初始化 | SetupTG **新增**双重职责：① 调用 `GET /restapi/login` 拿 token 写入 `${__property(rest_token)}`；② 当 `rest_api.pre_create_tables=true` 时遍历 `test_model.yaml` 中每个 measurement 调用 `POST /restapi/ddl` 预建表（ptag / tag / field 名必须与 InfluxDB Line tag_set / field_set 一致，见 §9.1） |
 | `conn_pool_size` UDV 控制 JDBC pool | **新增** `rest_conn_pool_size` UDV 控制 JMeter HTTPClient 连接池（`httpclient4.max_total_connections`） |
-| throughput UDV 控制写入 QPS | 复用现有 `write_throughput`（`ConstantThroughputTimer`），不新增 |
+| 写入 QPS（cfg 字面烤死） | cfg `wc.throughput` 直接烤死 `ConstantThroughputTimer`（无 `write_throughput` UDV，2026-09-11 cfg-write-throughput-literal 起） |
 | 数据库连接字符串 `db_url`（JDBC URL） | **新增** `rest_api` 配置段（见 §6.3），与 `db_url` 并存；不再用 JDBC URL |
 | 默认时区 | 新增 `rest_api.timezone` UDV，可选透传给 `?tz=` |
 

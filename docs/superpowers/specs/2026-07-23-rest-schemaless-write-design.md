@@ -141,7 +141,7 @@ JMeter props: __SHARED_MEM_{db}_{table} + __SHARED_MEM_{db}_{table}_columns
 ```
 [ThreadGroup, num_threads=N, duration=test_duration, scheduler]
   │
-  ├─ConstantThroughputTimer (write_throughput UDV)
+  ├─ConstantThroughputTimer (cfg `wc.throughput` 字面量)
   │
   ├─JSR223PreProcessor (Groovy: 拼 InfluxDB Line body)   ← 新增
   │   读 globalProps.__SHARED_MEM_{db}_{table} (行列表) + _columns (header)
@@ -279,7 +279,7 @@ def generate_rest_write_thread_group(
     rest_api_config: Dict[str, Any],
     *,
     name: str = "REST Write",
-    throughput_qps: Optional[float] = None,  # 复用 write_throughput UDV
+    throughput_qps: Optional[float] = None,  # 烤死为 cfg 字面数值（无 UDV 入口）
 ) -> List:
     """返回 [ThreadGroup, hashTree]。"""
 ```
@@ -293,7 +293,7 @@ def generate_rest_write_thread_group(
 - Header：`Content-Type: text/plain`、`Accept: application/json`、`Authorization: Basic ${__property(rest_token)}`。
 - Body：`${request_body}`（Groovy PreProcessor 运行时设置）。
 - `ssl_context`：`${rest_api.ca_cert_path}` 仅当 `https_mode=tls`。
-- 沿用现有 `ConstantThroughputTimer` + `write_throughput` UDV 控 QPS。
+- 沿用现有 `ConstantThroughputTimer`，cfg `wc.throughput` 字面量烤死。
 - 每个 sampler 配 Response Assertion（`code==0`）。
 
 ### 4.4 `generate_rest_query_thread_group`（`jmx_skeleton_generator/generators/rest_query_groups.py` 新增）

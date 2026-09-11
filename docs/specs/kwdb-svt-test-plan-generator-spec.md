@@ -128,7 +128,7 @@
 **写入配置（`write_config`）**
 
 - `tbl_name`：表名，`all` 表示所有表使用相同的写入配置，每张表生成独立的写入线程组；若不同表需要不同的写入参数，则需分条目指定表名，每张表可独立配置
-- `throughput`：**每个设备的目标吞吐量**（per-device-per-minute，单位次/分钟 SQL 触发频率）。`ConstantThroughputTimer` 配 `calcMode=0`（This thread only），配 `throughput` = 每线程每分钟 sampler 触发 = 每设备每分钟 SQL 数（因 1 sampler = `device_per_thread` 个 SQL 自动覆盖 dpt 个设备）。每张表的写入线程组独立挂载 ConstantThroughputTimer，Timer 仅对该线程组生效
+- `throughput`：**每个设备的目标吞吐量**（per-device-per-minute，单位次/分钟 SQL 触发频率）。`ConstantThroughputTimer` 配 `calcMode=0`（This thread only），配 `throughput` = 每线程每分钟 sampler 触发 = 每设备每分钟 SQL 数（因 1 sampler = `device_per_thread` 个 SQL 自动覆盖 dpt 个设备）。**写入 sampler 的 timer `throughput` 直接**烤死 cfg 字面数值（samples/min/thread），不走 JMeter UDV 间接层；`${write_throughput}` UDV 已**移除**（2026-09-11 cfg-write-throughput-literal），`–Jwrite_throughput=N` 命令行入口不再生效，修改吞吐即改 cfg `throughput` 后重生成 JMX。每张表的写入线程组独立挂载 ConstantThroughputTimer，Timer 仅对该线程组生效
 - `mode`：数据写入模式（按"每条 INSERT SQL 写多少行 + 走哪种 server-side 通道"业务语义；5 mode → 3 mode 收敛，2026-09-02）：
   - `direct`：直接 INSERT 写入（`Update Statement` + inline SQL 字符串）。`batch_lines=1` = 单行 INSERT，`batch_lines=N` = MultiRowInsert VALUES `(...), (...), ...`。
   - `prepare`：PreparedStatement 写入（`addBatch() × batch_lines` + `executeBatch()` + `?` bind）。`batch_lines=1` = 单行 addBatch + executeBatch，`batch_lines=N` = N 行 addBatch + executeBatch。
@@ -327,7 +327,7 @@ query_config:
 - **初始化线程组**：分为两个 `SetupThreadGroup`，均在普通线程组之前执行：
   - `SetupThreadGroup (DDL 执行)`：负责建库建表 DDL 以及关系表元数据种子初始化写入。
   - `SetupThreadGroup: 初始化共享内存种子区`**：使用**单线程**执行一次，为每张时序表从列种子文件拼接出完整的**行种子数据总集**，放入全局共享内存。所有写入线程共享同一块内存，不再按线程拆分，也不再使用单独的实时数据生成线程组。行种子总集的行数为该表各列 `seed_num` 的最大值，其余列按自身种子顺序循环填充；列数据按列种子文件名中的列序号顺序读取。
-- **写入线程组**：每张表生成独立的写入线程组。`tbl_name: all` 时，所有表各自拥有独立的写入线程组，但共享相同的 `throughput`、`mode`、`batch_lines`、`device_per_thread`、`num_threads` 等配置值；若不同表需要不同的写入参数，则 `write_config` 中需分条目指定表名，每张表可独立配置 `throughput`、`mode`、`batch_lines`、`device_per_thread`、`num_threads`。写入线程组的 `JDBCSampler` 下挂载 `JSR223PreProcessor`，负责：
+- **写入线程组**：每张表生成独立的写入线程组。`tbl_name: all` 时，所有表各自拥有独立的写入线程组，但共享相同的 `throughput`、`mode`、`batch_lines`、`device_per_thread`、`num_threads` 等配置值；若不同表需要不同的写入参数，则 `write_config` 中需分条目指定表名，每张表可独立配置 `throughput`、`mode`、`batch_lines`、`device_per_thread`、`num_threads`。写入线程组的 `ConstantThroughputTimer.throughput` 烤死为 cfg `throughput` 字面量，无 `${write_throughput}` UDV 入口。写入线程组的 `JDBCSampler` 下挂载 `JSR223PreProcessor`，负责：
   - 每个线程首次执行时一次性获取基准时间；
   - 每次写入前，从该表共享的行种子总集中**随机取一个起始行号**，拷贝连续 `batch_lines` 行作为本次写入数据；若 `起始行号 + batch_lines` 超过总集行数，则从总集开头取剩余行（循环回绕）；
   - 在本地拷贝出的 batch 上**装配时间戳**（**整步语义**：时间戳 = 基准时间 + `i × ms_step`，i ∈ [0, batch_lines)；write-batch-mode-semantics DCR 2026-08-31 修复 gap #6，原 D-24 分摊语义 `i × (ms_step / batch_lines)` 已废止）；
@@ -342,10 +342,10 @@ query_config:
     ```
 - **查询线程组**：`query_config` 中的每个查询条目生成独立的查询线程组，各自挂载独立的 ConstantThroughputTimer，以满足不同查询的不同频率需求。
 - **Timer 作用范围**：ConstantThroughputTimer 挂载在线程组级别，仅对该线程组生效，不参与跨线程组的吞吐量分配
-- **Timer 配置**：`calcMode` 固定为 `0`（This thread only），即每个线程独立计算目标吞吐量。`throughput` 参数值直接使用配置中的数值，**不除以 num_threads**——配置值本身就是每个线程的目标。线程组总吞吐量 = `throughput × num_threads`，集群总吞吐量 = `throughput × num_threads × 端数`。示例如下：
+- **Timer 配置**：`calcMode` 固定为 `0`（This thread only），即每个线程独立计算目标吞吐量。**写入** timer 的 `throughput` 直接烤死 cfg `WriteConfig.throughput` 字面量；**查询** timer 的 `throughput` 直接烤死 cfg `QueryConfig.throughput` 字面量。`throughput` 参数值直接使用配置中的数值，**不除以 num_threads**——配置值本身就是每个线程的目标。线程组总吞吐量 = `throughput × num_threads`，集群总吞吐量 = `throughput × num_threads × 端数`。示例（写入，cfg `throughput=60`）：
   ```xml
   <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="吞吐量控制" enabled="true">
-    <stringProp name="throughput">${write_throughput}</stringProp>
+    <stringProp name="throughput">60</stringProp>
     <intProp name="calcMode">0</intProp>
   </ConstantThroughputTimer>
   ```
