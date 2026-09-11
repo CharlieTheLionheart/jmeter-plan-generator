@@ -2,17 +2,15 @@
 
 Design: openspec/changes/throughput-control/design.md
 
-Two consumers:
+Two consumers, both embedding cfg literals (no JMeter UDV):
 
-- :func:`generate_write_timer` — emit a ``ConstantThroughputTimer`` that
-  references the JMeter UDV variable ``${write_throughput}``. The UDV
-  itself is populated by
-  :func:`jmx_skeleton_generator.generators.test_plan.generate_user_defined_variables`
-  with a default value of :data:`DEFAULT_WRITE_THROUGHPUT` (120
-  samples per minute).
-- :func:`generate_query_timer` — emit a ``ConstantThroughputTimer`` that
-  carries the literal numeric throughput from ``QueryConfig.throughput``
-  (no JMeter variable). Each query gets its own literal value.
+- :func:`generate_write_timer` — emit a ``ConstantThroughputTimer`` whose
+  ``throughput`` attribute is the literal string form of the per-table
+  ``WriteConfig.throughput`` cfg value (samples per minute, per-thread).
+  The caller must pass the throughput explicitly — there is no
+  process-wide default.
+- :func:`generate_query_timer` — same shape, but the throughput comes
+  from ``QueryConfig.throughput`` and each query gets its own literal.
 
 The two functions never consult a multi-end config nor split throughput
 across ends; multi-end coordination is the caller's responsibility
@@ -20,13 +18,11 @@ across ends; multi-end coordination is the caller's responsibility
 """
 
 from throughput_control.throughput_timer_generator import (
-    DEFAULT_WRITE_THROUGHPUT,
     generate_query_timer,
     generate_write_timer,
 )
 
 __all__ = [
-    "DEFAULT_WRITE_THROUGHPUT",
     "generate_query_timer",
     "generate_write_timer",
 ]
