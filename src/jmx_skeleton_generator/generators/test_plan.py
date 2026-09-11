@@ -113,7 +113,6 @@ def generate_user_defined_variables(
         "device_start": "${__P(device_start,1)}",
         "device_per_thread": "${__P(device_per_thread,1)}",
         "test_duration": f"${{__P(test_duration,{conn_config.test_duration})}}",
-        "write_throughput": "${__P(write_throughput,120)}",  # default 120 samples/min
     }
     # F-16 (2026-08-20): expose ``seed_dir`` as a UDV so the absolute path
     # baked at generation time (``output_dir/seeds``) is the default, but
