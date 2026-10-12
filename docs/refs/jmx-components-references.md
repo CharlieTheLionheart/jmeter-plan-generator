@@ -412,6 +412,136 @@ SampleResult.setIgnore()</stringProp>
 
 ---
 
+### PostThreadGroup（GUI 名为 "tearDown Thread Group"）
+
+tearDown 线程组，在所有普通线程组完成后执行（如结果验证、清理等）。JMeter GUI 中显示为 "tearDown Thread Group"，但保存的 `testclass` 为 `PostThreadGroup`，`guiclass` 为 `PostThreadGroupGui`。schema 与 `SetupThreadGroup` 基本对称，只是 testclass/guiclass 不同。
+
+```xml
+<PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="VerifyTearDownTG-Schema">
+  <intProp name="ThreadGroup.num_threads">1</intProp>
+  <intProp name="ThreadGroup.ramp_time">1</intProp>
+  <longProp name="ThreadGroup.delay">60</longProp>
+  <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+  <boolProp name="ThreadGroup.scheduler">true</boolProp>
+  <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+  <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+    <stringProp name="LoopController.loops">1</stringProp>
+    <boolProp name="LoopController.continue_forever">false</boolProp>
+  </elementProp>
+</PostThreadGroup>
+<hashTree>
+  <!-- 嵌套 Sampler / Controller 等 -->
+</hashTree>
+```
+
+**关键属性：**
+
+| Property | 类型 | 说明 |
+|----------|------|------|
+| `testclass` | string | **固定为 `PostThreadGroup`**（与 SetupThreadGroup 的 `SetupThreadGroup` 区分） |
+| `guiclass` | string | **固定为 `PostThreadGroupGui`** |
+| `ThreadGroup.num_threads` | int / string | 线程数（虚拟用户数） |
+| `ThreadGroup.ramp_time` | int | 启动所有线程所需时间（秒） |
+| `ThreadGroup.delay` | long | 启动延迟（秒）。**典型用法**：主线程结束后等待若干秒再启动 Verify TG（如等待 60s 让 CDC 同步完成） |
+| `ThreadGroup.scheduler` | bool | 是否启用调度器（与 `delay` / `duration` 配合使用） |
+| `ThreadGroup.same_user_on_next_iteration` | bool | 每轮测试是否使用相同用户 |
+| `ThreadGroup.on_sample_error` | string | 采样器错误时的动作：`continue` / `startnextloop` / `stopthread` / `stoptest` / `stoptestnow` |
+| `LoopController.loops` | int / string | 循环次数 |
+| `LoopController.continue_forever` | bool | 是否永远循环 |
+
+**关键差异（与 SetupThreadGroup）：**
+
+| 字段 | SetupThreadGroup | PostThreadGroup |
+|------|------------------|-----------------|
+| `testclass` | `SetupThreadGroup` | `PostThreadGroup` |
+| `guiclass` | `SetupThreadGroupGui` | `PostThreadGroupGui` |
+| `ThreadGroup.duration` | 必填 `longProp`（JMeter GUI 默认填 1） | **省略**（JMeter 5.6.3 默认不写 `<longProp name="ThreadGroup.duration">`），让 TG 跑完 sampler 列表后自然结束 |
+| GUI 菜单路径 | Add → Threads (Users) → setUp Thread Group | Add → Threads (Users) → tearDown Thread Group |
+| 执行位置 | 主测试前 | 所有普通 TG 完成后 |
+
+> 用途：作为 Verify 线程组用（如 SHOW SUBSCRIPTION status + count(*) 断言），JMeter 引擎保证在所有普通 ThreadGroup 完成后启动（与 `TestPlan.serialize_threadgroups` 设置无关），无需修改 `serialize_threadgroups`。
+
+---
+
+### RegexExtractor
+
+正则表达式提取器（Post Processor），从采样器响应中按正则提取出变量。常用于发布版 `SHOW SUBSCRIPTION` 返回字段布局中提取 `status` 列。
+
+```xml
+<RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="sub_status" enabled="true">
+  <stringProp name="RegexExtractor.useHeaders">false</stringProp>
+  <stringProp name="RegexExtractor.refname"></stringProp>
+  <stringProp name="RegexExtractor.regex">status\s*|\s*(\w+)</stringProp>
+  <stringProp name="RegexExtractor.template">$1$</stringProp>
+  <stringProp name="RegexExtractor.default"></stringProp>
+  <boolProp name="RegexExtractor.default_empty_value">false</boolProp>
+  <stringProp name="RegexExtractor.match_number"></stringProp>
+</RegexExtractor>
+<hashTree/>
+```
+
+**关键属性：**
+
+| Property | 类型 | 说明 |
+|----------|------|------|
+| `RegexExtractor.useHeaders` | bool | 是否从响应头提取（默认 `false`） |
+| `RegexExtractor.refname` | string | 提取结果变量名（如 `sub_status`）。空字符串表示未匹配 |
+| `RegexExtractor.regex` | string | 正则表达式（必填） |
+| `RegexExtractor.template` | string | 引用模式（如 `$1$` 引用第一个 group,`$0$` 引用整个匹配） |
+| `RegexExtractor.default` | string | 未匹配时的默认值（空字符串表示 vars.get('refname') = null） |
+| `RegexExtractor.default_empty_value` | bool | 未匹配时是否返回空字符串而非默认值 |
+| `RegexExtractor.match_number` | string | 第几次匹配（`1` = 第一次,`-1` = 全部,空字符串 = 默认 1） |
+
+**嵌套位置：** 作为采样器配对 hashTree 的子节点（**不能挂在 TG 级 hashTree**，否则 JMeter 忽略 — 历史坑 `93d8a18` 修过类似问题）。
+
+> 用途：从 `SHOW SUBSCRIPTION sub_iot;` 返回字段布局 `name | pub_name | conn | parameter | status | start_time | ...` 中提取 `status` 列到 `vars.sub_status`，供后续 JSR223 Assertion 引用。
+
+---
+
+### JSR223Assertion
+
+JSR223 断言（在采样器完成后运行的脚本断言）。
+
+```xml
+<JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="JSR223 Assertion" enabled="true">
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="script">def s = vars.get(&apos;sub_status&apos;)
+assert s != null &amp;&amp; s.contains(&apos;running&apos;) : &apos;subscription not running, status=&apos; + s
+</stringProp>
+  <stringProp name="scriptLanguage">groovy</stringProp>
+</JSR223Assertion>
+<hashTree/>
+```
+
+**关键属性：**
+
+| Property | 类型 | 说明 |
+|----------|------|------|
+| `cacheKey` | string | 脚本编译缓存键（Groovy 等支持编译的语言有效），建议 `true` |
+| `scriptLanguage` | string | 脚本语言：`groovy` / `java` / `beanshell` / `javascript` / `jexl` 等 |
+| `script` | string | 脚本内容（与 `filename` 二选一） |
+| `filename` | string | 外部脚本文件路径 |
+| `parameters` | string | 传入脚本的参数 |
+
+**脚本内置变量：**
+
+| 变量 | 说明 |
+|------|------|
+| `vars` | JMeter 变量映射（`vars.get('refname')` 取前一个 sampler 的提取变量，如 RegexExtractor 的 `refname`） |
+| `props` | JMeter 属性映射 |
+| `log` | 日志记录器 |
+| `ctx` | JMeterContext |
+| `prev` | 前一个 sampler 结果 |
+| `AssertionResult` | 断言结果对象 |
+
+**嵌套位置：** 作为采样器配对 hashTree 的子节点（与 RegexExtractor 同层，均在采样器的 hashTree 内）。
+
+> 用途：断言 `vars.get('refname')` 是否符合预期（如 `contains('running')` 判定 SHOW SUBSCRIPTION 状态、`n >= threshold` 判定 row count ≥ threshold）。`assert` 语句失败 → 该采样器标红 → TG 终止（默认 `ThreadGroup.on_sample_error=continue` 不终止，按需调整）。
+
+---
+
 ## 其他常用组件
 
 ---
@@ -681,6 +811,41 @@ HTTPSamplerProxy 通常与 `HeaderManager` 配对使用（每个 header 一个 `
 | `ResultCollector.error_logging` | bool | 是否只记录错误 |
 | `saveConfig` | objProp | `SampleSaveConfiguration` 对象，控制保存/显示哪些字段 |
 | `filename` | string | 结果保存文件路径，空表示不保存到文件 |
+
+---
+
+### Flow Control Action (was: Test Action)
+JMeter GUI 中显示为 **Flow Control Action**（官方文档 §18.1 Samplers），但保存的 JMX XML 元素名仍为 `<TestAction>`（`guiclass="TestActionGui"`）。功能：在 sampler 序列中插入暂停、停止测试、或跳到下一轮循环，**不计入 sample 统计**（JMeter 5.6.3 实测：`summary = 0` 但线程实际等待）。
+
+```xml
+<TestAction guiclass="TestActionGui" testclass="TestAction" testname="pause-for-subscription-connect">
+  <intProp name="ActionProcessor.action">1</intProp>
+  <intProp name="ActionProcessor.target">0</intProp>
+  <stringProp name="ActionProcessor.duration">5000</stringProp>
+</TestAction>
+<hashTree/>
+```
+
+**关键属性：**
+
+| Property | 类型 | 取值 | 说明 |
+|----------|------|------|------|
+| `ActionProcessor.action` | int | 1=Pause / 2=Stop / 3=Stop Now / 4=Go to next loop iteration | 默认 1（Pause） |
+| `ActionProcessor.target` | int | 0=Current Thread / 1=All Threads | ignored for Pause and Go to next loop iteration |
+| `ActionProcessor.duration` | string（毫秒数字符串） | 如 `"5000"` | Pause 模式下必填 |
+
+**命名空间注意：** 所有属性名都以 `ActionProcessor.*` 前缀,这是 JMeter 5.6.3 GUI 实际保存的 XML 全限定名；官方文档表格里写的是 `Action` / `Target` / `Duration` 人类可读名，容易混淆。**不要**按官方文档表格名直接照抄。
+
+**典型用途：**
+- SetupTG 末尾 `Pause 5000 ms`，等待发布订阅连接建立（`db-administration/pub-sub.md` 规定 2-5s 连接窗口）
+- Verify TG 入口 `Pause N ms`，留数据同步余量（`db-administration/pub-sub.md` 规定同步周期 2s + ~10s 端到端延迟）
+- 配合 Transaction Controller 避免 sample 计数污染（JMeter 官方推荐用法，引用 `jmx-testplan-reference.md` line 342）
+
+**实测验证（2026-10-10）：**
+- JMeter 5.6.3 GUI 创建 ThreadGroup + Flow Control Action（Action=Pause, Target=Current Thread, Duration=5000），保存为 `/tmp/test_action_pause.jmx`
+- 命令行 `jmeter -n -t /tmp/test_action_pause.jmx`,线程启动 → 完成时间间隔 ≈ 5009 ms（精确符合 5000 ms pause）
+- `summary = 0 in 00:00:00`（不计入 sample）
+- `jmeter.log` 无 schema parse error
 
 ---
 

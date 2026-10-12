@@ -29,3 +29,4 @@ tests/kwjdbc_svt/fixtures/tls/
 
 # Worktree 隔离工作区
 .worktrees/
+.vscode/settings.json
