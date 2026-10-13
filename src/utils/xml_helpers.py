@@ -280,8 +280,6 @@ def setup_thread_group_element(
     scheduler: bool = True,
     props: Optional[List[ET.Element]] = None,
     testname: Optional[str] = None,
-    guiclass: str = "SetupThreadGroupGui",
-    testclass: str = "SetupThreadGroup",
     children: Optional[List[ET.Element]] = None,
 ) -> Tuple[ET.Element, ET.Element]:
     """Create a ``<SetupThreadGroup>`` element and its paired ``<hashTree>``.
@@ -316,7 +314,8 @@ def setup_thread_group_element(
         "SetupThreadGroup",
         name=name,
         testname=testname or name,
-        attributes={"guiclass": guiclass, "testclass": testclass},
+        # testclass / guiclass 硬编码 — JMeter GUI 不能改节点类型
+        attributes={"guiclass": "SetupThreadGroupGui", "testclass": "SetupThreadGroup"},
         children=all_props,
     )
     stg_hash = hash_tree(*(children or []))
@@ -903,55 +902,71 @@ def teardown_thread_group_element(
     *,
     num_threads: Union[int, str] = 1,
     ramp_time: Union[int, str] = 1,
+    duration: Optional[str] = None,
     delay: Union[int, str] = 60,
     loops: Union[int, str] = 1,
-) -> ET.Element:
-    """Create a ``<PostThreadGroup>`` element (JMeter tearDown ThreadGroup).
+    scheduler: bool = True,
+    enabled: bool = True,
+    on_sample_error: str = "continue",
+    same_user_on_next_iteration: bool = True,
+    props: Optional[List[ET.Element]] = None,
+    testname: Optional[str] = None,
+    children: Optional[List[ET.Element]] = None,
+) -> Tuple[ET.Element, ET.Element]:
+    """Create a ``<PostThreadGroup>`` element and its paired ``<hashTree>``.
 
-    Element shape is anchored against two reference sources (per
-    OpenSpec review F-012 + design.md F-010):
+    Generic PostThreadGroup (JMeter tearDown ThreadGroup) factory,
+    structurally aligned with ``setup_thread_group_element`` /
+    ``thread_group_element`` so the three TG types share a common
+    shape (caller passes sampler list via ``children`` kwarg, paired
+    ``<hashTree>`` is constructed by the helper).
 
-    - **JMeter GUI manual save** (canonical reference, user exported
-      via JMeter 5.6.3 GUI; saved at
-      ``~/Downloads/JSR223 Assertion.jmx:10-21``) — has
-      ``ThreadGroup.delay=60`` paired with ``ThreadGroup.scheduler=true``,
-      no ``ThreadGroup.duration``, no ``enabled="true"`` attribute
-      (the GUI omits ``enabled`` when the default of ``true`` applies).
-    - ``docs/refs/jmeter-testplan-reference.md:1671-1672`` — JMeter
-      official docs confirm ``Duration`` and ``Startup delay`` are
-      only emitted when the scheduler checkbox is selected, so delay
-      and scheduler must be emitted as a pair (or both omitted).
-
-    Field summary:
+    Per ``docs/refs/jmx-components-references.md`` §PostThreadGroup 实测 jmx
+    (per OpenSpec D6 + F-010):
 
     - ``testclass='PostThreadGroup'`` / ``guiclass='PostThreadGroupGui'``
-    - ``num_threads=1`` / ``ramp_time=1`` (Verify TG only needs one
-      virtual user)
-    - ``delay=60s`` (Verify TG 典型用法: 主 TG 结束后等 60s 让 CDC 同步
-      完成 before SHOW SUBSCRIPTION / count(*) sampling runs, per
-      design.md F-010)
-    - ``scheduler=true`` (paired with ``delay`` — JMeter docs require
-      scheduler to be on for ``delay`` to take effect)
-    - ``same_user_on_next_iteration=true`` / ``on_sample_error=continue``
+      are **hard-coded** (JMeter GUI cannot change node type / GUI
+      class — these are intrinsic to the tearDown ThreadGroup node).
+    - ``ThreadGroup.delay`` defaults to 60s (Verify TG 典型用法: 主 TG
+      结束后等 60s 让 CDC 同步完成 before SHOW SUBSCRIPTION / count(*)
+      sampling runs).
+    - ``ThreadGroup.scheduler=true`` (paired with ``delay`` so the
+      scheduler actually waits).
+    - ``ThreadGroup.same_user_on_next_iteration=true`` / ``on_sample_error=continue``
     - ``LoopController.loops=1`` / ``continue_forever=false``
-    - ``ThreadGroup.duration`` is **NOT emitted** (PostThreadGroup
-      关键差异: JMeter 5.6.3 默认不写, TG 跑完 sampler 列表后自然
-      结束)
+    - ``ThreadGroup.duration`` is **NOT emitted** unless ``duration`` is
+      explicitly passed (PostThreadGroup 关键差异: JMeter 5.6.3 默认
+      不写, TG 跑完 sampler 列表后自然结束).
 
-    The returned ``<PostThreadGroup>`` element has the standard TG
-    property children but no paired ``<hashTree>`` — callers building
-    a complete Verify TG must construct a paired ``<hashTree>`` (e.g.
-    via ``hash_tree(*children)``) and place it as a sibling of this
-    element so JMeter recognises the appended samplers as belonging to
-    this thread group.
+    Returns
+    -------
+    ``(tg_element, tg_hash)`` — the PostThreadGroup element plus a
+    paired ``<hashTree>`` whose children are the supplied ``children``
+    (caller-built samplers, e.g. JDBCSamplers for verify assertions).
+    The pair is intended to be appended to the test-plan hashTree as
+    two siblings — JMeter recognises the paired hashTree as the
+    container of samplers that belong to this thread group.
     """
-    children: List[ET.Element] = [
+    all_props: List[ET.Element] = [
         int_prop("ThreadGroup.num_threads", str(num_threads)),
         int_prop("ThreadGroup.ramp_time", str(ramp_time)),
+        # NOTE: ThreadGroup.duration is intentionally OMITTED unless
+        # explicitly passed. Per docs §PostThreadGroup 关键差异段:
+        # JMeter 5.6.3 default does not emit
+        # <longProp name="ThreadGroup.duration"> for PostThreadGroup;
+        # TG 自然结束 after sampler list runs out.
+        *(
+            [string_prop("ThreadGroup.duration", str(duration))]
+            if duration
+            else []
+        ),
         long_prop("ThreadGroup.delay", str(delay)),
-        bool_prop("ThreadGroup.same_user_on_next_iteration", "true"),
-        bool_prop("ThreadGroup.scheduler", "true"),
-        string_prop("ThreadGroup.on_sample_error", "continue"),
+        bool_prop(
+            "ThreadGroup.same_user_on_next_iteration",
+            "true" if same_user_on_next_iteration else "false",
+        ),
+        bool_prop("ThreadGroup.scheduler", "true" if scheduler else "false"),
+        string_prop("ThreadGroup.on_sample_error", on_sample_error),
         element_prop(
             name="ThreadGroup.main_controller",
             element_type="LoopController",
@@ -966,16 +981,24 @@ def teardown_thread_group_element(
             ],
         ),
     ]
-    return make_element(
+    if props:
+        all_props.extend(props)
+
+    # testclass / guiclass 硬编码 — JMeter GUI 不能改节点类型,
+    # 仅 `enabled` 可变 (默认 true, JMeter 显式 disable 时输出 false)
+    tg = make_element(
         "PostThreadGroup",
         name=name,
-        testname=name,
+        testname=testname or name,
         attributes={
             "guiclass": "PostThreadGroupGui",
             "testclass": "PostThreadGroup",
+            "enabled": "true" if enabled else "false",
         },
-        children=children,
+        children=all_props,
     )
+    tg_hash = hash_tree(*(children or []))
+    return tg, tg_hash
 
 
 def regex_extractor_element(

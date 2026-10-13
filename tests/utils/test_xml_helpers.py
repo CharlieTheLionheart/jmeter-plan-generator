@@ -27,6 +27,7 @@ import xml.etree.ElementTree as ET
 from utils.xml_helpers import (
     jsr223_assertion_element,
     regex_extractor_element,
+    string_prop,
     teardown_thread_group_element,
 )
 
@@ -80,7 +81,15 @@ class TestTeardownThreadGroupElement:
     """
 
     def _build_default(self, **overrides) -> ET.Element:
-        return teardown_thread_group_element("VerifyTearDownTG", **overrides)
+        """Build a default PostThreadGroup, returning just the TG element
+        (the paired hashTree is discarded — tests focus on TG content).
+
+        To test the paired hashTree behaviour (e.g. children propagation),
+        use ``teardown_thread_group_element(...)`` directly and unpack
+        the tuple.
+        """
+        tg, _ = teardown_thread_group_element("VerifyTearDownTG", **overrides)
+        return tg
 
     def test_testclass_and_guiclass(self) -> None:
         """``testclass='PostThreadGroup'`` / ``guiclass='PostThreadGroupGui'``
@@ -92,8 +101,8 @@ class TestTeardownThreadGroupElement:
 
     def test_testname_passed_through(self) -> None:
         """``name`` arg maps to the Element's ``testname`` attribute."""
-        elem = teardown_thread_group_element("MyVerifyTG")
-        assert elem.attrib["testname"] == "MyVerifyTG"
+        tg, _ = teardown_thread_group_element("MyVerifyTG")
+        assert tg.attrib["testname"] == "MyVerifyTG"
 
     def test_num_threads_default_one(self) -> None:
         """Default ``num_threads=1``."""
@@ -177,20 +186,20 @@ class TestTeardownThreadGroupElement:
 
     def test_custom_num_threads(self) -> None:
         """``num_threads`` kwarg overrides the default 1."""
-        elem = teardown_thread_group_element("X", num_threads=4)
-        prop = _find_prop(elem, "intProp", "ThreadGroup.num_threads")
+        tg, _ = teardown_thread_group_element("X", num_threads=4)
+        prop = _find_prop(tg, "intProp", "ThreadGroup.num_threads")
         assert prop.text == "4"
 
     def test_custom_delay(self) -> None:
         """``delay`` kwarg overrides the default 60."""
-        elem = teardown_thread_group_element("X", delay=10)
-        prop = _find_prop(elem, "longProp", "ThreadGroup.delay")
+        tg, _ = teardown_thread_group_element("X", delay=10)
+        prop = _find_prop(tg, "longProp", "ThreadGroup.delay")
         assert prop.text == "10"
 
     def test_custom_loops(self) -> None:
         """``loops`` kwarg maps to ``LoopController.loops``."""
-        elem = teardown_thread_group_element("X", loops=3)
-        ctrl = _find_element_prop(elem, "ThreadGroup.main_controller")
+        tg, _ = teardown_thread_group_element("X", loops=3)
+        ctrl = _find_element_prop(tg, "ThreadGroup.main_controller")
         loops = _find_prop(ctrl, "stringProp", "LoopController.loops")
         assert loops.text == "3"
 
@@ -200,6 +209,89 @@ class TestTeardownThreadGroupElement:
         elem = self._build_default()
         assert isinstance(elem, ET.Element)
         assert _local(elem.tag) == "PostThreadGroup"
+
+    def test_returns_pair_of_tg_and_hashtree(self) -> None:
+        """New API returns ``(tg, hashTree)`` tuple — paired JMeter schema
+        (per A 决定, 对齐 ``setup_thread_group_element`` paired-hashTree 模式).
+        """
+        tg, tg_hash = teardown_thread_group_element("X")
+        assert _local(tg.tag) == "PostThreadGroup"
+        assert _local(tg_hash.tag) == "hashTree"
+        # 默认空 hashTree (children=None)
+        assert len(list(tg_hash)) == 0
+
+    def test_children_kwarg_lands_in_paired_hashtree(self) -> None:
+        """``children`` kwarg 传入的 sampler 列表出现在 paired ``<hashTree>`` 内部."""
+        # 用一个最简单的 sampler-like child (mock):
+        # 实际生产中 caller 传 jdbc_sampler_element 等 helper 产物
+        mock_sampler = ET.Element(
+            f"{NS}JDBCSampler",
+            attrib={"testname": "MyMockSampler"}
+        )
+        tg, tg_hash = teardown_thread_group_element(
+            "X", children=[mock_sampler]
+        )
+        # TG 元素本身不应含 children (它们在 hashTree 里)
+        tg_children = [_local(c.tag) for c in tg]
+        assert "JDBCSampler" not in tg_children
+        # hashTree 含传入的 children
+        children = list(tg_hash)
+        assert len(children) == 1
+        assert _local(children[0].tag) == "JDBCSampler"
+        assert children[0].attrib["testname"] == "MyMockSampler"
+
+    def test_enabled_default_true(self) -> None:
+        """``enabled=True`` (默认) → TG 属性 ``enabled="true"``."""
+        tg, _ = teardown_thread_group_element("X")
+        assert tg.attrib["enabled"] == "true"
+
+    def test_enabled_false(self) -> None:
+        """``enabled=False`` → TG 属性 ``enabled="false"`` (临时禁用 TG)."""
+        tg, _ = teardown_thread_group_element("X", enabled=False)
+        assert tg.attrib["enabled"] == "false"
+
+    def test_duration_when_passed_emits_longprop(self) -> None:
+        """``duration`` kwarg 显式传 → 输出 ``<stringProp name="ThreadGroup.duration">``
+        (覆盖默认不输出行为, 给未来场景用).
+        """
+        tg, _ = teardown_thread_group_element("X", duration="300")
+        prop = _find_prop(tg, "stringProp", "ThreadGroup.duration")
+        assert prop is not None
+        assert prop.text == "300"
+
+    def test_scheduler_false(self) -> None:
+        """``scheduler=False`` → ``ThreadGroup.scheduler="false"`` (不启用调度器).
+
+        Per docs §PostThreadGroup: 即使 scheduler=false, PostThreadGroup 仍
+        在主 TG 完成后跑(tearDown 行为不依赖 scheduler); 但 caller
+        仍可显式关掉 scheduler 用于不需要等待的场景.
+        """
+        tg, _ = teardown_thread_group_element("X", scheduler=False)
+        prop = _find_prop(tg, "boolProp", "ThreadGroup.scheduler")
+        assert prop.text == "false"
+
+    def test_on_sample_error_override(self) -> None:
+        """``on_sample_error`` kwarg 覆盖默认 ``"continue"`` (e.g. ``"stopthread"``)."""
+        tg, _ = teardown_thread_group_element("X", on_sample_error="stopthread")
+        prop = _find_prop(tg, "stringProp", "ThreadGroup.on_sample_error")
+        assert prop.text == "stopthread"
+
+    def test_same_user_on_next_iteration_false(self) -> None:
+        """``same_user_on_next_iteration=False`` → ``boolProp="false"``."""
+        tg, _ = teardown_thread_group_element("X", same_user_on_next_iteration=False)
+        prop = _find_prop(
+            tg, "boolProp", "ThreadGroup.same_user_on_next_iteration"
+        )
+        assert prop.text == "false"
+
+    def test_props_kwarg_appends_extra_props(self) -> None:
+        """``props`` kwarg 传入额外 stringProp / boolProp 直接 append 到 TG 元素内
+        (跟 ``setup_thread_group_element`` 对齐的扩展点)."""
+        extra = string_prop("MyCustom.field", "custom_value")
+        tg, _ = teardown_thread_group_element("X", props=[extra])
+        prop = _find_prop(tg, "stringProp", "MyCustom.field")
+        assert prop is not None
+        assert prop.text == "custom_value"
 
 
 # ===========================================================================

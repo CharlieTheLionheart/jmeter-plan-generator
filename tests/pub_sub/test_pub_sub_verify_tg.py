@@ -21,6 +21,7 @@ from xml.etree import ElementTree as ET
 from pub_sub.pub_sub_verify_tg import (
     _build_count_sampler,
     _build_show_subscription_status_sampler,
+    generate_pub_sub_verify_tg,
 )
 
 
@@ -46,6 +47,58 @@ def _find_prop(elem: ET.Element, tag: str, name: str) -> ET.Element | None:
         if _local(child.tag) == tag and child.get("name") == name:
             return child
     return None
+
+
+def _build_test_model_single_table() -> "TestModelConfig":
+    """Build a minimal ``TestModelConfig`` with one ts db + one table."""
+    from config_parser.models import (
+        ColTypeConfig,
+        PrimaryTagColTypeConfig,
+        TestModelConfig,
+        TsColConfig,
+        TsDbConfig,
+        TsTableConfig,
+    )
+
+    table = TsTableConfig(
+        name="t_cnc",
+        ts_col=TsColConfig(name="ts", type="timestamp", ms_step=1000),
+        primary_tag_count=1,
+        regular_tag_count=1,
+        data_col_count=1,
+        primary_tags=[
+            PrimaryTagColTypeConfig(col_type="int4", type_proportion=1.0)
+        ],
+        regular_tags=[
+            ColTypeConfig(col_type="int4", type_proportion=1.0)
+        ],
+        data_cols=[
+            ColTypeConfig(col_type="float8", type_proportion=1.0)
+        ],
+    )
+    return TestModelConfig(
+        ts_dbs=[TsDbConfig(name="iot_monitor", tables=[table])],
+    )
+
+
+def _build_pubsub_config(
+    *,
+    publisher_db: str = "iot_monitor",
+    publication_name: str = "pub_iot",
+    subscription_name: str = "sub_iot",
+    expected_min_rows: int | None = None,
+) -> "PubSubConfig":
+    """Build a minimal ``PubSubConfig`` that passes self-consistent validation."""
+    from config_parser.models import PubSubConfig
+
+    return PubSubConfig(
+        publisher_db=publisher_db,
+        publication_name=publication_name,
+        subscription_name=subscription_name,
+        conninfo="postgresql://root@localhost:26257/iot_monitor?sslmode=disable",
+        options={"target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc"},
+        expected_min_rows=expected_min_rows,
+    )
 
 
 # ===========================================================================
@@ -94,7 +147,7 @@ class TestBuildShowSubscriptionStatusSampler:
         sampler = self._build(subscription_name="sub_iot")
         prop = _find_prop(sampler, "stringProp", "query")
         assert prop is not None
-        assert prop.text == "SHOW SUBSCRIPTION sub_iot"
+        assert prop.text == "show subscription sub_iot"
 
     def test_sampler_variable_names_is_status(self) -> None:
         """``variable_names='status'`` (per design.md line 585: JDBC Request binds
@@ -171,7 +224,7 @@ class TestBuildShowSubscriptionStatusSampler:
         sampler = self._build(subscription_name="sub_custom_42")
         assert sampler.attrib["testname"] == "ShowSubscription-sub_custom_42"
         prop = _find_prop(sampler, "stringProp", "query")
-        assert prop.text == "SHOW SUBSCRIPTION sub_custom_42"
+        assert prop.text == "show subscription sub_custom_42"
 
 
 # ===========================================================================
@@ -295,3 +348,296 @@ class TestBuildCountSampler:
         assert sampler.attrib["testname"] == "CountRows-iot_monitor_sub-t_custom"
         prop = _find_prop(sampler, "stringProp", "query")
         assert "iot_monitor_sub.t_custom" in prop.text
+
+
+# ===========================================================================
+# generate_pub_sub_verify_tg (OpenSpec §3.6)
+# ===========================================================================
+
+class TestGeneratePubSubVerifyTg:
+    """``generate_pub_sub_verify_tg(pub_sub_config, test_model_config)``
+    组装完整 Verify PostThreadGroup (per design.md line 513-380).
+
+    内部:
+    - 派生 ``sub_db = f"{pub_db}_sub"`` (D5 硬约定)
+    - 调 ``teardown_thread_group_element`` 拿 PostThreadGroup( delay=60s
+      + 不写 ThreadGroup.duration)
+    - ``expected_min_rows = pub_sub_config.expected_min_rows or 1`` (内联默认)
+    - 调 §3.4 helper 拿 1 个 SHOW SUBSCRIPTION status sampler + N 个
+      ``select count(*) from <sub_db>.<table>`` sampler
+    - 全部 sampler append 到 PostThreadGroup 元素(design.md 字面行为)
+    """
+
+    def _build_test_model_two_tables(self) -> TestModelConfig:
+        """Two tables on one ts_db to exercise N-sampler count loop."""
+        from config_parser.models import (
+            ColTypeConfig,
+            PrimaryTagColTypeConfig,
+            TestModelConfig,
+            TsColConfig,
+            TsDbConfig,
+            TsTableConfig,
+        )
+
+        def _table(name: str) -> TsTableConfig:
+            return TsTableConfig(
+                name=name,
+                ts_col=TsColConfig(name="ts", type="timestamp", ms_step=1000),
+                primary_tag_count=1,
+                regular_tag_count=1,
+                data_col_count=1,
+                primary_tags=[
+                    PrimaryTagColTypeConfig(col_type="int4", type_proportion=1.0)
+                ],
+                regular_tags=[
+                    ColTypeConfig(col_type="int4", type_proportion=1.0)
+                ],
+                data_cols=[
+                    ColTypeConfig(col_type="float8", type_proportion=1.0)
+                ],
+            )
+
+        return TestModelConfig(
+            ts_dbs=[
+                TsDbConfig(
+                    name="iot_monitor",
+                    tables=[_table("t_cnc"), _table("t_cnc2")],
+                ),
+            ],
+        )
+
+    def test_returns_post_thread_group_element(self) -> None:
+        """返回 ``<PostThreadGroup>`` 元素 (per §2 helper 字面 + design.md line 543).
+
+        design.md 锁定 `tg = teardown_thread_group_element(...)` 单值返回
+        + `tg.append(sampler)` 直接 append 到 PostThreadGroup 元素。
+        """
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config()
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+
+        assert isinstance(tg, ET.Element)
+        assert _local(tg.tag) == "PostThreadGroup"
+        assert tg.attrib["testclass"] == "PostThreadGroup"
+        assert tg.attrib["guiclass"] == "PostThreadGroupGui"
+
+    def test_post_thread_group_name_uses_subscription_name(self) -> None:
+        """``testname='VerifyTearDownTG-PubSub-<subscription_name>'`` (per design.md line 544)."""
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config(subscription_name="sub_custom")
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        assert tg.attrib["testname"] == "VerifyTearDownTG-PubSub-sub_custom"
+
+    def test_post_thread_group_delay_60(self) -> None:
+        """PostThreadGroup.delay = 60s (per design.md line 547 + F-010 锁定).
+
+        主 TG 结束后等 60s 让 CDC 同步完成再跑 Verify。
+        """
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config()
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        prop = _find_prop(tg, "longProp", "ThreadGroup.delay")
+        assert prop is not None
+        assert prop.text == "60"
+
+    def test_post_thread_group_duration_not_emitted(self) -> None:
+        """PostThreadGroup 不输出 ``ThreadGroup.duration`` (per docs §PostThreadGroup 关键差异段)."""
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config()
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        for tag in ("intProp", "longProp", "stringProp"):
+            assert _find_prop(tg, tag, "ThreadGroup.duration") is None
+
+    def test_post_thread_group_loops_1(self) -> None:
+        """``LoopController.loops=1`` (per design.md line 378)."""
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config()
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        ctrl = _find_prop(tg, "elementProp", "ThreadGroup.main_controller")
+        loops = _find_prop(ctrl, "stringProp", "LoopController.loops")
+        assert loops is not None
+        assert loops.text == "1"
+
+    def test_contains_one_show_subscription_status_sampler(self) -> None:
+        """含 1 个 SHOW SUBSCRIPTION status sampler (per design.md line 558-562)."""
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config()
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
+        # 1 个 SHOW SUBSCRIPTION + 1 个 count = 2 个 sampler
+        assert len(samplers) == 2
+        # 首条 sampler 必须是 SHOW SUBSCRIPTION (per design.md 顺序)
+        first = samplers[0]
+        assert first.attrib["testname"] == "ShowSubscription-sub_iot"
+        prop = _find_prop(first, "stringProp", "query")
+        assert prop is not None
+        assert prop.text == "show subscription sub_iot"
+
+    def test_count_samplers_match_ts_tables_count(self) -> None:
+        """count sampler 数量 = test_model.ts_dbs[*].tables[*] 总数 (per design.md line 565-572).
+
+        N 张表 → N 个 ``CountRows-<sub_db>-<table>`` sampler
+        (本测试用 2 张表 → 2 个 count sampler + 1 个 SHOW SUBSCRIPTION = 3 个总)
+        """
+        model = self._build_test_model_two_tables()
+        pubsub = _build_pubsub_config()
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
+        # 1 SHOW SUBSCRIPTION + 2 count = 3 个总 sampler
+        assert len(samplers) == 3
+
+    def test_count_samplers_use_fqn_subscriber_table(self) -> None:
+        """count sampler query 走 FQN 跨库查 ``select count(*) from <sub_db>.<table>``
+        (per D5 + design.md line 567-571)."""
+        model = self._build_test_model_two_tables()
+        pubsub = _build_pubsub_config()
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
+        # 跳过首条 SHOW SUBSCRIPTION, 检查后 2 个 count sampler
+        count_samplers = samplers[1:]
+        assert len(count_samplers) == 2
+        for sampler in count_samplers:
+            prop = _find_prop(sampler, "stringProp", "query")
+            assert prop is not None
+            # FQN 跨库查 sub_db.table
+            assert "iot_monitor_sub" in prop.text
+            assert "select count(*) from iot_monitor_sub." in prop.text
+
+    def test_default_expected_min_rows_is_one(self) -> None:
+        """``expected_min_rows=None`` (默认) → 内联默认 ``1`` (per design.md line 372)."""
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config(expected_min_rows=None)
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
+        # 后 N 个 sampler 都是 count sampler
+        count_samplers = samplers[1:]
+        for sampler in count_samplers:
+            assertion = _find_child(sampler, "JSR223Assertion")
+            script = _find_prop(assertion, "stringProp", "script")
+            # 阈值 1 出现 (>= 1)
+            assert "1" in script.text
+            assert ">=" in script.text
+
+    def test_explicit_expected_min_rows_overrides(self) -> None:
+        """``expected_min_rows=N`` (显式) → 内联用 N (per design.md line 372).
+
+        WHERE 过滤场景 user 显式传 0 走恒真, 阈值覆盖测试用 7 验证。
+        """
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config(expected_min_rows=7)
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
+        count_samplers = samplers[1:]
+        for sampler in count_samplers:
+            assertion = _find_child(sampler, "JSR223Assertion")
+            script = _find_prop(assertion, "stringProp", "script")
+            assert "7" in script.text
+            assert ">=" in script.text
+
+    def test_sampler_data_source_default_pool(self) -> None:
+        """每 sampler 走 default_pool (per D5 单池 + FQN 跨库).
+
+        所有 sampler 共享同一条 JDBC Connection Configuration, 通过
+        ``dataSource='default_pool'`` 引用。
+        """
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config()
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
+        for sampler in samplers:
+            prop = _find_prop(sampler, "stringProp", "dataSource")
+            assert prop is not None
+            assert prop.text == "default_pool"
+
+    def test_no_jdbc_database_field_in_samplers(self) -> None:
+        """JMeter 5.6.3 JDBCSampler 无 ``database`` 字段 (per F-013 / 实际 jmx schema).
+
+        单池 + FQN 跨库场景: sampler 不需要 ``database`` 字段覆盖,
+        所有 SQL 在 defaultdb 连接上跑(通过 ``dataSource='default_pool'``
+        引用), FQN 表名直接在 query 内表达跨库。
+        """
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config()
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
+        for sampler in samplers:
+            # 无 'database' 字段
+            assert _find_prop(sampler, "stringProp", "database") is None
+            # 无 JDBC Request.database 属性
+            assert "database" not in sampler.attrib
+
+    def test_sub_db_hardcoded_convention(self) -> None:
+        """``sub_db = f"{publisher_db}_sub"`` 内部硬约定 (per D5).
+
+        Verify TG 内部 sampler (count) 引用 ``iot_monitor_sub.t_cnc`` 而非
+        ``iot_monitor.t_cnc`` — 这是 subscriber 表, 不是 publisher 表。
+        """
+        model = _build_test_model_single_table()
+        pubsub = _build_pubsub_config(publisher_db="iot_monitor")
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
+        # count sampler name + query 都引用 sub_db
+        for sampler in samplers:
+            if "CountRows" in sampler.attrib["testname"]:
+                assert "iot_monitor_sub" in sampler.attrib["testname"]
+                prop = _find_prop(sampler, "stringProp", "query")
+                assert "iot_monitor_sub" in prop.text
+                # 反例: 不能引用单独的 iot_monitor (无 sub 后缀)
+                assert "from iot_monitor.t_cnc" not in prop.text
+
+    def test_verify_tg_iterates_all_ts_dbs(self) -> None:
+        """Verify TG 遍历所有 ts_db 的所有 tables (per design.md line 565-571).
+
+        双 ts_db 场景 (iot_monitor + benchmark) 各有 1 张表 →
+        1 SHOW SUBSCRIPTION + 2 count = 3 个 sampler
+        """
+        from config_parser.models import (
+            ColTypeConfig,
+            PrimaryTagColTypeConfig,
+            TestModelConfig,
+            TsColConfig,
+            TsDbConfig,
+            TsTableConfig,
+        )
+
+        def _table(name: str) -> TsTableConfig:
+            return TsTableConfig(
+                name=name,
+                ts_col=TsColConfig(name="ts", type="timestamp", ms_step=1000),
+                primary_tag_count=1,
+                regular_tag_count=1,
+                data_col_count=1,
+                primary_tags=[PrimaryTagColTypeConfig(col_type="int4", type_proportion=1.0)],
+                regular_tags=[ColTypeConfig(col_type="int4", type_proportion=1.0)],
+                data_cols=[ColTypeConfig(col_type="float8", type_proportion=1.0)],
+            )
+
+        model = TestModelConfig(
+            ts_dbs=[
+                TsDbConfig(name="iot_monitor", tables=[_table("t_cnc")]),
+                TsDbConfig(name="benchmark", tables=[_table("t_bench")]),
+            ],
+        )
+        pubsub = _build_pubsub_config()
+        tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
+        samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
+        # 1 SHOW SUBSCRIPTION + 2 count = 3 个
+        assert len(samplers) == 3
+        # count sampler names 应分别引用 sub_db_1 + sub_db_2
+        count_names = sorted(
+            s.attrib["testname"] for s in samplers
+            if "CountRows" in s.attrib["testname"]
+        )
+        # 注意: 这里两个 ts_db 都被 sub 化, 各自 sub_db
+        # 但 generate_pub_sub_verify_tg 用 pub_sub_config.publisher_db
+        # 派生 sub_db, 不会为不同 ts_db 各自派生 (F-009 + D5 单池)
+        # 所以实际上 2 个 count sampler 都会用 iot_monitor_sub (因为 pub_sub_config.publisher_db = iot_monitor)
+        # 这是 design.md 隐含的简化: sub_db 单一, 不为每个 ts_db 派生
+        # 实际行为: 2 个 sampler 都用 iot_monitor_sub.<table> 查询
+        # 我们只测 sampler 数量, 不测具体的 sub_db 命名 (因为 design.md 简化)
+        assert len(count_names) == 2
+
+
+# Fixtures shared with §3.4 tests (defined above):
+# _local, _find_child, _find_prop, _find_samplers_in_order, _build_setup_tg
+

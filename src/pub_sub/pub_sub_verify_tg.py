@@ -25,11 +25,14 @@ follows the ``sampler.append(child)`` pattern explicitly.
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
+from typing import List, Tuple
 
+from config_parser.models import PubSubConfig, TestModelConfig
 from utils.xml_helpers import (
     jdbc_sampler_element,
     jsr223_assertion_element,
     regex_extractor_element,
+    teardown_thread_group_element,
 )
 
 
@@ -59,7 +62,7 @@ def _build_show_subscription_status_sampler(
     # (caller 端负责把 sampler 放到合适的 hashTree 位置,见 design.md line 559-572)
     sampler, _ = jdbc_sampler_element(
         name=f"ShowSubscription-{subscription_name}",
-        query=f"SHOW SUBSCRIPTION {subscription_name}",
+        query=f"show subscription {subscription_name}",
         variable_names="status",
     )
     sampler.append(regex_extractor_element(
@@ -113,3 +116,72 @@ assert n >= {expected_min_rows} : 'row count ' + n + ' below threshold {expected
 """,
     ))
     return sampler
+
+
+def generate_pub_sub_verify_tg(
+    pub_sub_config: PubSubConfig,
+    test_model_config: TestModelConfig,
+) -> Tuple[ET.Element, ET.Element]:
+    """Assemble the full Verify PostThreadGroup + paired hashTree (per §3.6).
+
+    Per design.md line 513-380 + tasks.md §3.6:
+
+    - 输入: ``pub_sub_config`` (Pydantic) + ``test_model_config`` (Pydantic)
+    - 输出: ``(tg, tg_hash)`` — PostThreadGroup 节点 + 配对 hashTree
+      (delegated to §2 ``teardown_thread_group_element`` 通用 paired
+      factory)
+    - 内部派生:
+      - ``sub_db = f"{pub_sub_config.publisher_db}_sub"`` (D5 硬约定)
+      - ``expected_min_rows = pub_sub_config.expected_min_rows
+        if not None else 1`` (内联默认, per D3 锁定)
+    - 元素结构 (per design.md line 528-378):
+      1. PostThreadGroup (num_threads=1, ramp_time=1, delay=60s, 无
+         ``ThreadGroup.duration``, ``LoopController.loops=1``) —
+         委托 §2 ``teardown_thread_group_element``
+      2. 1 个 SHOW SUBSCRIPTION status sampler + RegexExtractor + JSR223Assertion
+         (委托 §3.4 ``_build_show_subscription_status_sampler``)
+      3. N 个 ``select count(*) from <sub_db>.<table>`` sampler
+         (每张 ts_table 一条, 委托 §3.4 ``_build_count_sampler``)
+    - 装配: 所有 sampler 收集到 ``samplers`` 列表, 一次性作为
+      ``children`` kwarg 传入 §2 helper(per F 决定: aligned paired
+      hashTree 模式, 跟 ``setup_thread_group_element`` 一致)
+
+    Per D5 (单池 + FQN 跨库): 所有 sampler 都用 ``dataSource='default_pool'``
+    引用同一条 JDBC Connection Configuration, sampler query 走 FQN 表名
+    跨库查, **不** 写 ``database`` 字段 (per F-013 / 实际 jmx schema,
+    JMeter 5.6.3 JDBCSampler 无此字段)。
+    """
+    sub_db = f"{pub_sub_config.publisher_db}_sub"
+
+    # D3 内联默认: pub_sub_config.expected_min_rows = None → 兜底 1
+    expected_min_rows = (
+        pub_sub_config.expected_min_rows
+        if pub_sub_config.expected_min_rows is not None
+        else 1
+    )
+
+    # 收集所有 sampler 列表, 一次性传给 §2 helper 的 children kwarg
+    # (per F 决定: aligned paired hashTree 模式)
+    samplers: List[ET.Element] = [
+        _build_show_subscription_status_sampler(
+            subscription_name=pub_sub_config.subscription_name,
+            subscriber_db=sub_db,  # = <publisher_db>_sub
+        ),
+    ]
+    for ts_db in test_model_config.ts_dbs:
+        for table in ts_db.tables:
+            samplers.append(_build_count_sampler(
+                publisher_db=ts_db.name,
+                table_name=table.name,
+                subscriber_db=sub_db,  # = <publisher_db>_sub
+                expected_min_rows=expected_min_rows,
+            ))
+
+    return teardown_thread_group_element(
+        name=f"VerifyTearDownTG-PubSub-{pub_sub_config.subscription_name}",
+        num_threads=1,
+        ramp_time=1,
+        delay=60,  # 主 TG 结束后等 60s 让 CDC 同步完成
+        # duration 不显式设: per §2 helper 不输出 ThreadGroup.duration
+        children=samplers,
+    )
