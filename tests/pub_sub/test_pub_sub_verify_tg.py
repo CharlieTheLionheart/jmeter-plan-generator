@@ -18,6 +18,15 @@ from __future__ import annotations
 
 from xml.etree import ElementTree as ET
 
+from config_parser.models import (
+    ColTypeConfig,
+    PrimaryTagColTypeConfig,
+    PubSubConfig,
+    TestModelConfig,
+    TsColConfig,
+    TsDbConfig,
+    TsTableConfig,
+)
 from pub_sub.pub_sub_verify_tg import (
     _build_count_sampler,
     _build_show_subscription_status_sampler,
@@ -49,17 +58,8 @@ def _find_prop(elem: ET.Element, tag: str, name: str) -> ET.Element | None:
     return None
 
 
-def _build_test_model_single_table() -> "TestModelConfig":
+def _build_test_model_single_table() -> TestModelConfig:
     """Build a minimal ``TestModelConfig`` with one ts db + one table."""
-    from config_parser.models import (
-        ColTypeConfig,
-        PrimaryTagColTypeConfig,
-        TestModelConfig,
-        TsColConfig,
-        TsDbConfig,
-        TsTableConfig,
-    )
-
     table = TsTableConfig(
         name="t_cnc",
         ts_col=TsColConfig(name="ts", type="timestamp", ms_step=1000),
@@ -87,10 +87,8 @@ def _build_pubsub_config(
     publication_name: str = "pub_iot",
     subscription_name: str = "sub_iot",
     expected_min_rows: int | None = None,
-) -> "PubSubConfig":
+) -> PubSubConfig:
     """Build a minimal ``PubSubConfig`` that passes self-consistent validation."""
-    from config_parser.models import PubSubConfig
-
     return PubSubConfig(
         publisher_db=publisher_db,
         publication_name=publication_name,
@@ -370,15 +368,6 @@ class TestGeneratePubSubVerifyTg:
 
     def _build_test_model_two_tables(self) -> TestModelConfig:
         """Two tables on one ts_db to exercise N-sampler count loop."""
-        from config_parser.models import (
-            ColTypeConfig,
-            PrimaryTagColTypeConfig,
-            TestModelConfig,
-            TsColConfig,
-            TsDbConfig,
-            TsTableConfig,
-        )
-
         def _table(name: str) -> TsTableConfig:
             return TsTableConfig(
                 name=name,
@@ -591,15 +580,6 @@ class TestGeneratePubSubVerifyTg:
         双 ts_db 场景 (iot_monitor + benchmark) 各有 1 张表 →
         1 SHOW SUBSCRIPTION + 2 count = 3 个 sampler
         """
-        from config_parser.models import (
-            ColTypeConfig,
-            PrimaryTagColTypeConfig,
-            TestModelConfig,
-            TsColConfig,
-            TsDbConfig,
-            TsTableConfig,
-        )
-
         def _table(name: str) -> TsTableConfig:
             return TsTableConfig(
                 name=name,
