@@ -56,10 +56,10 @@
 
 ### 3.1 `build_publication_sql(publication_name, publisher_db, tables, options=None)`
 
-- [ ] 3.1.1 pytest 先写 `tests/pub_sub/test_publication_sql.py` 6 种 SQL 形态断言(整库 / 单表 / 单表+列子集 / 单表+WHERE / 单表+列子集+WHERE / 多表)+ `WITH OPTIONS` 拼接规则(无 options 不追加 / 有 options 含 publication-side keys 才追加 / 12 形态插入顺序保留)
-- [ ] 3.1.2 实现 `src/pub_sub/publication_sql.py::build_publication_sql(...)`
-- [ ] 3.1.3 **验收**:跑 `pytest tests/pub_sub/test_publication_sql.py` 全绿
-- [ ] 3.1.4 *commit*:该模块完成后再继续 §3.2
+- [x] 3.1.1 pytest 先写 `tests/pub_sub/test_publication_sql.py` 6 种 SQL 形态断言(整库 / 单表 / 单表+列子集 / 单表+WHERE / 单表+列子集+WHERE / 多表)+ `WITH OPTIONS` 拼接规则(无 options 不追加 / 有 options 含 publication-side keys 才追加 / 12 形态插入顺序保留)
+- [x] 3.1.2 实现 `src/pub_sub/publication_sql.py::build_publication_sql(...)`
+- [x] 3.1.3 **验收**:跑 `pytest tests/pub_sub/test_publication_sql.py` 全绿
+- [x] 3.1.4 *commit*:该模块完成后再继续 §3.2
 
 ### 3.2 `build_subscribe_dest_schemas(publisher_ddls, publisher_db)`
 
