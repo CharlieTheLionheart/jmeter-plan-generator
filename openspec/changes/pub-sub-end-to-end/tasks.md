@@ -77,10 +77,10 @@
 
 ### 3.4 `_build_show_subscription_status_sampler` + `_build_count_sampler`(helper,依赖 §2 helper)
 
-- [ ] 3.4.1 pytest 先写 `tests/pub_sub/test_pub_sub_verify_tg.py::test__build_show_subscription_status_sampler` + `test__build_count_sampler` 含失败断言(`jdbc_sampler_element` + `regex_extractor_element` + `jsr223_assertion_element` 子节点结构 + variable_names + f-string script 内容)
-- [ ] 3.4.2 实现 `_build_show_subscription_status_sampler(subscription_name, subscriber_db)` + `_build_count_sampler(publisher_db, table_name, subscriber_db, expected_min_rows)`(放 `pub_sub_verify_tg.py` 内)
-- [ ] 3.4.3 **验收**:跑 `pytest tests/pub_sub/test_pub_sub_verify_tg.py::test__build_*` 全绿
-- [ ] 3.4.4 *commit*
+- [x] 3.4.1 pytest 先写 `tests/pub_sub/test_pub_sub_verify_tg.py::test__build_show_subscription_status_sampler` + `test__build_count_sampler` 含失败断言(`jdbc_sampler_element` + `regex_extractor_element` + `jsr223_assertion_element` 子节点结构 + variable_names + f-string script 内容)
+- [x] 3.4.2 实现 `_build_show_subscription_status_sampler(subscription_name, subscriber_db)` + `_build_count_sampler(publisher_db, table_name, subscriber_db, expected_min_rows)`(放 `pub_sub_verify_tg.py` 内)
+- [x] 3.4.3 **验收**:跑 `pytest tests/pub_sub/test_pub_sub_verify_tg.py::test__build_*` 全绿
+- [x] 3.4.4 *commit*
 
 ### 3.5 `append_pub_sub_to_setup_tg(setup_tg_element, pub_sub_config, test_model_config)`
 
