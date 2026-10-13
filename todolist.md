@@ -59,6 +59,8 @@
 - F-014 落全局 memory 规则:`feedback-no-removed-feature-meta-comments` — user 反对保留"刻意隐藏 X" / "无需 X 子字段" 等元描述(此地无银三百两);被删除概念不再以任何形式回提
 - F-015 `pub_sub_config` fixture yaml 示例 + 字段清单:`design.md` 新增完整段(整库模式 + 表级 + 列子集 + WHERE 模式 fixture 示例;PubSubConfig 字段清单 8 项 + PublicationTableEntry 子模型 3 项 + TestConfig 挂载位置)
 - F-016 `conninfo` 来源与构造明确:`conninfo` 由 user 在 `test_cfg.yaml::pub_sub_config.conninfo` 字段显式填;generator 不派生、不用 `${db_url}` 字符串重写;libpq 格式 + TLS 双格式 + 与 `${db_url}` 用户名/密码/host/port 必须一致
+- F-017 §1 Pydantic 模型 + 外部 cross-ref validator 编码完成(commit `86f70ab`):`PubSubConfig` 7 字段 + `PublicationTableEntry` 3 字段 Pydantic 模型 + `TestConfig.pub_sub_config: Optional[PubSubConfig] = None` 字段;`validate_pub_sub_refs` 外部 validator 拆出(与 `validate_foreign_key_refs` 职责完全独立,只校验 ts_table 自身属性存在性);column_namer 规则校验(`^{col|rtag|ptag}_{normalize_type(col_type)}_{int}$` shape + normalize_type 必须在声明的 col_type 集合中);ptag 联合主键规则(必须覆盖**所有**声明的 ptag col_type);35 pytest 用例(`tests/config_parser/test_pub_sub_config.py`)全绿 + 全套 678 passed 无 regression
+- F-018 多段 f-string 统一改为 `f"""..."""` 多行格式(commit `86f70ab`):`PubSubConfig.check_options` / `multi_table_forbids_columns_and_where` / `validate_pub_sub_refs` 4 处错误消息;按 AGENTS.md "Surgical Changes" 原则只动 §1 新加代码,pre-existing 多段 f-string 不在范围不动
 
 **已确定的设计决策**(8 个 Decision + 5 段实现细节):
 
@@ -107,4 +109,4 @@
 - (7) `docs/refs/kaiwudb-pubsub-references.md` 新建:CREATE PUBLICATION / CREATE SUBSCRIPTION 语法 + 权限 + 同步周期 + 端到端延迟 + 2-5s 连接窗口 + insecure / TLS conninfo 示例 + conninfo 与 `${db_url}` 一致性 + 数据库清理归属说明(由流水线负责)
 - (8) `.claude/skills/kwjdbc-jmx-smoke/SKILL.md` §7 加 pub_sub smoke 章节:`jmeter -n -t test_plan.jmx -J...` 跑两次端到端(a) 整库模式 (b) 表级 + 列子集 + WHERE 模式,断言 (a)-(d) 全过(SetupTG code==0 / Write TG JTL 100% 成功 / Verify TG count(*) >= threshold / SHOW SUBSCRIPTION status 含 running)
 
-**下一动作**:开始 step (1) PubSubConfig + PublicationTableEntry Pydantic 模型 → step (2) xml_helpers.py 三个 helper → step (3) src/pub_sub/ 子包 → step (4) 集成到 test_plan.py → step (5)-(8) 联调 + 文档收尾
+**下一动作**:§1 已完成;开始 step (2) xml_helpers.py 三个 helper(teardown_thread_group_element / regex_extractor_element / jsr223_assertion_element)→ step (3) src/pub_sub/ 子包 → step (4) 集成到 test_plan.py → step (5)-(8) 联调 + 文档收尾
