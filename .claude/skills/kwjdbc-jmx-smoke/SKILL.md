@@ -687,6 +687,128 @@ docker exec kaiwudb-smoke /kaiwudb/bin/kwbase sql --certs-dir=/kaiwudb/certs \
 - 若后续 kwbase 升级或换镜像，client cert 仍**必须**与 server 共用同一 CA
   才能 mTLS 成功 —— 重建容器（§6.0.1 隔离陷阱）后必须重跑全套 §6.0 step 1-7。
 
+## 7. pub_sub smoke（insecure 容器, 端到端 DCR）
+
+> OpenSpec change `pub-sub-end-to-end` (§3-§5 落地后): pub-sub 端到端 smoke
+> 验证 (SetupTG 注入 create publication / create subscription + Verify
+> TG 注入 show subscription status + count(*) 断言).
+>
+> **关键差异** (vs §6 schemaless):
+> - **不需要 TLS 容器** — pub_sub 走 `?sslmode=disable` insecure 容器即可
+>   (per proposal.md 备注; pub_sub_config.conninfo 字段是字面值, 不像
+>   db_url 那样被 `-J` 覆盖, 所以 conninfo 需要自己保证 insecure)
+> - **不依赖** REST API / client cert / user creation (per §6.0 step 6-7)
+> - 复用现有 insecure 容器即可 (§3 步骤 1-5 起容器 → 跑 smoke)
+
+### 7.0 容器前置
+
+- **不**需要重建容器 — §3 步骤 1-5 起的 insecure 容器直接可用
+- 确认容器内 `db_url` UDV 默认值指向 `defaultdb`:
+  ```bash
+  # 容器内 kaiwudb 进程 listen on 26257, defaultdb 是 SQL 默认入口
+  grep db_url /data/jmeter-*/test_plan.jmx | head -1
+  # 期望: <stringProp name="db_url">jdbc:kaiwudb://127.0.0.1:26257/defaultdb</stringProp>
+  ```
+- 确认 insecure (no TLS) — kwbase insecure 启动已满足, no `sslmode=require`
+
+### 7.1 调用: 两次端到端 invocation templates
+
+**(a) 整库模式 + 默认阈值** (`test_cfg_pub_sub.yaml`):
+```bash
+# 容器内 (KaiwuDB listen on 127.0.0.1:26257)
+python -m kwjdbc_svt.main -o /data/jmeter-int \
+    /data/fixtures/test_model.yaml \
+    /data/fixtures/test_cfg_pub_sub.yaml
+jmeter -n -t /data/jmeter-int/test_plan.jmx \
+    -J db_url="jdbc:kaiwudb://127.0.0.1:26257/defaultdb" \
+    -J test_duration=30 \
+    -l /data/jmeter-int/result.csv \
+    -e -o /data/jmeter-int/report
+```
+
+**(b) 表级 + 列子集 + WHERE + `expected_min_rows=0` 恒真**
+(`test_cfg_pub_sub_tables.yaml`):
+```bash
+python -m kwjdbc_svt.main -o /data/jmeter-int-tables \
+    /data/fixtures/test_model.yaml \
+    /data/fixtures/test_cfg_pub_sub_tables.yaml
+jmeter -n -t /data/jmeter-int-tables/test_plan.jmx \
+    -J db_url="jdbc:kaiwudb://127.0.0.1:26257/defaultdb" \
+    -J test_duration=30 \
+    -l /data/jmeter-int-tables/result.csv \
+    -e -o /data/jmeter-int-tables/report
+```
+
+### 7.2 断言 checklist (匹配 SetupTG / Write TG / Verify TG lifecycle)
+
+| 阶段 | 断言 | 通过条件 |
+|---|---|---|
+| SetupTG (含 pub_sub 注入的 3 个 sampler) | SetupTG 全部 sampler `code==0` | jtl 中 `s:assertionResult` 全空 |
+| Write TG (主线程写 iot_monitor.t_cnc) | Write TG JTL 100% 成功 (无 error) | jtl 中 `s:success=true` 100% |
+| Verify TG PostThreadGroup (60s delay 后) | SHOW SUBSCRIPTION status 含 `running` | jtl 中 JSR223Assertion script 输出 `"subscription not running"` 不出现 |
+| Verify TG (per-table count sampler) | `count(*) >= expected_min_rows` | jtl 中 JSR223Assertion script 输出 `"below threshold"` 不出现 |
+| **特殊**: publication 用 WHERE 过滤 | `expected_min_rows` 必须设 `0` (走恒真) | 否则 count(*) 可能为 0 → Verify TG fail (设计警告, per design.md D3 段) |
+
+**注意**:
+- `test_cfg_pub_sub.yaml` 走**默认** 1 阈值;`test_cfg_pub_sub_tables.yaml` 走**显式 0 阈值** (恒真)
+- 两份 fixture 都必须跑通, 不能只跑一份
+
+### 7.3 Troubleshooting
+
+- **`<publisher_db>_sub` 已存在 from prior run**:
+  - 症状: `create ts database if not exists iot_monitor_sub` 报"already exists" 或
+    主线程 Insert 报"duplicate"
+  - 修: 让流水线侧 DROP DATABASE (per §7.4 cleanup 责任), 或调
+    `ddl_statements` 让 `create ts database` 走 `if not exists`(per §3.5 设计)
+- **conninfo sslmode mismatch**:
+  - 症状: `CREATE SUBSCRIPTION` 报 `SSL not enabled` 或 `SSL required`
+  - 修: 检查 fixture `pub_sub_config.conninfo` 是否含 `?sslmode=disable` (insecure
+    容器必须);pipeline `-J` 覆盖 `db_url` 时**不**覆盖 `conninfo` (per F-016
+    锁定, conninfo 是字面)
+- **`count(*)=0` likely causes**:
+  - 症状: Verify TG 报 `"row count 0 below threshold 1"`
+  - 修: (1) 检查主 TG 是否真写了数据 (jtl 中 Write TG success count); (2) 检查
+    subscription 同步延迟 (per design.md F-010: 60s delay 覆盖
+    `2-5s 连接建立 + ~10s 数据同步延迟 + 2s CDC 周期 + 多次同步周期累计`);
+    (3) 考虑用 WHERE 过滤 fixture 时设 `expected_min_rows=0` 走恒真
+- **WHERE clause rejected by server at CREATE PUBLICATION execution time**:
+  - 症状: SetupTG 报 `syntax error at or near "where"` (KaiwuDB 不支持
+    多表 WHERE / 部分列子集 WHERE 等)
+  - 修: (1) 确认 fixture `tables` 是单表 + 单表 WHERE 合法; (2) Pydantic
+    校验已阻止多表 columns/where (per §1), 但 WHERE 语法不 parse
+    (per design.md line 50 + §6.3 段)
+- **SHOW SUBSCRIPTION status 不含 `running`**:
+  - 症状: Verify TG 第一条 sampler (SHOW SUBSCRIPTION) 的
+    JSR223Assertion 报 `"subscription not running, status=<status>"`
+  - 修: 查 subscription 真实 status (SHOW SUBSCRIPTION 走 defaultdb
+    连接, per D5 per-cluster); 常见 cause: subscription enable='off',
+    conninfo 鉴权失败, subscription 还没连上 publisher
+
+### 7.4 Database cleanup (operator-side 责任)
+
+> **重要**: generator **不**生成 tearDown DROP DDL, 数据库清理由**流水线
+> 侧**负责. 这是 design.md Context 锁定 ("DROP 操作稳定性属功能测试
+> 范畴; 测试计划仅在流水线内集成, 数据库清理由流水线侧负责").
+
+推荐 operator-side cleanup 顺序 (per §0 scope 锁定):
+```sql
+-- 1. drop subscription (先停 CDC 拉取)
+DROP SUBSCRIPTION sub_iot;
+
+-- 2. drop publication (停 publisher 端 CDC 输出)
+DROP PUBLICATION pub_iot;
+
+-- 3. drop subscriber db (清理 subscriber 端表 + db)
+DROP DATABASE iot_monitor_sub;
+
+-- 4. drop publisher db (可选, 清理 publisher 端表 + db)
+DROP DATABASE iot_monitor;
+```
+
+**注意**: 上述 `DROP SUBSCRIPTION` / `DROP PUBLICATION` 文档未明确支持 `IF EXISTS`,
+按 design.md Context 锁定, generator **不**生成 IF EXISTS 幂等 DROP, 流水线
+直接调 DROP(失败时手动介入)。
+
 ## 交叉引用
 
 - `tests/kwjdbc_svt/test_main.py::TestEndToEnd` — 程序内等价 smoke，快迭代
