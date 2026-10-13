@@ -27,7 +27,7 @@
 
 ## 1. Pydantic 模型(`PubSubConfig` + `PublicationTableEntry` + `TestConfig`)
 
-- [ ] 1.1 pytest 先写 `tests/config_parser/test_pub_sub_config.py` 含失败断言:`PubSubConfig` 7 字段 + `PublicationTableEntry` 3 字段 + `TestConfig.pub_sub_config: Optional[PubSubConfig] = None`;`@field_validator` / `@model_validator(mode="after")` 校验规则:
+- [x] 1.1 pytest 先写 `tests/config_parser/test_pub_sub_config.py` 含失败断言:`PubSubConfig` 7 字段 + `PublicationTableEntry` 3 字段 + `TestConfig.pub_sub_config: Optional[PubSubConfig] = None`;`@field_validator` / `@model_validator(mode="after")` 校验规则:
   - `conninfo` `startswith("postgresql://")` + non-empty
   - `tables` 多表时 `columns` / `where` 强制空
   - `tables[i].name` ∈ `test_model.ts_dbs[*].tables[*].name`
@@ -36,9 +36,9 @@
   - `expected_min_rows >= 0`(允许 None)
   - `len(tables) > 1` 时 columns/where 强制空
   - `publisher_db` ∈ `test_model.ts_dbs[*].name`
-- [ ] 1.2 实现 `src/config_parser/models.py::PubSubConfig` + `PublicationTableEntry` + `TestConfig.pub_sub_config: Optional[PubSubConfig] = None` 字段
-- [ ] 1.3 实现 `PubSubConfig` / `PublicationTableEntry` 的 `@field_validator` + `@model_validator(mode="after")` 校验规则
-- [ ] 1.4 **验收**:跑 `pytest tests/config_parser/test_pub_sub_config.py` 全绿
+- [x] 1.2 实现 `src/config_parser/models.py::PubSubConfig` + `PublicationTableEntry` + `TestConfig.pub_sub_config: Optional[PubSubConfig] = None` 字段
+- [x] 1.3 实现 `PubSubConfig` / `PublicationTableEntry` 的 `@field_validator` + `@model_validator(mode="after")` 校验规则
+- [x] 1.4 **验收**:跑 `pytest tests/config_parser/test_pub_sub_config.py` 全绿
 
 ## 2. xml_helpers.py 3 helper(`teardown_thread_group_element` / `regex_extractor_element` / `jsr223_assertion_element`)
 
