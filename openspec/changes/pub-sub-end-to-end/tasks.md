@@ -64,9 +64,9 @@
 ### 3.2 `build_subscribe_dest_schemas(publisher_ddls, publisher_db)`
 
 - [x] 3.2.1 pytest 先写 `tests/pub_sub/test_subscribe_dest_schemas.py::test_build_subscribe_dest_schemas_*` 含失败断言:`CREATE TS DATABASE <pub_db>` → `'CREATE TS DATABASE <pub_db>_sub'` 字符串精确替换 + `<pub_db>.` → `<pub_db>_sub.` via `\b` word boundary regex(含 `iot_monitor_other.t` 不被误匹配反例);`sub_db` 内部硬约定 = `f"{publisher_db}_sub"`
-- [ ] 3.2.2 实现 `src/pub_sub/subscribe_dest_schemas.py::build_subscribe_dest_schemas(...)`(内部派生 `sub_db`)
-- [ ] 3.2.3 **验收**:跑 `pytest tests/pub_sub/test_subscribe_dest_schemas.py::test_build_subscribe_dest_schemas_*` 全绿
-- [ ] 3.2.4 *commit*:该模块完成后再继续 §3.3
+- [x] 3.2.2 实现 `src/pub_sub/subscribe_dest_schemas.py::build_subscribe_dest_schemas(...)`(内部派生 `sub_db`)
+- [x] 3.2.3 **验收**:跑 `pytest tests/pub_sub/test_subscribe_dest_schemas.py::test_build_subscribe_dest_schemas_*` 全绿
+- [x] 3.2.4 *commit*:该模块完成后再继续 §3.3
 
 ### 3.3 `build_create_subscription_sql(subscription_name, publication_name, conninfo, options=None)`
 
