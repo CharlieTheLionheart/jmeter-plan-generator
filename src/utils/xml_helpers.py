@@ -892,3 +892,170 @@ def write_jmx(element: ET.Element, path: str, *, encoding: str = "UTF-8") -> Non
     with open(path, "wb") as f:
         f.write(f'<?xml version="1.0" encoding="{encoding}"?>\n'.encode(encoding))
         tree.write(f, encoding=encoding)
+
+
+# ---------------------------------------------------------------------------
+# Pub-sub helpers (OpenSpec change pub-sub-end-to-end, 2026-10-12)
+# ---------------------------------------------------------------------------
+
+def teardown_thread_group_element(
+    name: str,
+    *,
+    num_threads: Union[int, str] = 1,
+    ramp_time: Union[int, str] = 1,
+    delay: Union[int, str] = 60,
+    loops: Union[int, str] = 1,
+) -> ET.Element:
+    """Create a ``<PostThreadGroup>`` element (JMeter tearDown ThreadGroup).
+
+    Element shape is anchored against two reference sources (per
+    OpenSpec review F-012 + design.md F-010):
+
+    - **JMeter GUI manual save** (canonical reference, user exported
+      via JMeter 5.6.3 GUI; saved at
+      ``~/Downloads/JSR223 Assertion.jmx:10-21``) — has
+      ``ThreadGroup.delay=60`` paired with ``ThreadGroup.scheduler=true``,
+      no ``ThreadGroup.duration``, no ``enabled="true"`` attribute
+      (the GUI omits ``enabled`` when the default of ``true`` applies).
+    - ``docs/refs/jmeter-testplan-reference.md:1671-1672`` — JMeter
+      official docs confirm ``Duration`` and ``Startup delay`` are
+      only emitted when the scheduler checkbox is selected, so delay
+      and scheduler must be emitted as a pair (or both omitted).
+
+    Field summary:
+
+    - ``testclass='PostThreadGroup'`` / ``guiclass='PostThreadGroupGui'``
+    - ``num_threads=1`` / ``ramp_time=1`` (Verify TG only needs one
+      virtual user)
+    - ``delay=60s`` (Verify TG 典型用法: 主 TG 结束后等 60s 让 CDC 同步
+      完成 before SHOW SUBSCRIPTION / count(*) sampling runs, per
+      design.md F-010)
+    - ``scheduler=true`` (paired with ``delay`` — JMeter docs require
+      scheduler to be on for ``delay`` to take effect)
+    - ``same_user_on_next_iteration=true`` / ``on_sample_error=continue``
+    - ``LoopController.loops=1`` / ``continue_forever=false``
+    - ``ThreadGroup.duration`` is **NOT emitted** (PostThreadGroup
+      关键差异: JMeter 5.6.3 默认不写, TG 跑完 sampler 列表后自然
+      结束)
+
+    The returned ``<PostThreadGroup>`` element has the standard TG
+    property children but no paired ``<hashTree>`` — callers building
+    a complete Verify TG must construct a paired ``<hashTree>`` (e.g.
+    via ``hash_tree(*children)``) and place it as a sibling of this
+    element so JMeter recognises the appended samplers as belonging to
+    this thread group.
+    """
+    children: List[ET.Element] = [
+        int_prop("ThreadGroup.num_threads", str(num_threads)),
+        int_prop("ThreadGroup.ramp_time", str(ramp_time)),
+        long_prop("ThreadGroup.delay", str(delay)),
+        bool_prop("ThreadGroup.same_user_on_next_iteration", "true"),
+        bool_prop("ThreadGroup.scheduler", "true"),
+        string_prop("ThreadGroup.on_sample_error", "continue"),
+        element_prop(
+            name="ThreadGroup.main_controller",
+            element_type="LoopController",
+            testname="Loop Controller",
+            attributes={
+                "guiclass": "LoopControlPanel",
+                "testclass": "LoopController",
+            },
+            props=[
+                string_prop("LoopController.loops", str(loops)),
+                bool_prop("LoopController.continue_forever", "false"),
+            ],
+        ),
+    ]
+    return make_element(
+        "PostThreadGroup",
+        name=name,
+        testname=name,
+        attributes={
+            "guiclass": "PostThreadGroupGui",
+            "testclass": "PostThreadGroup",
+        },
+        children=children,
+    )
+
+
+def regex_extractor_element(
+    ref_name: str,
+    regex: str,
+    template: str,
+    match_number: Union[int, str],
+    *,
+    default: str = "",
+) -> ET.Element:
+    """Create a ``<RegexExtractor>`` element (JMeter Post Processor).
+
+    Element shape anchored against
+    ``~/Downloads/JSR223 Assertion.jmx:36-44`` (user's JMeter GUI
+    manual save) — the 7 fields are emitted in the order shown there
+    (useHeaders → refname → regex → template → default →
+    default_empty_value → match_number). JMeter parses by field name,
+    not by position, so order is informational only.
+
+    Used in the pub-sub Verify TG to extract the ``status`` column from
+    ``SHOW SUBSCRIPTION <sub_name>``'s pipe-separated field layout
+    (``name | pub_name | conn | parameter | status | start_time | ...``)
+    into ``vars.<ref_name>`` for the JSR223Assertion to read.
+    """
+    children: List[ET.Element] = [
+        string_prop("RegexExtractor.useHeaders", "false"),
+        string_prop("RegexExtractor.refname", ref_name),
+        string_prop("RegexExtractor.regex", regex),
+        string_prop("RegexExtractor.template", template),
+        string_prop("RegexExtractor.default", default),
+        bool_prop("RegexExtractor.default_empty_value", "false"),
+        string_prop("RegexExtractor.match_number", str(match_number)),
+    ]
+    return make_element(
+        "RegexExtractor",
+        name=ref_name,
+        testname=ref_name,
+        attributes={
+            "guiclass": "RegexExtractorGui",
+            "testclass": "RegexExtractor",
+        },
+        children=children,
+    )
+
+
+def jsr223_assertion_element(
+    script: str,
+    *,
+    script_language: str = "groovy",
+) -> ET.Element:
+    """Create a ``<JSR223Assertion>`` element (JMeter post-sampler script).
+
+    Element shape anchored against
+    ``~/Downloads/JSR223 Assertion.jmx:46-54`` (user's JMeter GUI
+    manual save) — the 5 fields are emitted in the order shown there
+    (cacheKey → filename → parameters → script → scriptLanguage).
+    JMeter parses by field name, not by position, so order is
+    informational only.
+
+    The script field is named ``script`` (NOT ``assertion_script`` —
+    JSR223Assertion uses the unified ``script`` field name per 实测
+    jmx, distinct from the legacy BSF assertion's ``assertion_script``).
+    Groovy is the default language (matches the pub-sub Verify TG
+    ``assert vars.get('sub_status')?.contains('running')`` pattern, a
+    Groovy null-safe + contains idiom).
+    """
+    children: List[ET.Element] = [
+        string_prop("cacheKey", "true"),
+        string_prop("filename", ""),
+        string_prop("parameters", ""),
+        string_prop("script", script),
+        string_prop("scriptLanguage", script_language),
+    ]
+    return make_element(
+        "JSR223Assertion",
+        name="JSR223 Assertion",
+        testname="JSR223 Assertion",
+        attributes={
+            "guiclass": "TestBeanGUI",
+            "testclass": "JSR223Assertion",
+        },
+        children=children,
+    )

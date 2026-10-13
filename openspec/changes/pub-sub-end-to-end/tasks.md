@@ -42,13 +42,13 @@
 
 ## 2. xml_helpers.py 3 helper(`teardown_thread_group_element` / `regex_extractor_element` / `jsr223_assertion_element`)
 
-- [ ] 2.1 pytest 先写 `tests/utils/test_xml_helpers.py::test_teardown_thread_group_element_*` 含失败断言:testclass="PostThreadGroup" / guiclass="PostThreadGroupGui" / **不**输出 `<longProp name="ThreadGroup.duration">` / `delay=60` / `num_threads=1` / `ramp_time=1` / `LoopController.loops=1`
-- [ ] 2.2 pytest 先写 `tests/utils/test_xml_helpers.py::test_regex_extractor_element_*` 含失败断言:字段顺序 + 实测 schema(`useHeaders` / `refname` / `regex` / `template` / `default` / `default_empty_value` / `match_number`)
-- [ ] 2.3 pytest 先写 `tests/utils/test_xml_helpers.py::test_jsr223_assertion_element_*` 含失败断言:字段顺序 + 实测 schema(`cacheKey=true` / `filename` / `parameters` / `script` / `scriptLanguage=groovy`;字段名 `script` **而非** `assertion_script`)
-- [ ] 2.4 实现 `src/utils/xml_helpers.py::teardown_thread_group_element(name, *, num_threads=1, ramp_time=1, delay=60, loops=1, ...)` 元素渲染(不输出 `<longProp name="ThreadGroup.duration">` / 不输出 `<stringProp name="ThreadGroup.duration">`)
-- [ ] 2.5 实现 `src/utils/xml_helpers.py::regex_extractor_element(ref_name, regex, template, match_number, default="")` 元素渲染
-- [ ] 2.6 实现 `src/utils/xml_helpers.py::jsr223_assertion_element(script, script_language="groovy")` 元素渲染
-- [ ] 2.7 **验收**:跑 `pytest tests/utils/test_xml_helpers.py` 全绿
+- [x] 2.1 pytest 先写 `tests/utils/test_xml_helpers.py::test_teardown_thread_group_element_*` 含失败断言:testclass="PostThreadGroup" / guiclass="PostThreadGroupGui" / **不**输出 `<longProp name="ThreadGroup.duration">` / `delay=60` / `num_threads=1` / `ramp_time=1` / `LoopController.loops=1`
+- [x] 2.2 pytest 先写 `tests/utils/test_xml_helpers.py::test_regex_extractor_element_*` 含失败断言:字段顺序 + 实测 schema(`useHeaders` / `refname` / `regex` / `template` / `default` / `default_empty_value` / `match_number`)
+- [x] 2.3 pytest 先写 `tests/utils/test_xml_helpers.py::test_jsr223_assertion_element_*` 含失败断言:字段顺序 + 实测 schema(`cacheKey=true` / `filename` / `parameters` / `script` / `scriptLanguage=groovy`;字段名 `script` **而非** `assertion_script`)
+- [x] 2.4 实现 `src/utils/xml_helpers.py::teardown_thread_group_element(name, *, num_threads=1, ramp_time=1, delay=60, loops=1, ...)` 元素渲染(不输出 `<longProp name="ThreadGroup.duration">` / 不输出 `<stringProp name="ThreadGroup.duration">`)
+- [x] 2.5 实现 `src/utils/xml_helpers.py::regex_extractor_element(ref_name, regex, template, match_number, default="")` 元素渲染
+- [x] 2.6 实现 `src/utils/xml_helpers.py::jsr223_assertion_element(script, script_language="groovy")` 元素渲染
+- [x] 2.7 **验收**:跑 `pytest tests/utils/test_xml_helpers.py` 全绿
 
 ## 3. src/pub_sub/ 子包 — TDD 节奏
 
