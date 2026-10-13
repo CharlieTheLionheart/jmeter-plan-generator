@@ -142,6 +142,16 @@ class JMXSkeletonGenerator:
         assembler.add_many(JDBCDataSourceGenerator(conn_config=self.test_config.conn_config.model_dump()).generate())
         ddl_elems = generate_ddl_setup_thread_group(self.ddl_statements, rel_init_specs=self.rel_init_specs)
         if ddl_elems: assembler.add_many(ddl_elems)
+        # OpenSpec pub-sub-end-to-end §5.2: 在 SetupTG 之后追加 pub_sub DDL 链
+        # (CreatePublication / CreateSubscriberDDL / CreateSubscription).
+        if self.test_config.pub_sub_config is not None and self.model is not None:
+            from pub_sub.pub_sub_setup_tg import append_pub_sub_to_setup_tg
+            # ddl_elems[1] 是 SetupTG 的 paired <hashTree>
+            append_pub_sub_to_setup_tg(
+                ddl_elems[1],
+                self.test_config.pub_sub_config,
+                self.model,
+            )
         sm_elems = generate_shared_memory_setup_thread_group(self.seed_csv_paths)
         if sm_elems: assembler.add_many(sm_elems)
         bind_elems = generate_bind_setup_thread_group(
@@ -155,6 +165,14 @@ class JMXSkeletonGenerator:
         if write_elems: assembler.add_many(write_elems)
         query_elems = generate_query_thread_groups(self.test_config.query_config)
         if query_elems: assembler.add_many(query_elems)
+        # OpenSpec pub-sub-end-to-end §5.3: 主 TG 之后追加 Verify PostThreadGroup
+        # (PostThreadGroup + 1 SHOW SUBSCRIPTION status sampler + N count sampler).
+        if self.test_config.pub_sub_config is not None and self.model is not None:
+            from pub_sub.pub_sub_verify_tg import generate_pub_sub_verify_tg
+            verify_tg, verify_hash = generate_pub_sub_verify_tg(
+                self.test_config.pub_sub_config, self.model
+            )
+            assembler.add_many([verify_tg, verify_hash])
         return JMXWriter(self.output_dir).write(assembler.assemble(tp_elem, tp_hash, udv_elements))
 
 

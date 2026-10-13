@@ -113,12 +113,12 @@
 
 > **不需要真实 KaiwuDB cluster**,本地 pytest 跑通
 
-- [ ] 5.1 pytest 先写 `tests/jmx_skeleton_generator/test_ddl_setup_pubsub_append.py` 含失败断言:不声明 `pub_sub_config` 段 → SetupTG / VerifyTG 不追加(空 hashTree);声明 `pub_sub_config` 段 → SetupTG 末尾 4 个 sampler + VerifyTG `PostThreadGroup` + 3 sampler;XML 结构可通过 `xml.etree.ElementTree.parse()` 解析
-- [ ] 5.2 实现 `src/jmx_skeleton_generator/generators/test_plan.py` 在 `generate_ddl_setup_thread_group(...)` 之后追加 `pub_sub_setup_tg.append_pub_sub_to_setup_tg(setup_tg, pub_sub_config, test_model_config)`(当 `test_config.pub_sub_config` 非 None)
-- [ ] 5.3 同文件在主 TG 之后追加 `pub_sub_verify_tg.generate_pub_sub_verify_tg(pub_sub_config, test_model_config)`(当 `test_config.pub_sub_config` 非 None)
-- [ ] 5.4 实现 helper 让 `TestConfig` 解析时把 `test_model_config` 透传到 `JMXSkeletonGenerator.generate(test_model_config, test_config)` 调用(若当前尚未透传)
-- [ ] 5.5 **验收**:跑 `pytest tests/jmx_skeleton_generator/test_ddl_setup_pubsub_append.py` 全绿
-- [ ] 5.6 *commit*:Phase A 集成测试通过后再继续 §6
+- [x] 5.1 pytest 先写 `tests/jmx_skeleton_generator/test_ddl_setup_pubsub_append.py` 含失败断言:不声明 `pub_sub_config` 段 → SetupTG / VerifyTG 不追加(空 hashTree);声明 `pub_sub_config` 段 → SetupTG 末尾 4 个 sampler + VerifyTG `PostThreadGroup` + 3 sampler;XML 结构可通过 `xml.etree.ElementTree.parse()` 解析
+- [x] 5.2 实现 `src/jmx_skeleton_generator/generators/skeleton.py` 在 `JMXSkeletonGenerator.generate()` `generate_ddl_setup_thread_group(...)` (line 143) 之后追加 `pub_sub_setup_tg.append_pub_sub_to_setup_tg(ddl_elems[1], pub_sub_config, self.model)`(当 `test_config.pub_sub_config` 非 None;`self.model` 可能 None,需降级为 `PubSubConfig.tables` 校验不依赖 model 的简化分支,或在 model 缺失时跳过 pub_sub)
+- [x] 5.3 同文件在主 TG 之后(`assembler.assemble(...)` 之前)追加 `pub_sub_verify_tg.generate_pub_sub_verify_tg(pub_sub_config, self.model)` 拿 `(verify_tg, verify_hash)`,`assembler.add_many([verify_tg, verify_hash])`(当非 None;`self.model` 同上处理)
+- [x] 5.4 实现 helper 让 `TestConfig` 解析时把 `test_model_config` 透传到 `JMXSkeletonGenerator.generate(test_model_config, test_config)` 调用(若当前尚未透传) — **已隐含满足**(`JMXSkeletonGenerator.__init__` 接 `model: Optional[TestModelConfig] = None` kwarg)
+- [x] 5.5 **验收**:跑 `pytest tests/jmx_skeleton_generator/test_ddl_setup_pubsub_append.py` 全绿
+- [x] 5.6 *commit*:Phase A 集成测试通过后再继续 §6
 
 ## 6. reference 文档(直接落地,无测试)
 
