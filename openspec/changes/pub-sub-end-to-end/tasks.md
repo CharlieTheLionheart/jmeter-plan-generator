@@ -98,9 +98,9 @@
 
 ### 3.7 `__init__.py` 导出
 
-- [ ] 3.7.1 pytest 先写 `tests/pub_sub/test___init__.py` 验证 5 个公开 API 可导入:`build_publication_sql` / `build_subscribe_dest_schemas` / `build_create_subscription_sql` / `append_pub_sub_to_setup_tg` / `generate_pub_sub_verify_tg`
-- [ ] 3.7.2 实现 `src/pub_sub/__init__.py` 从 5 个内部模块导入
-- [ ] 3.7.3 **验收**:跑 `pytest tests/pub_sub/test___init__.py` 全绿
+- [x] 3.7.1 pytest 先写 `tests/pub_sub/test___init__.py` 验证 5 个公开 API 可导入:`build_publication_sql` / `build_subscribe_dest_schemas` / `build_create_subscription_sql` / `append_pub_sub_to_setup_tg` / `generate_pub_sub_verify_tg`
+- [x] 3.7.2 实现 `src/pub_sub/__init__.py` 从 5 个内部模块导入
+- [x] 3.7.3 **验收**:跑 `pytest tests/pub_sub/test___init__.py` 全绿
 
 ## 4. fixture 文件(2 个)
 
