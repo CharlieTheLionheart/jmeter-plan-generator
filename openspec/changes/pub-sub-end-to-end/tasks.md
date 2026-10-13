@@ -91,10 +91,10 @@
 
 ### 3.6 `generate_pub_sub_verify_tg(pub_sub_config, test_model_config)`
 
-- [ ] 3.6.1 pytest 先写 `tests/pub_sub/test_pub_sub_verify_tg.py::test_generate_pub_sub_verify_tg` 含失败断言:`sub_db = f"{pub_sub_config.publisher_db}_sub"` 派生 + PostThreadGroup delay=60s 无 duration + 1 个 SHOW SUBSCRIPTION status sampler + N 个 count sampler(每张 ts_table 一条)+ `expected_min_rows` 内联(`pub_sub_config.expected_min_rows if pub_sub_config.expected_min_rows is not None else 1`)+ 每 sampler `database` 字段不写(单池 + FQN 跨库)
-- [ ] 3.6.2 实现 `src/pub_sub/pub_sub_verify_tg.py::generate_pub_sub_verify_tg(...)`(调用 §3.4 helper)
-- [ ] 3.6.3 **验收**:跑 `pytest tests/pub_sub/test_pub_sub_verify_tg.py` 全绿
-- [ ] 3.6.4 *commit*
+- [x] 3.6.1 pytest 先写 `tests/pub_sub/test_pub_sub_verify_tg.py::test_generate_pub_sub_verify_tg` 含失败断言:`sub_db = f"{pub_sub_config.publisher_db}_sub"` 派生 + PostThreadGroup delay=60s 无 duration + 1 个 SHOW SUBSCRIPTION status sampler + N 个 count sampler(每张 ts_table 一条)+ `expected_min_rows` 内联(`pub_sub_config.expected_min_rows if pub_sub_config.expected_min_rows is not None else 1`)+ 每 sampler `database` 字段不写(单池 + FQN 跨库)
+- [x] 3.6.2 实现 `src/pub_sub/pub_sub_verify_tg.py::generate_pub_sub_verify_tg(...)`(调用 §3.4 helper)
+- [x] 3.6.3 **验收**:跑 `pytest tests/pub_sub/test_pub_sub_verify_tg.py` 全绿
+- [x] 3.6.4 *commit*
 
 ### 3.7 `__init__.py` 导出
 
