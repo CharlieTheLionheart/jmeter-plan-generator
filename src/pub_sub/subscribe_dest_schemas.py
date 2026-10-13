@@ -49,12 +49,16 @@ def build_subscribe_dest_schemas(
     sub_db = f"{publisher_db}_sub"
     result: List[str] = []
     for ddl in publisher_ddls:
-        # 步骤 1: 字符串精确替换 CREATE TS DATABASE
-        # 整库名 + 大写 SQL 关键字(per design.md 字面规范)。
-        # 大小写敏感:SQL 关键字在 publisher 端按字面写大写。
-        ddl = ddl.replace(
-            f"CREATE TS DATABASE {publisher_db}",
-            f"CREATE TS DATABASE {sub_db}",
+        # 步骤 1: 大小写不敏感替换 CREATE TS DATABASE
+        # 实际 DDLGenerator 输出 ``create ts database if not exists <db>``
+        # (小写关键字 + ``if not exists`` 子句), 所以 regex 必须:
+        # 1) IGNORECASE (匹配大小写两种 DDL)
+        # 2) 容忍可选的 ``if not exists`` 子句
+        ddl = re.sub(
+            rf"create\s+ts\s+database(\s+if\s+not\s+exists)?\s+{re.escape(publisher_db)}",
+            lambda m: f"create ts database{m.group(1) or ''} {sub_db}",
+            ddl,
+            flags=re.IGNORECASE,
         )
         # 步骤 2: word boundary regex 替换 `<pub_db>.` → `<sub_db>.`
         # \b 防止 iot_monitor 误匹配 iot_monitor_other 的前缀。

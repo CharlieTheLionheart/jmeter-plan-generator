@@ -42,25 +42,42 @@ class TestBuildSubscribeDestSchemasCreateDatabase:
     (字符串精确替换)."""
 
     def test_simple_substitution(self) -> None:
-        """基本替换: ``CREATE TS DATABASE iot_monitor`` → ``... iot_monitor_sub``."""
+        """基本替换: ``create ts database iot_monitor`` → ``create ts database iot_monitor_sub``.
+
+        Note: 实际 DDLGenerator 输出小写 SQL 关键字(``create ts
+        database``, 不是 ``CREATE TS DATABASE``), 所以测试用小写。
+        ``build_subscribe_dest_schemas`` 用 ``re.IGNORECASE`` 匹配,
+        replacement 保留小写。"""
         out = build_subscribe_dest_schemas(
-            ["CREATE TS DATABASE iot_monitor"], "iot_monitor"
+            ["create ts database iot_monitor"], "iot_monitor"
         )
-        assert out == ["CREATE TS DATABASE iot_monitor_sub"]
+        assert out == ["create ts database iot_monitor_sub"]
 
     def test_different_publisher_db(self) -> None:
         """不同 ``publisher_db`` → 不同 sub_db(内部硬约定 ``f"{publisher_db}_sub"``)."""
         out = build_subscribe_dest_schemas(
-            ["CREATE TS DATABASE other_db"], "other_db"
+            ["create ts database other_db"], "other_db"
         )
-        assert out == ["CREATE TS DATABASE other_db_sub"]
+        assert out == ["create ts database other_db_sub"]
 
     def test_precise_substitution_no_partial_match(self) -> None:
-        """精确替换: ``CREATE TS DATABASE other_db`` (pub_db=iot_monitor) 不变."""
+        """精确替换: ``create ts database other_db`` (pub_db=iot_monitor) 不变."""
         out = build_subscribe_dest_schemas(
-            ["CREATE TS DATABASE other_db"], "iot_monitor"
+            ["create ts database other_db"], "iot_monitor"
         )
-        assert out == ["CREATE TS DATABASE other_db"]
+        assert out == ["create ts database other_db"]
+
+    def test_case_insensitive_uppercase(self) -> None:
+        """大写 ``CREATE TS DATABASE`` 也应被替换(IGNORECASE flag).
+
+        Per DDLGenerator 实际输出 + design.md 字面规范, 关键字既可
+        大写也可小写。``re.IGNORECASE`` 让函数对两种都接受。
+        """
+        out = build_subscribe_dest_schemas(
+            ["CREATE TS DATABASE iot_monitor"], "iot_monitor"
+        )
+        # 替换保留小写(replacement 模板是固定的)
+        assert out == ["create ts database iot_monitor_sub"]
 
 
 class TestBuildSubscribeDestSchemasTableQualifiedName:
@@ -100,46 +117,46 @@ class TestBuildSubscribeDestSchemasCombined:
     def test_full_publisher_ddl_combined(self) -> None:
         """完整 publisher DDL (建库 + 建表 合并到一条字符串) → 全部替换."""
         ddl = (
-            "CREATE TS DATABASE iot_monitor;\n"
-            "CREATE TABLE iot_monitor.t_cnc "
+            "create ts database iot_monitor;\n"
+            "create table iot_monitor.t_cnc "
             "(ts TIMESTAMP NOT NULL, k VARCHAR(64)) "
-            "TAGS (k VARCHAR(64)) PRIMARY TAGS (k) WITH (retentions 3d);"
+            "tags (k VARCHAR(64)) primary tags (k) with (retentions 3d);"
         )
         out = build_subscribe_dest_schemas([ddl], "iot_monitor")
         assert out == [
-            "CREATE TS DATABASE iot_monitor_sub;\n"
-            "CREATE TABLE iot_monitor_sub.t_cnc "
+            "create ts database iot_monitor_sub;\n"
+            "create table iot_monitor_sub.t_cnc "
             "(ts TIMESTAMP NOT NULL, k VARCHAR(64)) "
-            "TAGS (k VARCHAR(64)) PRIMARY TAGS (k) WITH (retentions 3d);"
+            "tags (k VARCHAR(64)) primary tags (k) with (retentions 3d);"
         ]
 
     def test_multiple_ddls_all_replaced(self) -> None:
         """多条 DDL(typical ``DDLGenerator.generate_statements`` 输出)全部替换."""
         out = build_subscribe_dest_schemas(
             [
-                "CREATE TS DATABASE iot_monitor",
-                "CREATE TABLE iot_monitor.t1 (k INT)",
-                "CREATE TABLE iot_monitor.t2 (k INT)",
+                "create ts database iot_monitor",
+                "create table iot_monitor.t1 (k INT)",
+                "create table iot_monitor.t2 (k INT)",
             ],
             "iot_monitor",
         )
         assert out == [
-            "CREATE TS DATABASE iot_monitor_sub",
-            "CREATE TABLE iot_monitor_sub.t1 (k INT)",
-            "CREATE TABLE iot_monitor_sub.t2 (k INT)",
+            "create ts database iot_monitor_sub",
+            "create table iot_monitor_sub.t1 (k INT)",
+            "create table iot_monitor_sub.t2 (k INT)",
         ]
 
     def test_word_boundary_among_replacement(self) -> None:
         """混合场景: 同一条 DDL 含 ``iot_monitor.t1`` (应替换) +
         ``iot_monitor_other.t2`` (不应替换)."""
         ddl = (
-            "CREATE TABLE iot_monitor.t1 (k INT);\n"
-            "CREATE TABLE iot_monitor_other.t2 (k INT);"
+            "create table iot_monitor.t1 (k INT);\n"
+            "create table iot_monitor_other.t2 (k INT);"
         )
         out = build_subscribe_dest_schemas([ddl], "iot_monitor")
         assert out == [
-            "CREATE TABLE iot_monitor_sub.t1 (k INT);\n"
-            "CREATE TABLE iot_monitor_other.t2 (k INT);"
+            "create table iot_monitor_sub.t1 (k INT);\n"
+            "create table iot_monitor_other.t2 (k INT);"
         ]
 
 
@@ -149,13 +166,13 @@ class TestBuildSubscribeDestSchemasSubDbConvention:
     def test_sub_db_convention_consistent_across_publisher_dbs(self) -> None:
         """两个不同 publisher_db → 两个不同 sub_db(从结果推断硬约定正确)."""
         out1 = build_subscribe_dest_schemas(
-            ["CREATE TS DATABASE iot_monitor"], "iot_monitor"
+            ["create ts database iot_monitor"], "iot_monitor"
         )
         out2 = build_subscribe_dest_schemas(
-            ["CREATE TS DATABASE benchmark"], "benchmark"
+            ["create ts database benchmark"], "benchmark"
         )
-        assert out1 == ["CREATE TS DATABASE iot_monitor_sub"]
-        assert out2 == ["CREATE TS DATABASE benchmark_sub"]
+        assert out1 == ["create ts database iot_monitor_sub"]
+        assert out2 == ["create ts database benchmark_sub"]
         # 不同 publisher_db → 不同 sub_db 后缀
         assert "iot_monitor_sub" in out1[0]
         assert "benchmark_sub" in out2[0]

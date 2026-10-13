@@ -84,10 +84,10 @@
 
 ### 3.5 `append_pub_sub_to_setup_tg(setup_tg_element, pub_sub_config, test_model_config)`
 
-- [ ] 3.5.1 pytest 先写 `tests/pub_sub/test_pub_sub_setup_tg.py` 含失败断言:`DDLGenerator.generate(test_model_config)` 内部调用 + `sub_db = f"{pub_sub_config.publisher_db}_sub"` 派生 + 4 个 JDBC Sampler 顺序与命名(per §3.5.2)+ `; '.join(subscribe_dest_schemas)` 合并到 `CreateSubscriberDDL` 单 sampler + sub_options caller 过滤契约(`SUBSCRIPTION_OPTION_KEYS = frozenset({"target", "enable", "ignore_history", "retry"})`)
-- [ ] 3.5.2 实现 `src/pub_sub/pub_sub_setup_tg.py::append_pub_sub_to_setup_tg(...)`(4 步顺序:CreatePublication → CreateTSDatabaseSubscriber → CreateSubscriberDDL(`; '.join`)→ CreateSubscription)
-- [ ] 3.5.3 **验收**:跑 `pytest tests/pub_sub/test_pub_sub_setup_tg.py` 全绿
-- [ ] 3.5.4 *commit*
+- [x] 3.5.1 pytest 先写 `tests/pub_sub/test_pub_sub_setup_tg.py` 含失败断言:`DDLGenerator.generate(test_model_config)` 内部调用 + `sub_db = f"{pub_sub_config.publisher_db}_sub"` 派生 + 4 个 JDBC Sampler 顺序与命名(per §3.5.2)+ `; '.join(subscribe_dest_schemas)` 合并到 `CreateSubscriberDDL` 单 sampler + sub_options caller 过滤契约(`SUBSCRIPTION_OPTION_KEYS = frozenset({"target", "enable", "ignore_history", "retry"})`)
+- [x] 3.5.2 实现 `src/pub_sub/pub_sub_setup_tg.py::append_pub_sub_to_setup_tg(...)`(4 步顺序:CreatePublication → CreateTSDatabaseSubscriber → CreateSubscriberDDL(`; '.join`)→ CreateSubscription)
+- [x] 3.5.3 **验收**:跑 `pytest tests/pub_sub/test_pub_sub_setup_tg.py` 全绿
+- [x] 3.5.4 *commit*
 
 ### 3.6 `generate_pub_sub_verify_tg(pub_sub_config, test_model_config)`
 
