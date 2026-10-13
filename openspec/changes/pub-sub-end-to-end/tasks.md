@@ -130,12 +130,12 @@
 
 > **在本地容器冒烟测试之前**完成
 
-- [ ] 7.1 `.claude/skills/kwjdbc-jmx-smoke/SKILL.md` §7 新增 `pub_sub smoke` 章节:不需 TLS 容器准备(`?sslmode=disable` insecure 容器即可,per proposal.md 备注)
-- [ ] 7.2 §7 给出两次端到端 invocation templates:(a) `test_cfg_pub_sub.yaml`(整库模式 + 默认阈值);(b) `test_cfg_pub_sub_tables.yaml`(表级 + 列子集 + WHERE + `expected_min_rows=0` 恒真)— 完整 `jmeter -n -t test_plan.jmx -J...` 命令行
-- [ ] 7.3 §7 断言 checklist 匹配 SetupTG / Write TG / Verify TG lifecycle(SetupTG 全部 `code==0` / Write TG JTL 100% 成功 / Verify TG `count(*) >= threshold` / SHOW SUBSCRIPTION `status` 含 `running`);note 当 publication 用 WHERE 过滤时 `expected_min_rows` 必须设 0(走恒真)
-- [ ] 7.4 §7 troubleshooting 段:`<publisher_db>_sub` 已存在 from prior run / conninfo sslmode mismatch / `count(*)=0` likely causes / WHERE clause rejected by server at CREATE PUBLICATION execution time
-- [ ] 7.5 §7 显式声明 database cleanup 责任由流水线负责(`DROP SUBSCRIPTION` / `DROP PUBLICATION` / `DROP DATABASE` 推荐 operator-side cleanup sequence)— 与 design.md §"约束锁定" 锁定对齐
-- [ ] 7.6 **章节完成判定**:`kwjdbc-jmx-smoke` skill `SKILL.md` 文档结构 + 章节逻辑在 `PATH/.claude/skills/kwjdbc-jmx-smoke/SKILL.md` 校验全绿(无 pytest,但 README / 章节标记存在)
+- [x] 7.1 `.claude/skills/kwjdbc-jmx-smoke/SKILL.md` §7 新增 `pub_sub smoke` 章节:不需 TLS 容器准备(`?sslmode=disable` insecure 容器即可,per proposal.md 备注)
+- [x] 7.2 §7 给出两次端到端 invocation templates:(a) `test_cfg_pub_sub.yaml`(整库模式 + 默认阈值);(b) `test_cfg_pub_sub_tables.yaml`(表级 + 列子集 + WHERE + `expected_min_rows=0` 恒真)— 完整 `jmeter -n -t test_plan.jmx -J...` 命令行
+- [x] 7.3 §7 断言 checklist 匹配 SetupTG / Write TG / Verify TG lifecycle(SetupTG 全部 `code==0` / Write TG JTL 100% 成功 / Verify TG `count(*) >= threshold` / SHOW SUBSCRIPTION `status` 含 `running`);note 当 publication 用 WHERE 过滤时 `expected_min_rows` 必须设 0(走恒真)
+- [x] 7.4 §7 troubleshooting 段:`<publisher_db>_sub` 已存在 from prior run / conninfo sslmode mismatch / `count(*)=0` likely causes / WHERE clause rejected by server at CREATE PUBLICATION execution time
+- [x] 7.5 §7 显式声明 database cleanup 责任由流水线负责(`DROP SUBSCRIPTION` / `DROP PUBLICATION` / `DROP DATABASE` 推荐 operator-side cleanup sequence)— 与 design.md §"约束锁定" 锁定对齐
+- [x] 7.6 **章节完成判定**:`kwjdbc-jmx-smoke` skill `SKILL.md` 文档结构 + 章节逻辑在 `PATH/.claude/skills/kwjdbc-jmx-smoke/SKILL.md` 校验全绿(无 pytest,但 README / 章节标记存在)
 
 ## 8. Phase B: 本地容器冒烟测试(**§5 + §7 通过后**)
 
