@@ -70,10 +70,10 @@
 
 ### 3.3 `build_create_subscription_sql(subscription_name, publication_name, conninfo, options=None)`
 
-- [ ] 3.3.1 pytest 先写 `tests/pub_sub/test_subscribe_dest_schemas.py::test_build_create_subscription_sql_*` 含失败断言:`CREATE SUBSCRIPTION <name> CONNECTION '<conninfo>' PUBLICATION <pub_name>` 基础拼接 + `WITH OPTIONS (k1 = v1, k2 = v2)` 拼接(无 options 不追加 / 有 options 追加 + 顺序保留);`options=None` / `options={}` 时**不**追加 WITH OPTIONS(防御性支持,per scope note)
-- [ ] 3.3.2 实现 `src/pub_sub/subscribe_dest_schemas.py::build_create_subscription_sql(...)`
-- [ ] 3.3.3 **验收**:跑 `pytest tests/pub_sub/test_subscribe_dest_schemas.py::test_build_create_subscription_sql_*` 全绿
-- [ ] 3.3.4 *commit*:该模块完成后再继续 §3.4
+- [x] 3.3.1 pytest 先写 `tests/pub_sub/test_subscribe_dest_schemas.py::test_build_create_subscription_sql_*` 含失败断言:`CREATE SUBSCRIPTION <name> CONNECTION '<conninfo>' PUBLICATION <pub_name>` 基础拼接 + `WITH OPTIONS (k1 = v1, k2 = v2)` 拼接(无 options 不追加 / 有 options 追加 + 顺序保留);`options=None` / `options={}` 时**不**追加 WITH OPTIONS(防御性支持,per scope note)
+- [x] 3.3.2 实现 `src/pub_sub/subscribe_dest_schemas.py::build_create_subscription_sql(...)`
+- [x] 3.3.3 **验收**:跑 `pytest tests/pub_sub/test_subscribe_dest_schemas.py::test_build_create_subscription_sql_*` 全绿
+- [x] 3.3.4 *commit*:该模块完成后再继续 §3.4
 
 ### 3.4 `_build_show_subscription_status_sampler` + `_build_count_sampler`(helper,依赖 §2 helper)
 
