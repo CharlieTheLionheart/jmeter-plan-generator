@@ -104,10 +104,10 @@
 
 ## 4. fixture 文件(2 个)
 
-- [ ] 4.1 pytest 先写 `tests/kwjdbc_svt/fixtures/test_cfg_pub_sub.yaml`(publisher_db="iot_monitor" / publication_name="pub_iot" / conninfo="postgresql://root@localhost:26257/iot_monitor?sslmode=disable" / options 含 target + enable / tables=null 整库模式 / expected_min_rows 未设)— 验证:`config_parser.parse_test_cfg_yaml(...)` 解析无 `ValidationError`,`pub_sub_config` 字段被加载为 `PubSubConfig` 实例
-- [ ] 4.2 pytest 先写 `tests/kwjdbc_svt/fixtures/test_cfg_pub_sub_tables.yaml`(tables=[{name: t_cnc, columns: [k_timestamp, device_id, col_float8_1], where: "col_float8_1 > 0"}] / options 含 target + ignore_history + retry / expected_min_rows=0)— 验证同上
-- [ ] 4.3 实现 2 个 fixture yaml 文件 + 解析断言测试
-- [ ] 4.4 **验收**:跑 `pytest tests/config_parser/test_fixture_yaml_parse.py`(或类似) 全绿
+- [x] 4.1 pytest 先写 `tests/kwjdbc_svt/fixtures/test_cfg_pub_sub.yaml`(publisher_db="iot_monitor" / publication_name="pub_iot" / conninfo="postgresql://root@127.0.0.1:26257/iot_monitor?sslmode=disable" / options 含 target + enable / tables=null 整库模式 / expected_min_rows 未设)— 验证:`config_parser.parse_test_cfg_yaml(...)` 解析无 `ValidationError`,`pub_sub_config` 字段被加载为 `PubSubConfig` 实例
+- [x] 4.2 pytest 先写 `tests/kwjdbc_svt/fixtures/test_cfg_pub_sub_tables.yaml`(tables=[{name: t_cnc, columns: [k_timestamp, device_id, col_float8_1], where: "col_float8_1 > 0"}] / options 含 target + ignore_history + retry / expected_min_rows=0)— 验证同上
+- [x] 4.3 实现 2 个 fixture yaml 文件 + 解析断言测试
+- [x] 4.4 **验收**:跑 `pytest tests/config_parser/test_fixture_yaml_parse.py`(或类似) 全绿
 
 ## 5. 集成到 test_plan.py — Phase A: .jmx 生成层集成测试
 

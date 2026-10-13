@@ -1,0 +1,21 @@
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 4
+  device_start: 1
+  test_duration: 30
+pub_sub_config:
+  publisher_db: iot_monitor
+  publication_name: pub_iot_tables
+  subscription_name: sub_iot_tables
+  conninfo: postgresql://root@127.0.0.1:26257/iot_monitor?sslmode=disable
+  tables:
+    - name: t_cnc
+      columns: [k_timestamp, device_id, col_float8_1]
+      where: "col_float8_1 > 0"
+  options:
+    target: '{"iot_monitor.t_cnc":"iot_monitor_sub.t_cnc"}'
+    ignore_history: "true"
+    retry: "5s"
+  expected_min_rows: 0

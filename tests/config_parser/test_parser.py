@@ -71,6 +71,68 @@ def test_parse_valid_test_cfg(tmp_path: Path) -> None:
     assert cfg.conn_config.db_url == "jdbc:kaiwudb://localhost:26257/defaultdb"
 
 
+# ---------------------------------------------------------------------------
+# pub_sub_config 真实 fixture yaml 解析 (OpenSpec pub-sub-end-to-end §4)
+# ---------------------------------------------------------------------------
+
+FIXTURES_DIR = Path(__file__).parent.parent / "kwjdbc_svt" / "fixtures"
+
+
+def test_parse_pub_sub_database_mode_fixture() -> None:
+    """整库模式 fixture (test_cfg_pub_sub.yaml):
+    ``pub_sub_config.tables`` 为 None, ``expected_min_rows`` 未设 (默认 None).
+
+    Per tasks.md §4.1: ``config_parser.parse_test_cfg_yaml(...)`` 解析
+    无 ``ValidationError``, ``pub_sub_config`` 字段被加载为 ``PubSubConfig`` 实例.
+    """
+    path = FIXTURES_DIR / "test_cfg_pub_sub.yaml"
+    cfg = parse_test_cfg_yaml(path)
+    assert cfg.pub_sub_config is not None
+    pub_sub = cfg.pub_sub_config
+    assert pub_sub.publisher_db == "iot_monitor"
+    assert pub_sub.publication_name == "pub_iot"
+    assert pub_sub.subscription_name == "sub_iot"
+    assert pub_sub.conninfo == (
+        "postgresql://root@127.0.0.1:26257/iot_monitor?sslmode=disable"
+    )
+    assert pub_sub.tables is None  # 整库模式
+    assert pub_sub.expected_min_rows is None  # 默认 (Verify TG 内联 1)
+    assert pub_sub.options == {
+        "target": '{"iot_monitor.t_cnc":"iot_monitor_sub.t_cnc"}',
+        "enable": "on",
+    }
+
+
+def test_parse_pub_sub_table_mode_fixture() -> None:
+    """表级 fixture (test_cfg_pub_sub_tables.yaml):
+    ``pub_sub_config.tables`` 含 1 张表 + columns 子集 + where 过滤 +
+    ``expected_min_rows=0`` (恒真, WHERE 过滤场景).
+
+    Per tasks.md §4.2: 解析无 ``ValidationError``, ``pub_sub_config`` 字段
+    被加载为 ``PubSubConfig`` 实例 + tables / columns / where / expected_min_rows
+    都正确解析.
+    """
+    path = FIXTURES_DIR / "test_cfg_pub_sub_tables.yaml"
+    cfg = parse_test_cfg_yaml(path)
+    assert cfg.pub_sub_config is not None
+    pub_sub = cfg.pub_sub_config
+    assert pub_sub.publisher_db == "iot_monitor"
+    assert pub_sub.publication_name == "pub_iot_tables"
+    assert pub_sub.subscription_name == "sub_iot_tables"
+    assert pub_sub.tables is not None
+    assert len(pub_sub.tables) == 1
+    entry = pub_sub.tables[0]
+    assert entry.name == "t_cnc"
+    assert entry.columns == ["k_timestamp", "device_id", "col_float8_1"]
+    assert entry.where == "col_float8_1 > 0"
+    assert pub_sub.expected_min_rows == 0
+    assert pub_sub.options == {
+        "target": '{"iot_monitor.t_cnc":"iot_monitor_sub.t_cnc"}',
+        "ignore_history": "true",
+        "retry": "5s",
+    }
+
+
 def test_missing_file(tmp_path: Path) -> None:
     with pytest.raises(ConfigParserError, match="file not found"):
         parse_test_model_yaml(tmp_path / "missing.yaml")
