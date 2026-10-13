@@ -49,6 +49,14 @@ KaiwuDB 3.x 起提供发布订阅实现集群内 / 集群间的逻辑复制。`d
 - 不测多 publication / 多 subscription 并行 / 链式级联(KaiwuDB 平台 1:1 限制)
 - 不在 Pydantic 层做 WHERE 表达式语法解析(`where` 字符串仅做非空校验,聚合 / 类型转换 / 排序规则 / 系统列引用 / 非不可变函数的合法性由 KaiwuDB 服务端在 CREATE PUBLICATION 执行时报错)
 
+**全局 spec 约定**(影响 §3 所有 SQL 字符串生成):
+
+- **SQL 关键字统一小写**:本设计文档示例中 SQL 关键字用大写(`CREATE TS DATABASE` / `CREATE PUBLICATION` / `FOR DATABASE` / `FOR TABLE` / `WITH OPTIONS` 等)**仅是字面示意**,实际生成时由 `DDLGenerator` 统一输出小写关键字(`create ts database if not exists ...` / `create publication ...` / `for database ...` / `for table ...` / `with options (...)`)。这是工程总 spec 之前定下来的:所有 SQL 字符串生成层(`build_publication_sql` / `build_subscribe_dest_schemas` / `build_create_subscription_sql`)都应容忍大小写差异(不假设输入 DDL 是大写),通过 `re.IGNORECASE` 匹配。
+- **F-009 caller 过滤契约**:`append_pub_sub_to_setup_tg` 在调用 `build_publication_sql` / `build_create_subscription_sql` 之前**对称地**过滤 `pub_sub_config.options`,只把对应 side 的 keys 传给对应函数:
+  - `PUBLICATION_OPTION_KEYS = frozenset({"buffer_size", "retrieve_tags", "publish"})` → `build_publication_sql`
+  - `SUBSCRIPTION_OPTION_KEYS = frozenset({"target", "enable", "ignore_history", "retry"})` → `build_create_subscription_sql`
+  (Pydantic Literal 校验已保证字典只可能含这 7-key 子集;caller 不传 7-key 全集避免 `target` / `buffer_size` 等 side-mismatch 的 options 进入错误 DDL)
+
 ## Decisions
 
 ### Decision 1:发布粒度由 `tables` 字段决定,`null/[]` 降级到 `FOR DATABASE` 整库模式
