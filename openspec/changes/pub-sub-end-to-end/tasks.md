@@ -122,9 +122,9 @@
 
 ## 6. reference 文档(直接落地,无测试)
 
-- [ ] 6.1 `docs/refs/kaiwudb-pubsub-references.md` 新建,包含:CREATE PUBLICATION / CREATE SUBSCRIPTION 语法 + 同步周期 + 端到端延迟 + 2-5s 连接窗口 + insecure / TLS conninfo 示例 + `options` key 集合分两组 + `SHOW SUBSCRIPTION` / `CREATE SUBSCRIPTION` per-cluster + conninfo 与 `${db_url}` 一致性 + 数据库清理归属(由流水线负责)
-- [ ] 6.2 `test_cfg.yaml::pub_sub_config` 字段 → 生成 DDL / JMX 元素映射表覆盖:`publisher_db` / `publication_name` / `subscription_name` / `conninfo` / `tables` / `expected_min_rows` + `subscriber_db = <publisher_db>_sub` 派生规则
-- [ ] 6.3 `tables` 校验规则段:multi-table 不可 columns/where;columns 必须含所有 primary_tags + NOT NULL data_cols;where 字符串 parse 时不语法校验
+- [x] 6.1 `docs/refs/kaiwudb-pubsub-references.md` 新建,包含:CREATE PUBLICATION / CREATE SUBSCRIPTION 语法 + 同步周期 + 端到端延迟 + 2-5s 连接窗口 + insecure / TLS conninfo 示例 + `options` key 集合分两组 + `SHOW SUBSCRIPTION` / `CREATE SUBSCRIPTION` per-cluster + conninfo 与 `${db_url}` 一致性 + 数据库清理归属(由流水线负责)
+- [x] 6.2 `test_cfg.yaml::pub_sub_config` 字段 → 生成 DDL / JMX 元素映射表覆盖:`publisher_db` / `publication_name` / `subscription_name` / `conninfo` / `tables` / `expected_min_rows` + `subscriber_db = <publisher_db>_sub` 派生规则
+- [x] 6.3 `tables` 校验规则段:multi-table 不可 columns/where;columns 必须含所有 primary_tags + NOT NULL data_cols;where 字符串 parse 时不语法校验
 
 ## 7. smoke skill 修订(发布订阅相关补充说明)
 
