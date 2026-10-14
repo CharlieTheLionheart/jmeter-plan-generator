@@ -790,18 +790,31 @@ jmeter -n -t /data/jmeter-int-tables/test_plan.jmx \
 > 侧**负责. 这是 design.md Context 锁定 ("DROP 操作稳定性属功能测试
 > 范畴; 测试计划仅在流水线内集成, 数据库清理由流水线侧负责").
 
-推荐 operator-side cleanup 顺序 (per §0 scope 锁定):
+#### 7.4.1 重跑前必须清理之前的状态 (insecure 容器复用场景)
+
+> **关键**: insecure 容器 (per §7.0) 没有 TLS, **不**支持自动重置状态; **同一
+> 容器**反复跑 pub_sub smoke **之前**, 必须**手动**先 DROP 之前创建的
+> `iot_monitor` / `iot_monitor_sub` db + publication + subscription + 内部
+> 表, 否则下一轮 SetupTG 会因 `create ts database if not exists iot_monitor`
+> (已存在) 或 `create publication` (已存在) 失败。
+
+按下面 §7.4.2 顺序 DROP 之前的状态, 再跑下一轮 smoke。
+
+#### 7.4.2 推荐 operator-side cleanup 顺序 (per §0 scope 锁定)
+
 ```sql
 -- 1. drop subscription (先停 CDC 拉取)
 DROP SUBSCRIPTION sub_iot;
+DROP SUBSCRIPTION sub_iot_tables;  -- 第二份 fixture 的 subscription
 
 -- 2. drop publication (停 publisher 端 CDC 输出)
 DROP PUBLICATION pub_iot;
+DROP PUBLICATION pub_iot_tables;    -- 第二份 fixture 的 publication
 
 -- 3. drop subscriber db (清理 subscriber 端表 + db)
 DROP DATABASE iot_monitor_sub;
 
--- 4. drop publisher db (可选, 清理 publisher 端表 + db)
+-- 4. drop publisher db (清理 publisher 端表 + db)
 DROP DATABASE iot_monitor;
 ```
 
