@@ -158,7 +158,7 @@ def _build_pubsub_config() -> PubSubConfig:
         publication_name="pub_iot",
         subscription_name="sub_iot",
         conninfo="postgresql://root@localhost:26257/iot_monitor?sslmode=disable",
-        options={"target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc"},
+        options={"target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}'},
     )
 
 

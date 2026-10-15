@@ -22,7 +22,7 @@ pub_sub_config:
       columns: [k_timestamp, device_id, col_float8_1]
       where: "col_float8_1 > 0"
   options:
-    target: '{"iot_monitor.t_cnc":"iot_monitor_sub.t_cnc"}'
+    target: '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}'
     ignore_history: "true"
     retry: "5s"
   expected_min_rows: 0

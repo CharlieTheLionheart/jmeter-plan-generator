@@ -29,6 +29,7 @@ from typing import List, Tuple
 
 from config_parser.models import PubSubConfig, TestModelConfig
 from utils.xml_helpers import (
+    empty_hash_tree,
     jdbc_sampler_element,
     jsr223_assertion_element,
     regex_extractor_element,
@@ -58,26 +59,32 @@ def _build_show_subscription_status_sampler(
     query runs on the default-pool connection regardless of which db
     the subscription logically serves.
     """
-    # 解构 jdbc_sampler_element 忽略 paired hashTree
-    # (caller 端负责把 sampler 放到合适的 hashTree 位置,见 design.md line 559-572)
-    sampler, _ = jdbc_sampler_element(
+    # JMeter schema 要求 sampler + paired hashTree 交替 (per JMXAssembler
+    # docstring line 37-38: "component, <hashTree/>, component, ...");
+    # regex_extractor / jsr223_assertion 必须在 sampler 自己的 paired hashTree
+    # 内部, 不是 sampler 元素内部 (实测 ~/Downloads/JSR223 Assertion.jmx
+    # line 35-56 是这个结构). 直接用 jdbc_sampler_element 返回的 sampler_hash
+    # 装 child + 各自 paired empty hashTree (per rest_write_groups.py:515-522).
+    sampler, sampler_hash = jdbc_sampler_element(
         name=f"ShowSubscription-{subscription_name}",
         query=f"show subscription {subscription_name}",
         variable_names="status",
     )
-    sampler.append(regex_extractor_element(
+    sampler_hash.append(regex_extractor_element(
         ref_name="sub_status",
         regex=r"status\s*\|\s*(\w+)",
         template="$1$",
         match_number=1,
     ))
-    sampler.append(jsr223_assertion_element(
+    sampler_hash.append(empty_hash_tree())  # paired with RegexExtractor
+    sampler_hash.append(jsr223_assertion_element(
         script=f"""
 def s = vars.get('sub_status')
 assert s != null && s.contains('running') : 'subscription not running, status=' + s
 """,
     ))
-    return sampler
+    sampler_hash.append(empty_hash_tree())  # paired with JSR223Assertion
+    return sampler, sampler_hash
 
 
 def _build_count_sampler(
@@ -103,19 +110,22 @@ def _build_count_sampler(
     db name is a caller-context hint (used by the verify TG assembly
     loop in §3.6 to iterate over ``test_model_config.ts_dbs``).
     """
-    # 解构 jdbc_sampler_element 忽略 paired hashTree (同上注释)
-    sampler, _ = jdbc_sampler_element(
+    # 同 _build_show_subscription_status_sampler: child + 各自 paired
+    # empty hashTree 装到 sampler 自己的 sampler_hash 内 (per rest_write_groups
+    # 模式 + JMeter schema 严格 alternating)
+    sampler, sampler_hash = jdbc_sampler_element(
         name=f"CountRows-{subscriber_db}-{table_name}",
         query=f"select count(*) from {subscriber_db}.{table_name}",
         variable_names="count",
     )
-    sampler.append(jsr223_assertion_element(
+    sampler_hash.append(jsr223_assertion_element(
         script=f"""
 def n = vars.get('count_1') as int
 assert n >= {expected_min_rows} : 'row count ' + n + ' below threshold {expected_min_rows}'
 """,
     ))
-    return sampler
+    sampler_hash.append(empty_hash_tree())  # paired with JSR223Assertion
+    return sampler, sampler_hash
 
 
 def generate_pub_sub_verify_tg(
@@ -160,22 +170,27 @@ def generate_pub_sub_verify_tg(
         else 1
     )
 
-    # 收集所有 sampler 列表, 一次性传给 §2 helper 的 children kwarg
-    # (per F 决定: aligned paired hashTree 模式)
-    samplers: List[ET.Element] = [
-        _build_show_subscription_status_sampler(
-            subscription_name=pub_sub_config.subscription_name,
-            subscriber_db=sub_db,  # = <publisher_db>_sub
-        ),
-    ]
+    # 收集所有 sampler + paired hashTree 元组, 展平为
+    # (sampler, hashTree, sampler, hashTree, ...) 序列 传给 §2 helper
+    # 的 children kwarg (per F 决定: aligned paired hashTree 模式).
+    # JMeter schema 要求 component + paired hashTree 交替, 所以 sampler 和
+    # 它自己的 paired hashTree 必须相邻 — 展平后顺序正确
+    # (per JMXAssembler docstring line 37-38).
+    sampler_pairs: List[ET.Element] = []
+    show_sampler, show_hash = _build_show_subscription_status_sampler(
+        subscription_name=pub_sub_config.subscription_name,
+        subscriber_db=sub_db,  # = <publisher_db>_sub
+    )
+    sampler_pairs.extend([show_sampler, show_hash])
     for ts_db in test_model_config.ts_dbs:
         for table in ts_db.tables:
-            samplers.append(_build_count_sampler(
+            count_sampler, count_hash = _build_count_sampler(
                 publisher_db=ts_db.name,
                 table_name=table.name,
                 subscriber_db=sub_db,  # = <publisher_db>_sub
                 expected_min_rows=expected_min_rows,
-            ))
+            )
+            sampler_pairs.extend([count_sampler, count_hash])
 
     return teardown_thread_group_element(
         name=f"VerifyTearDownTG-PubSub-{pub_sub_config.subscription_name}",
@@ -183,5 +198,5 @@ def generate_pub_sub_verify_tg(
         ramp_time=1,
         delay=60,  # 主 TG 结束后等 60s 让 CDC 同步完成
         # duration 不显式设: per §2 helper 不输出 ThreadGroup.duration
-        children=samplers,
+        children=sampler_pairs,
     )

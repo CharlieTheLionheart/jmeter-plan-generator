@@ -31,7 +31,7 @@ from pub_sub.subscribe_dest_schemas import (
     build_create_subscription_sql,
     build_subscribe_dest_schemas,
 )
-from utils.xml_helpers import jdbc_sampler_element
+from utils.xml_helpers import empty_hash_tree, jdbc_sampler_element
 
 
 # F-009 caller 过滤契约: caller 端在调用 build_publication_sql /
@@ -92,6 +92,9 @@ def append_pub_sub_to_setup_tg(
         query=pub_sql,
     )
     setup_tg_element.append(pub_sampler)
+    # JMeter schema: sampler 必须紧跟 paired empty hashTree (per §6.4 / JMX
+    # saved format); 不加 hashTree → 后续 sampler 被当 hashTree cast 报错
+    setup_tg_element.append(empty_hash_tree())
 
     # 步骤 2 + 3 合并: CREATE TS DATABASE sub + CREATE TABLE sub.x 合并到单 sampler
     # (per 2026-10-12 user 提议: KaiwuDB JDBC driver 支持 `;` 分隔多条 SQL)
@@ -104,6 +107,7 @@ def append_pub_sub_to_setup_tg(
         query=combined_subscriber_ddl,
     )
     setup_tg_element.append(ddl_sampler)
+    setup_tg_element.append(empty_hash_tree())
 
     # 步骤 4: CREATE SUBSCRIPTION
     # F-009 caller 过滤契约: 只把 subscription-side keys 传给 build_create_subscription_sql
@@ -123,3 +127,4 @@ def append_pub_sub_to_setup_tg(
         query=sub_sql,
     )
     setup_tg_element.append(sub_sampler)
+    setup_tg_element.append(empty_hash_tree())

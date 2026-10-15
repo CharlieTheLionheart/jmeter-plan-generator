@@ -105,7 +105,11 @@ def _build_pubsub_config(
 ) -> PubSubConfig:
     """Build a PubSubConfig that passes self-consistent validation."""
     if options is None:
-        options = {"target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc"}
+        # Per sub-sql.md + V3.3.0 实测: target 必须 3 段 + enable='on'
+        options = {
+            "target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}',
+            "enable": "on",
+        }
     return PubSubConfig(
         publisher_db=publisher_db,
         publication_name=publication_name,
@@ -283,7 +287,7 @@ class TestAppendPubSubToSetupTgCreateSubscription:
         setup_tg = _build_setup_tg()
         test_model = _build_test_model()
         pubsub = _build_pubsub_config(
-            options={"target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc"},
+            options={"target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}'},
         )
         append_pub_sub_to_setup_tg(setup_tg, pubsub, test_model)
 
@@ -295,7 +299,8 @@ class TestAppendPubSubToSetupTgCreateSubscription:
         assert "CONNECTION 'postgresql://root@localhost:26257/iot_monitor?sslmode=disable'" in prop.text
         assert "PUBLICATION pub_iot" in prop.text
         assert "WITH OPTIONS" in prop.text
-        assert "target = iot_monitor.t_cnc=iot_monitor_sub.t_cnc" in prop.text
+        # target value 整体用单引号包 JSON (per sub-sql.md line 28 + V3.3.0 实测)
+        assert "target = '{\"iot_monitor.public.t_cnc\":\"iot_monitor_sub.public.t_cnc\"}'" in prop.text
 
     def test_create_subscription_caller_filters_options(self) -> None:
         """Caller 过滤契约 (F-009): 7-key options 中只把 subscription-side keys
@@ -309,7 +314,7 @@ class TestAppendPubSubToSetupTgCreateSubscription:
         pubsub = _build_pubsub_config(
             options={
                 "buffer_size": "4",  # publication-side, 应被过滤
-                "target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc",  # subscription-side, 保留
+                "target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}',  # subscription-side, 保留
             },
         )
         append_pub_sub_to_setup_tg(setup_tg, pubsub, test_model)
@@ -330,10 +335,10 @@ class TestAppendPubSubToSetupTgCreateSubscription:
         test_model = _build_test_model()
         pubsub = _build_pubsub_config(
             options={
-                "target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc",
+                "target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}',
                 "enable": "on",
-                "ignore_history": "true",
-                "retry": "5s",
+                "ignore_history": "on",  # per sub-sql.md line 28: on/off
+                "retry": "5",  # per sub-sql.md line 28: 数字 0-10 字面
                 # publication-side keys (应被过滤):
                 "buffer_size": "4",
                 "retrieve_tags": "true",
@@ -372,7 +377,7 @@ class TestAppendPubSubToSetupTgCreateSubscription:
         pubsub = _build_pubsub_config(
             options={
                 "buffer_size": "4",  # publication-side, 应在 CreatePublication
-                "target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc",  # subscription-side, 不应在
+                "target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}',  # subscription-side, 不应在
             },
         )
         append_pub_sub_to_setup_tg(setup_tg, pubsub, test_model)

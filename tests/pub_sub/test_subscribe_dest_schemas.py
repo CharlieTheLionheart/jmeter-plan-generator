@@ -183,10 +183,22 @@ class TestBuildSubscribeDestSchemasSubDbConvention:
 # ===========================================================================
 
 class TestBuildCreateSubscriptionSql:
-    """``CREATE SUBSCRIPTION`` SQL 字符串拼接(per design.md line 323-333).
+    """``CREATE SUBSCRIPTION`` SQL 字符串拼接.
+
+    Per docs/refs/kaiwudb-pubsub-references.md §1 官方示例(line 47) +
+    V3.3.0 实测(host-native + ent 3.3.0 镜像):
 
     基础形态: ``CREATE SUBSCRIPTION <name> CONNECTION '<conninfo>' PUBLICATION <pub_name>``
-    (末尾可选 `` WITH OPTIONS (...)``)。
+    (末尾可选 `` WITH OPTIONS (target = '<JSON>')``)。
+
+    关键约束(per V3.3.0 实测):
+    - ``target`` value 必须是 3 段表名 ``<db>.<schema>.<table>``(默认 schema
+      是 ``public``,2 段自动补)
+    - ``target`` value 用单引号包 JSON object literal
+      (例 ``'{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}'``)
+    - server 自动 default ``enable=on`` / ``retry=5`` / ``ignore_history=on``;
+      写多 option 会触发语法错误(at or near "on"/"true"/"5"),所以 SQL
+      builder 只透传 ``target``,忽略其他 subscription-side keys
     """
 
     def test_basic_no_options(self) -> None:
@@ -220,7 +232,7 @@ class TestBuildCreateSubscriptionSql:
         assert "WITH OPTIONS" not in sql
 
     def test_options_empty_dict_no_with_options(self) -> None:
-        """``options={}`` → 不追加 ``WITH OPTIONS`` (防御性覆盖,per design.md scope note)."""
+        """``options={}`` → 不追加 ``WITH OPTIONS`` (防御性覆盖)."""
         sql = build_create_subscription_sql(
             "sub_iot", "pub_iot",
             "postgresql://root@localhost:26257/iot_monitor?sslmode=disable",
@@ -228,67 +240,94 @@ class TestBuildCreateSubscriptionSql:
         )
         assert "WITH OPTIONS" not in sql
 
-    def test_options_appended(self) -> None:
-        """``options`` 非空 → 末尾追加 `` WITH OPTIONS (...)``."""
-        sql = build_create_subscription_sql(
-            "sub_iot", "pub_iot",
-            "postgresql://root@localhost:26257/iot_monitor?sslmode=disable",
-            options={"target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc"},
-        )
-        assert sql == (
-            "CREATE SUBSCRIPTION sub_iot "
-            "CONNECTION 'postgresql://root@localhost:26257/iot_monitor?sslmode=disable' "
-            "PUBLICATION pub_iot "
-            "WITH OPTIONS (target = iot_monitor.t_cnc=iot_monitor_sub.t_cnc)"
-        )
+    def test_options_no_target_key_still_emits_with_options(self) -> None:
+        """``options`` 无 ``target`` key 但有其他 keys → **仍然** 追加
+        ``WITH OPTIONS``(包含 enable/retry/ignore_history)。
 
-    def test_options_insertion_order_preserved(self) -> None:
-        """``options`` dict 插入顺序保留 (Python 3.7+ dict iteration order)."""
+        Per V3.3.0 实测 + sub-sql.md:4 个 subscription-side keys 各自独立
+        可用。本 DCR ``PubSubConfig.options.target`` 必填 (per D5),caller
+        注入永远含 target,本分支仅作多集群扩展预留。"""
         sql = build_create_subscription_sql(
             "sub_iot", "pub_iot",
             "postgresql://root@localhost:26257/iot_monitor?sslmode=disable",
-            options={
-                "target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc",
-                "enable": "on",
-            },
+            options={"enable": "on", "retry": "5"},
         )
-        # 插入顺序: target → enable
-        assert sql.endswith(
-            "WITH OPTIONS (target = iot_monitor.t_cnc=iot_monitor_sub.t_cnc, enable = on)"
-        )
-        # 换插入顺序确认不是字母序
-        sql2 = build_create_subscription_sql(
-            "sub_iot", "pub_iot",
-            "postgresql://root@localhost:26257/iot_monitor?sslmode=disable",
-            options={
-                "enable": "on",
-                "target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc",
-            },
-        )
-        assert sql2.endswith("WITH OPTIONS (enable = on, target = iot_monitor.t_cnc=iot_monitor_sub.t_cnc)")
+        assert "WITH OPTIONS" in sql
+        assert "enable = 'on'" in sql
+        assert "retry = 5" in sql
 
-    def test_all_four_subscription_side_keys(self) -> None:
-        """4 个 subscription-side keys 都接受 (``target`` / ``enable`` /
-        ``ignore_history`` / ``retry``,per design.md line 329)."""
+    def test_all_four_subscription_side_keys_with_correct_value_forms(self) -> None:
+        """``options`` 含 4 个 subscription-side keys → 全部进 SQL,各自 value 形式按 sub-sql.md:
+
+        - ``target`` 单引号包 JSON,3 段
+        - ``enable`` / ``ignore_history`` 单引号包 value
+        - ``retry`` 数字字面(无引号)
+
+        Per sub-sql.md line 114 官方 ALTER 例子: ``enable = 'on'``。"""
         sql = build_create_subscription_sql(
             "sub_iot", "pub_iot",
             "postgresql://root@localhost:26257/iot_monitor?sslmode=disable",
             options={
-                "target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc",
+                "target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}',
                 "enable": "on",
-                "ignore_history": "true",
-                "retry": "5s",
+                "ignore_history": "on",
+                "retry": "5",
             },
         )
-        # 插入顺序保留
         assert sql.endswith(
             "WITH OPTIONS ("
-            "target = iot_monitor.t_cnc=iot_monitor_sub.t_cnc, "
-            "enable = on, "
-            "ignore_history = true, "
-            "retry = 5s"
+            "target = '{\"iot_monitor.public.t_cnc\":\"iot_monitor_sub.public.t_cnc\"}', "
+            "enable = 'on', "
+            "ignore_history = 'on', "
+            "retry = 5"
             ")"
         )
+
+    def test_target_value_wrapped_in_single_quotes(self) -> None:
+        """``target`` value 整体用单引号包(JSON string literal).
+
+        Per V3.3.0 实测 + reference §1 官方示例:
+        ``target='{"benchmark.public.cpu":"sub_bench.public.sub_cpu"}'``.
+
+        Note: fixture 必须写 3 段 ``<db>.public.<table>``(per V3.3.0
+        实测 2 段触发 ``replication from scheme "" is unsupported``)。本测试
+        用 3 段 input 验证单引号包 JSON 的拼接逻辑;2 段自动补段行为见
+        ``test_target_2_segment_gets_public_added``。"""
+        sql = build_create_subscription_sql(
+            "sub_iot", "pub_iot",
+            "postgresql://root@localhost:26257/iot_monitor?sslmode=disable",
+            options={"target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}'},
+        )
+        assert "target = '{\"iot_monitor.public.t_cnc\":\"iot_monitor_sub.public.t_cnc\"}'" in sql
+
+    def test_target_2_segment_gets_public_added(self) -> None:
+        """``target`` 2 段表名 ``<db>.<table>`` → 自动补 ``.public.`` 中间段.
+
+        Per V3.3.0 实测:2 段报 ``replication from scheme \"\" is unsupported``;
+        3 段 OK. 所以 generator 在 SQL 拼接时自动补 ``public`` schema."""
+        sql = build_create_subscription_sql(
+            "sub_iot", "pub_iot",
+            "postgresql://root@localhost:26257/iot_monitor?sslmode=disable",
+            options={"target": '{"iot_monitor.t_cnc":"iot_monitor_sub.t_cnc"}'},
+        )
+        # 2 段表名 → 3 段
+        assert "iot_monitor.public.t_cnc" in sql
+        assert "iot_monitor_sub.public.t_cnc" in sql
+        # 不应保留 2 段
+        assert '"iot_monitor.t_cnc"' not in sql
+        assert '"iot_monitor_sub.t_cnc"' not in sql
+
+    def test_target_3_segment_unchanged(self) -> None:
+        """``target`` 已是 3 段 ``<db>.public.<table>`` → 不修改."""
+        sql = build_create_subscription_sql(
+            "sub_iot", "pub_iot",
+            "postgresql://root@localhost:26257/iot_monitor?sslmode=disable",
+            options={"target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}'},
+        )
+        assert "iot_monitor.public.t_cnc" in sql
+        assert "iot_monitor_sub.public.t_cnc" in sql
+        # 不会被错误地补成 4 段
+        assert "iot_monitor.public.public.t_cnc" not in sql
 
     def test_connection_quoted_with_single_quote(self) -> None:
         """``conninfo`` 用单引号包裹 (per design.md line 331)."""

@@ -18,7 +18,7 @@ pub_sub_config:
   subscription_name: sub_iot
   conninfo: postgresql://root@127.0.0.1:26257/iot_monitor?sslmode=disable
   options:
-    target: '{"iot_monitor.t_cnc":"iot_monitor_sub.t_cnc"}'
+    target: '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}'
     enable: "on"
   # tables 为 null → 整库模式 (per design.md D1 段)
   # expected_min_rows 未设 → Verify TG 内联默认 1 (per D3 段)

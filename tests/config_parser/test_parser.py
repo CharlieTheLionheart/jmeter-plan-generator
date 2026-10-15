@@ -98,7 +98,7 @@ def test_parse_pub_sub_database_mode_fixture() -> None:
     assert pub_sub.tables is None  # 整库模式
     assert pub_sub.expected_min_rows is None  # 默认 (Verify TG 内联 1)
     assert pub_sub.options == {
-        "target": '{"iot_monitor.t_cnc":"iot_monitor_sub.t_cnc"}',
+        "target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}',
         "enable": "on",
     }
 
@@ -127,7 +127,7 @@ def test_parse_pub_sub_table_mode_fixture() -> None:
     assert entry.where == "col_float8_1 > 0"
     assert pub_sub.expected_min_rows == 0
     assert pub_sub.options == {
-        "target": '{"iot_monitor.t_cnc":"iot_monitor_sub.t_cnc"}',
+        "target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}',
         "ignore_history": "true",
         "retry": "5s",
     }
