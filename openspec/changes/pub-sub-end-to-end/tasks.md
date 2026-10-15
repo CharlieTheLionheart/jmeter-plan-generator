@@ -139,11 +139,11 @@
 
 ## 8. Phase B: 本地容器冒烟测试(**§5 + §7 通过后**)
 
-- [ ] 8.1 启动本地 KaiwuDB Docker container(insecure 容器,`?sslmode=disable`,per skill §7 修订)
-- [ ] 8.2 跑 `(a) test_cfg_pub_sub.yaml` 端到端:`python -m kwjdbc_svt.main ...` 生成 .jmx + `jmeter -n -t test_plan.jmx -J...`,断言 SetupTG 全部 `code==0` + Write TG JTL 100% 成功 + Verify TG `count(*) >= 1` + SHOW SUBSCRIPTION `status` 含 `running`
-- [ ] 8.3 跑 `(b) test_cfg_pub_sub_tables.yaml` 端到端:断言 SetupTG 全部 `code==0` + Write TG JTL 100% 成功 + Verify TG `count(*) >= 0`(走恒真 WHERE 过滤场景)+ SHOW SUBSCRIPTION `status` 含 `running`
-- [ ] 8.4 数据库清理 operator-side 流程验证:`DROP SUBSCRIPTION` → `DROP PUBLICATION` → `DROP DATABASE` 可正常执行(归属流水线,本任务不写自动化,只记录可执行)
-- [ ] 8.5 **冒烟通过**:两条 fixture 数据组合(整库 / 表级+列子集+WHERE) 端到端无失败,Verify TG row 阈值断言 / subscription status 断言 全过
+- [x] 8.1 启动本地 KaiwuDB 容器(per §7 skill 修订:用 V3.3.0-dirty host-native build `10.110.105.65:5000/svt_images/kaiwudb-x86_64-ent-0824dev30:3.3.0` insecure 模式 + `?sslmode=disable`; 实测 dmidecode 修复后容器起来 OK)
+- [x] 8.2 跑 `(a) test_cfg_pub_sub.yaml` 端到端:`python -m kwjdbc_svt.main ...` 生成 .jmx + `jmeter -n -t test_plan.jmx -Jtest_duration=300`,断言 SetupTG 全部 `code==0` + Write TG JTL 100% 成功 + Verify TG `count(*) >= 1`(per D7 推翻, **不**再走 SHOW SUBSCRIPTION status 断言)
+- [x] 8.3 跑 `(b) test_cfg_pub_sub_tables.yaml` 端到端:断言 SetupTG 全部 `code==0` + Write TG JTL 100% 成功 + Verify TG `count(*) >= 0`(走恒真 WHERE 过滤场景); column subset `[ts, ptag_varchar_1, col_float4_1]` + `WHERE col_float4_1 > 0` CDC 同步 200 rows(per D7 推翻, **不**再走 SHOW SUBSCRIPTION status 断言)
+- [x] 8.4 数据库清理 operator-side 流程验证:`DROP SUBSCRIPTION` → `DROP PUBLICATION` → `DROP DATABASE` 可正常执行(归属流水线,本任务不写自动化,只记录可执行)— 已验证 (a) + (b) 跑完均 cleanup 干净
+- [x] 8.5 **冒烟通过**:两条 fixture 数据组合(整库 / 表级+列子集+WHERE) 端到端无失败 (commit `60f8c53` §8 smoke 集成修复落地),Verify TG `count(*)` row 阈值断言全过(per D7 推翻, 不再走 SHOW SUBSCRIPTION status 断言); iot_monitor.t_cnc 200 rows → iot_monitor_sub.t_cnc 200 rows CDC 同步两条 fixture 都验证
 
 ---
 
