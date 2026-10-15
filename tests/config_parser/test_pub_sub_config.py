@@ -235,8 +235,8 @@ class TestPubSubConfigValidators:
                 "retrieve_tags": "true",
                 "publish": "insert",
                 "enable": "on",
-                "ignore_history": "true",
-                "retry": "5s",
+                "ignore_history": "on",
+                "retry": "5",
             }
         )
         assert set(cfg.options) == {

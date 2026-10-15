@@ -19,10 +19,10 @@ pub_sub_config:
   conninfo: postgresql://root@127.0.0.1:26257/iot_monitor?sslmode=disable
   tables:
     - name: t_cnc
-      columns: [k_timestamp, device_id, col_float8_1]
-      where: "col_float8_1 > 0"
+      columns: [ts, ptag_varchar_1, col_float4_1]
+      where: "col_float4_1 > 0"
   options:
     target: '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}'
-    ignore_history: "true"
-    retry: "5s"
+    ignore_history: "on"
+    retry: "5"
   expected_min_rows: 0

@@ -274,10 +274,10 @@ def setup_thread_group_element(
     *,
     num_threads: Union[int, str] = 1,
     ramp_time: Union[int, str] = 1,
-    duration: Optional[str] = None,
+    duration: Optional[str] = "600",
     delay: Union[int, str] = 0,
     loops: Union[int, str] = 1,
-    scheduler: bool = True,
+    scheduler: bool = False,
     props: Optional[List[ET.Element]] = None,
     testname: Optional[str] = None,
     children: Optional[List[ET.Element]] = None,
@@ -293,8 +293,8 @@ def setup_thread_group_element(
         string_prop("SetupThreadGroup.on_sample_error", "continue"),
         string_prop("ThreadGroup.num_threads", str(num_threads)),
         string_prop("ThreadGroup.ramp_time", str(ramp_time)),
-        string_prop("ThreadGroup.duration", str(duration) if duration else ""),
-        string_prop("ThreadGroup.delay", str(delay)),
+        long_prop("ThreadGroup.duration", str(duration) if duration else ""),
+        long_prop("ThreadGroup.delay", str(delay)),
         bool_prop("ThreadGroup.same_user_on_next_iteration", "true"),
         bool_prop("ThreadGroup.scheduler", "true" if scheduler else "false"),
         element_prop(
@@ -378,7 +378,7 @@ def jdbc_sampler_element(
     name: str,
     query: str = "",
     *,
-    data_source: str = "default_pool",
+    data_source: str = "jdbcConfig",
     query_type: str = "Update Statement",
     query_arguments: str = "",
     query_arguments_types: str = "",
@@ -902,7 +902,7 @@ def teardown_thread_group_element(
     *,
     num_threads: Union[int, str] = 1,
     ramp_time: Union[int, str] = 1,
-    duration: Optional[str] = None,
+    duration: Optional[str] = "600",
     delay: Union[int, str] = 60,
     loops: Union[int, str] = 1,
     scheduler: bool = True,
@@ -952,14 +952,10 @@ def teardown_thread_group_element(
         int_prop("ThreadGroup.ramp_time", str(ramp_time)),
         # NOTE: ThreadGroup.duration is intentionally OMITTED unless
         # explicitly passed. Per docs §PostThreadGroup 关键差异段:
-        # JMeter 5.6.3 default does not emit
-        # <longProp name="ThreadGroup.duration"> for PostThreadGroup;
-        # TG 自然结束 after sampler list runs out.
-        *(
-            [string_prop("ThreadGroup.duration", str(duration))]
-            if duration
-            else []
-        ),
+        # ThreadGroup.duration 总是输出: JMeter 5.6.3 PostThreadGroup 硬约束
+        # ``duration > 0``, 缺字段 / 空字符串 报 ``Invalid duration 0``.
+        # 默认 600s (per user 2026-10-15: 创发布/订阅 + Verify 链路 5-10 分钟内完成足够).
+        long_prop("ThreadGroup.duration", str(duration)),
         long_prop("ThreadGroup.delay", str(delay)),
         bool_prop(
             "ThreadGroup.same_user_on_next_iteration",

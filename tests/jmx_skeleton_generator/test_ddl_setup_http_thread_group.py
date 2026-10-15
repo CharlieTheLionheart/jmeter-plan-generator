@@ -502,10 +502,17 @@ def test_setprop_script_guards_against_null_or_empty_token():
 # ---------------------------------------------------------------------------
 
 
-def test_setup_thread_group_duration_uses_test_duration_udv():
-    """``SetupThreadGroup.duration`` 必须是 ``${test_duration}`` UDV 引用
-    （非硬编字面 ``1`` / ``30``）。原因：TLS 握手 + DDL RTT 通常 ≥2s，
-    硬编短值会让 Login 之后的 DDL-1 / DDL-2 被 scheduler 截止掉。
+def test_setup_thread_group_duration_default_600():
+    """``SetupThreadGroup.duration`` 默认输出字面 ``600``(硬编码,
+    不跟 ``${test_duration}`` UDV 走). Per user 2026-10-15 决策:
+
+    - SetupThreadGroup 不勾选 "Specify Thread lifetime"(scheduler=false)
+    - duration 字面 600 兜底(防止 JMeter 5.6.3 缺字段报错)
+    - Setup TG 1 thread + 1 loop 自然结束,不受 duration 限制
+
+    之前(commit `493f925` 之前)SetupThreadGroup 用 ``${test_duration}``
+    UDV 跟 test_duration 走,但 user 反馈"Setup TG 怎么能指定 duration
+    为 test_duration 呢"推翻 — Setup TG 应该跟 test_duration 解耦。
     """
     elems = generate_ddl_setup_http_thread_group(
         ["CREATE DATABASE foo", "CREATE TABLE t1"],
@@ -515,17 +522,12 @@ def test_setup_thread_group_duration_uses_test_duration_udv():
     setup_tg = elems[0]
     duration_prop = None
     for sp in setup_tg:
-        if _local(sp.tag) == "stringProp" and sp.get("name") == "ThreadGroup.duration":
+        if _local(sp.tag) == "longProp" and sp.get("name") == "ThreadGroup.duration":
             duration_prop = sp.text
             break
     assert duration_prop is not None, (
         "SetupThreadGroup 必须有 ThreadGroup.duration stringProp"
     )
-    assert duration_prop == "${test_duration}", (
-        f"SetupThreadGroup.duration 必须是 ${{test_duration}} UDV 形式, "
-        f"got {duration_prop!r}"
-    )
-    # 反例：不能是字面 1 / 30 / 任意秒数
-    assert duration_prop not in ("1", "30", "60", "120"), (
-        f"SetupThreadGroup.duration 不能硬编秒数, got {duration_prop!r}"
+    assert duration_prop == "600", (
+        f"SetupThreadGroup.duration 默认字面 600, got {duration_prop!r}"
     )

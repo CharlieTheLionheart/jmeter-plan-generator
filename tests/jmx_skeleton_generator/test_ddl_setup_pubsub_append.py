@@ -254,14 +254,6 @@ class TestWithPubSubConfig:
         elements = list(tree.getroot())
         assert _has_node_with_testname(elements, "VerifyTearDownTG-PubSub-sub_iot")
 
-    def test_verify_tg_has_show_subscription_status_sampler(self, tmp_output_dir) -> None:
-        """VerifyTG 含 ``ShowSubscription-sub_iot`` sampler."""
-        cfg = _build_test_config(pub_sub_config=_build_pubsub_config())
-        _build_generator(cfg, _build_test_model(), tmp_output_dir).generate()
-        tree = ET.parse(str(tmp_output_dir / "test_plan.jmx"))
-        elements = list(tree.getroot())
-        assert _has_node_with_testname(elements, "ShowSubscription-sub_iot")
-
     def test_verify_tg_has_count_sampler_per_table(self, tmp_output_dir) -> None:
         """VerifyTG 含 N 个 count sampler (每张 ts_table 一条, 1 张表 → 1 个).
 

@@ -91,10 +91,6 @@ def generate_ddl_setup_thread_group(
         testname=name,
         num_threads=num_threads,
         ramp_time=1,
-        duration="${test_duration}",
-        delay=0,
-        loops=1,
-        scheduler=True,
         children=children,
     )
     return [stg, stg_hash]
@@ -487,10 +483,6 @@ def generate_ddl_setup_http_thread_group(
         testname=name,
         num_threads=num_threads,
         ramp_time=1,
-        duration="${test_duration}",
-        delay=0,
-        loops=1,
-        scheduler=True,
         children=children,
     )
     return [stg, stg_hash]

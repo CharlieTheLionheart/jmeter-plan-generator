@@ -37,56 +37,6 @@ from utils.xml_helpers import (
 )
 
 
-def _build_show_subscription_status_sampler(
-    subscription_name: str,
-    subscriber_db: str,
-) -> ET.Element:
-    """Build the ``SHOW SUBSCRIPTION <name>`` sampler for the Verify TG.
-
-    Per design.md line 580-599:
-    - JDBCSampler name = ``ShowSubscription-{subscription_name}``
-    - JDBCSampler query = ``SHOW SUBSCRIPTION {subscription_name}``
-    - JDBCSampler ``variable_names='status'`` (JDBC Request binds first
-      column to ``vars.get('status')``)
-    - RegexExtractor ``ref_name='sub_status'`` extracts ``status`` column
-      from the pipe-separated ``SHOW SUBSCRIPTION`` output
-    - JSR223Assertion asserts ``vars.get('sub_status')?.contains('running')``
-
-    ``subscriber_db`` is accepted for API symmetry with
-    ``_build_count_sampler`` (per tasks.md §3.4.2 signature) but is
-    not used in the sampler: ``SHOW SUBSCRIPTION`` is a per-cluster
-    metadata query (per D5: not bound to a specific database), so the
-    query runs on the default-pool connection regardless of which db
-    the subscription logically serves.
-    """
-    # JMeter schema 要求 sampler + paired hashTree 交替 (per JMXAssembler
-    # docstring line 37-38: "component, <hashTree/>, component, ...");
-    # regex_extractor / jsr223_assertion 必须在 sampler 自己的 paired hashTree
-    # 内部, 不是 sampler 元素内部 (实测 ~/Downloads/JSR223 Assertion.jmx
-    # line 35-56 是这个结构). 直接用 jdbc_sampler_element 返回的 sampler_hash
-    # 装 child + 各自 paired empty hashTree (per rest_write_groups.py:515-522).
-    sampler, sampler_hash = jdbc_sampler_element(
-        name=f"ShowSubscription-{subscription_name}",
-        query=f"show subscription {subscription_name}",
-        variable_names="status",
-    )
-    sampler_hash.append(regex_extractor_element(
-        ref_name="sub_status",
-        regex=r"status\s*\|\s*(\w+)",
-        template="$1$",
-        match_number=1,
-    ))
-    sampler_hash.append(empty_hash_tree())  # paired with RegexExtractor
-    sampler_hash.append(jsr223_assertion_element(
-        script=f"""
-def s = vars.get('sub_status')
-assert s != null && s.contains('running') : 'subscription not running, status=' + s
-""",
-    ))
-    sampler_hash.append(empty_hash_tree())  # paired with JSR223Assertion
-    return sampler, sampler_hash
-
-
 def _build_count_sampler(
     publisher_db: str,
     table_name: str,
@@ -116,6 +66,7 @@ def _build_count_sampler(
     sampler, sampler_hash = jdbc_sampler_element(
         name=f"CountRows-{subscriber_db}-{table_name}",
         query=f"select count(*) from {subscriber_db}.{table_name}",
+        query_type="Select Statement",
         variable_names="count",
     )
     sampler_hash.append(jsr223_assertion_element(
@@ -177,11 +128,6 @@ def generate_pub_sub_verify_tg(
     # 它自己的 paired hashTree 必须相邻 — 展平后顺序正确
     # (per JMXAssembler docstring line 37-38).
     sampler_pairs: List[ET.Element] = []
-    show_sampler, show_hash = _build_show_subscription_status_sampler(
-        subscription_name=pub_sub_config.subscription_name,
-        subscriber_db=sub_db,  # = <publisher_db>_sub
-    )
-    sampler_pairs.extend([show_sampler, show_hash])
     for ts_db in test_model_config.ts_dbs:
         for table in ts_db.tables:
             count_sampler, count_hash = _build_count_sampler(

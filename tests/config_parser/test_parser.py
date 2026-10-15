@@ -123,13 +123,13 @@ def test_parse_pub_sub_table_mode_fixture() -> None:
     assert len(pub_sub.tables) == 1
     entry = pub_sub.tables[0]
     assert entry.name == "t_cnc"
-    assert entry.columns == ["k_timestamp", "device_id", "col_float8_1"]
-    assert entry.where == "col_float8_1 > 0"
+    assert entry.columns == ["ts", "ptag_varchar_1", "col_float4_1"]
+    assert entry.where == "col_float4_1 > 0"
     assert pub_sub.expected_min_rows == 0
     assert pub_sub.options == {
         "target": '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}',
-        "ignore_history": "true",
-        "retry": "5s",
+        "ignore_history": "on",
+        "retry": "5",
     }
 
 

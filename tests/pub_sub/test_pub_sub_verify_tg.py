@@ -29,7 +29,6 @@ from config_parser.models import (
 )
 from pub_sub.pub_sub_verify_tg import (
     _build_count_sampler,
-    _build_show_subscription_status_sampler,
     generate_pub_sub_verify_tg,
 )
 
@@ -110,132 +109,6 @@ def _build_pubsub_config(
         options={"target": "iot_monitor.t_cnc=iot_monitor_sub.t_cnc"},
         expected_min_rows=expected_min_rows,
     )
-
-
-# ===========================================================================
-# _build_show_subscription_status_sampler (§3.4)
-# ===========================================================================
-
-class TestBuildShowSubscriptionStatusSampler:
-    """``SHOW SUBSCRIPTION <name>`` sampler + status 提取 + running 断言.
-
-    Per design.md line 580-599:
-    - JDBCSampler name = ``ShowSubscription-{subscription_name}``
-    - JDBCSampler query = ``SHOW SUBSCRIPTION {subscription_name}``
-    - JDBCSampler variable_names = ``"status"`` (JDBC Request binds
-      first column to ``vars.get('status')``)
-    - 子节点 RegexExtractor: ref_name="sub_status",
-      regex=``r"status\s*\|\s*(\w+)"``, template="$1$", match_number=1
-    - 子节点 JSR223Assertion: script 断言
-      ``vars.get('sub_status')?.contains('running')``
-    """
-
-    def _build(self, subscription_name="sub_iot", subscriber_db="iot_monitor_sub"):
-        return _build_show_subscription_status_sampler(
-            subscription_name, subscriber_db
-        )
-
-    def test_returns_jdbc_sampler_element(self) -> None:
-        """返回 ``<JDBCSampler>`` 元素(per tasks.md §3.4.1 + design.md)."""
-        sampler, sampler_hash = self._build()
-        assert isinstance(sampler, ET.Element)
-        assert _local(sampler.tag) == "JDBCSampler"
-
-    def test_testclass_and_guiclass(self) -> None:
-        """``testclass='JDBCSampler'`` / ``guiclass='TestBeanGUI'``
-        (per JMeter 5.6.3 实测 jdbc_sampler_element 行为)."""
-        sampler, sampler_hash = self._build()
-        assert sampler.attrib["testclass"] == "JDBCSampler"
-        assert sampler.attrib["guiclass"] == "TestBeanGUI"
-
-    def test_sampler_name_uses_subscription_name(self) -> None:
-        """``name='ShowSubscription-{subscription_name}'`` (per design.md line 583)."""
-        sampler, sampler_hash = self._build(subscription_name="sub_iot")
-        assert sampler.attrib["testname"] == "ShowSubscription-sub_iot"
-
-    def test_sampler_query_is_show_subscription(self) -> None:
-        """``query='SHOW SUBSCRIPTION {subscription_name}'`` (per design.md line 584)."""
-        sampler, sampler_hash = self._build(subscription_name="sub_iot")
-        prop = _find_prop(sampler, "stringProp", "query")
-        assert prop is not None
-        assert prop.text == "show subscription sub_iot"
-
-    def test_sampler_variable_names_is_status(self) -> None:
-        """``variable_names='status'`` (per design.md line 585: JDBC Request binds
-        first column to ``vars.get('status')``)."""
-        sampler, sampler_hash = self._build()
-        prop = _find_prop(sampler, "stringProp", "variableNames")
-        assert prop is not None
-        assert prop.text == "status"
-
-    def test_has_regex_extractor_child(self) -> None:
-        """子节点有 ``<RegexExtractor>`` (status 列提取)."""
-        sampler, sampler_hash = self._build()
-        ext = _find_child(sampler_hash, "RegexExtractor")
-        assert ext is not None, "expected RegexExtractor child"
-        assert ext.attrib["testclass"] == "RegexExtractor"
-
-    def test_regex_extractor_refname_is_sub_status(self) -> None:
-        """RegexExtractor.refname = 'sub_status' (per design.md line 588)."""
-        sampler, sampler_hash = self._build()
-        ext = _find_child(sampler_hash, "RegexExtractor")
-        prop = _find_prop(ext, "stringProp", "RegexExtractor.refname")
-        assert prop is not None
-        assert prop.text == "sub_status"
-
-    def test_regex_extractor_regex(self) -> None:
-        """RegexExtractor.regex = ``r"status\s*\|\s*(\w+)"`` (per design.md line 589)."""
-        sampler, sampler_hash = self._build()
-        ext = _find_child(sampler_hash, "RegexExtractor")
-        prop = _find_prop(ext, "stringProp", "RegexExtractor.regex")
-        assert prop is not None
-        assert prop.text == r"status\s*\|\s*(\w+)"
-
-    def test_regex_extractor_template_and_match_number(self) -> None:
-        """RegexExtractor.template='$1$' / match_number=1 (per design.md line 590-591)."""
-        sampler, sampler_hash = self._build()
-        ext = _find_child(sampler_hash, "RegexExtractor")
-        tmpl = _find_prop(ext, "stringProp", "RegexExtractor.template")
-        match = _find_prop(ext, "stringProp", "RegexExtractor.match_number")
-        assert tmpl.text == "$1$"
-        assert match.text == "1"
-
-    def test_has_jsr223_assertion_child(self) -> None:
-        """子节点有 ``<JSR223Assertion>`` (running 断言)."""
-        sampler, sampler_hash = self._build()
-        assertion = _find_child(sampler_hash, "JSR223Assertion")
-        assert assertion is not None, "expected JSR223Assertion child"
-
-    def test_assertion_script_contains_running(self) -> None:
-        """JSR223Assertion script 包含 'running' 字符串(per design.md line 596)."""
-        sampler, sampler_hash = self._build()
-        assertion = _find_child(sampler_hash, "JSR223Assertion")
-        prop = _find_prop(assertion, "stringProp", "script")
-        assert prop is not None
-        assert "running" in prop.text
-
-    def test_assertion_script_uses_sub_status_variable(self) -> None:
-        """JSR223Assertion script 读 ``vars.get('sub_status')`` (per design.md line 595)."""
-        sampler, sampler_hash = self._build()
-        assertion = _find_child(sampler_hash, "JSR223Assertion")
-        prop = _find_prop(assertion, "stringProp", "script")
-        assert prop is not None
-        assert "sub_status" in prop.text
-
-    def test_assertion_script_language_groovy(self) -> None:
-        """JSR223Assertion 默认 ``scriptLanguage='groovy'`` (per JSR223 helper 默认)."""
-        sampler, sampler_hash = self._build()
-        assertion = _find_child(sampler_hash, "JSR223Assertion")
-        prop = _find_prop(assertion, "stringProp", "scriptLanguage")
-        assert prop is not None
-        assert prop.text == "groovy"
-
-    def test_subscription_name_passed_through(self) -> None:
-        """``subscription_name`` 同时出现在 sampler name + query 中."""
-        sampler, sampler_hash = self._build(subscription_name="sub_custom_42")
-        assert sampler.attrib["testname"] == "ShowSubscription-sub_custom_42"
-        prop = _find_prop(sampler, "stringProp", "query")
-        assert prop.text == "show subscription sub_custom_42"
 
 
 # ===========================================================================
@@ -442,13 +315,16 @@ class TestGeneratePubSubVerifyTg:
         assert prop is not None
         assert prop.text == "60"
 
-    def test_post_thread_group_duration_not_emitted(self) -> None:
-        """PostThreadGroup 不输出 ``ThreadGroup.duration`` (per docs §PostThreadGroup 关键差异段)."""
+    def test_post_thread_group_duration_default_600(self) -> None:
+        """PostThreadGroup 默认输出 ``ThreadGroup.duration`` = 600s
+        (per JMeter 5.6.3 硬约束 ``duration > 0``, per user 2026-10-15:
+        创发布/订阅 + Verify 链路 5-10 分钟内完成足够)."""
         model = _build_test_model_single_table()
         pubsub = _build_pubsub_config()
         tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
-        for tag in ("intProp", "longProp", "stringProp"):
-            assert _find_prop(tg, tag, "ThreadGroup.duration") is None
+        prop = _find_prop(tg, "longProp", "ThreadGroup.duration")
+        assert prop is not None
+        assert prop.text == "600"
 
     def test_post_thread_group_loops_1(self) -> None:
         """``LoopController.loops=1`` (per design.md line 378)."""
@@ -460,33 +336,31 @@ class TestGeneratePubSubVerifyTg:
         assert loops is not None
         assert loops.text == "1"
 
-    def test_contains_one_show_subscription_status_sampler(self) -> None:
-        """含 1 个 SHOW SUBSCRIPTION status sampler (per design.md line 558-562)."""
+    def test_contains_count_sampler_per_table(self) -> None:
+        """每张 ts_table 1 个 count sampler(per D7 简化: 不再走 SHOW SUBSCRIPTION
+        status sampler, count >= expected_min_rows 即可证明订阅成功 + 数据同步).
+        """
         model = _build_test_model_single_table()
         pubsub = _build_pubsub_config()
         tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
         samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
-        # 1 个 SHOW SUBSCRIPTION + 1 个 count = 2 个 sampler
-        assert len(samplers) == 2
-        # 首条 sampler 必须是 SHOW SUBSCRIPTION (per design.md 顺序)
+        # 1 张表 → 1 个 count sampler (无 SHOW SUBSCRIPTION)
+        assert len(samplers) == 1
         first = samplers[0]
-        assert first.attrib["testname"] == "ShowSubscription-sub_iot"
-        prop = _find_prop(first, "stringProp", "query")
-        assert prop is not None
-        assert prop.text == "show subscription sub_iot"
+        assert first.attrib["testname"] == "CountRows-iot_monitor_sub-t_cnc"
 
     def test_count_samplers_match_ts_tables_count(self) -> None:
         """count sampler 数量 = test_model.ts_dbs[*].tables[*] 总数 (per design.md line 565-572).
 
         N 张表 → N 个 ``CountRows-<sub_db>-<table>`` sampler
-        (本测试用 2 张表 → 2 个 count sampler + 1 个 SHOW SUBSCRIPTION = 3 个总)
+        (本测试用 2 张表 → 2 个 count sampler)
         """
         model = self._build_test_model_two_tables()
         pubsub = _build_pubsub_config()
         tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
         samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
-        # 1 SHOW SUBSCRIPTION + 2 count = 3 个总 sampler
-        assert len(samplers) == 3
+        # 2 count = 2 个总 sampler (无 SHOW SUBSCRIPTION)
+        assert len(samplers) == 2
 
     def test_count_samplers_use_fqn_subscriber_table(self) -> None:
         """count sampler query 走 FQN 跨库查 ``select count(*) from <sub_db>.<table>``
@@ -495,8 +369,8 @@ class TestGeneratePubSubVerifyTg:
         pubsub = _build_pubsub_config()
         tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
         samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
-        # 跳过首条 SHOW SUBSCRIPTION, 检查后 2 个 count sampler
-        count_samplers = samplers[1:]
+        # 全部 sampler 都是 count sampler (per D7 简化, 无 SHOW SUBSCRIPTION)
+        count_samplers = samplers
         assert len(count_samplers) == 2
         for sampler in count_samplers:
             prop = _find_prop(sampler, "stringProp", "query")
@@ -511,8 +385,8 @@ class TestGeneratePubSubVerifyTg:
         pubsub = _build_pubsub_config(expected_min_rows=None)
         tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
         samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
-        # 后 N 个 sampler 都是 count sampler
-        count_samplers = samplers[1:]
+        # 全部 sampler 都是 count sampler
+        count_samplers = samplers
         for sampler in count_samplers:
             sampler_hash = _find_sampler_hash(tg_hash, sampler)
             assertion = _find_child(sampler_hash, "JSR223Assertion")
@@ -530,7 +404,7 @@ class TestGeneratePubSubVerifyTg:
         pubsub = _build_pubsub_config(expected_min_rows=7)
         tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
         samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
-        count_samplers = samplers[1:]
+        count_samplers = samplers
         for sampler in count_samplers:
             sampler_hash = _find_sampler_hash(tg_hash, sampler)
             assertion = _find_child(sampler_hash, "JSR223Assertion")
@@ -551,7 +425,7 @@ class TestGeneratePubSubVerifyTg:
         for sampler in samplers:
             prop = _find_prop(sampler, "stringProp", "dataSource")
             assert prop is not None
-            assert prop.text == "default_pool"
+            assert prop.text == "jdbcConfig"
 
     def test_no_jdbc_database_field_in_samplers(self) -> None:
         """JMeter 5.6.3 JDBCSampler 无 ``database`` 字段 (per F-013 / 实际 jmx schema).
@@ -616,8 +490,8 @@ class TestGeneratePubSubVerifyTg:
         pubsub = _build_pubsub_config()
         tg, tg_hash = generate_pub_sub_verify_tg(pubsub, model)
         samplers = [c for c in tg_hash if _local(c.tag) == "JDBCSampler"]
-        # 1 SHOW SUBSCRIPTION + 2 count = 3 个
-        assert len(samplers) == 3
+        # 2 count = 2 个 (无 SHOW SUBSCRIPTION, per D7 简化)
+        assert len(samplers) == 2
         # count sampler names 应分别引用 sub_db_1 + sub_db_2
         count_names = sorted(
             s.attrib["testname"] for s in samplers

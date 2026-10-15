@@ -254,7 +254,7 @@ class TestBuildCreateSubscriptionSql:
         )
         assert "WITH OPTIONS" in sql
         assert "enable = 'on'" in sql
-        assert "retry = 5" in sql
+        assert "retry = '5'" in sql
 
     def test_all_four_subscription_side_keys_with_correct_value_forms(self) -> None:
         """``options`` 含 4 个 subscription-side keys → 全部进 SQL,各自 value 形式按 sub-sql.md:
@@ -279,7 +279,7 @@ class TestBuildCreateSubscriptionSql:
             "target = '{\"iot_monitor.public.t_cnc\":\"iot_monitor_sub.public.t_cnc\"}', "
             "enable = 'on', "
             "ignore_history = 'on', "
-            "retry = 5"
+            "retry = '5'"
             ")"
         )
 

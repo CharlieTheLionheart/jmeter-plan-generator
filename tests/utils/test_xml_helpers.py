@@ -173,16 +173,15 @@ class TestTeardownThreadGroupElement:
         assert prop is not None
         assert prop.text == "false"
 
-    def test_duration_NOT_emitted(self) -> None:
-        """``ThreadGroup.duration`` MUST NOT be emitted under any tag
-        (per docs §PostThreadGroup 关键差异段: JMeter 5.6.3 默认不写
-        ``<longProp name='ThreadGroup.duration'>``, TG 跑完 sampler
-        列表后自然结束)."""
+    def test_duration_default_emits_600(self) -> None:
+        """``ThreadGroup.duration`` 默认输出 ``<longProp>600</longProp>``
+        (per JMeter 5.6.3 PostThreadGroup 硬约束 ``duration > 0``;
+        per user 2026-10-15: 创发布/订阅 + Verify 链路 5-10 分钟内完成足够,
+        600s 远大于 typical test_duration=300s, 不会被 scheduler 截断)."""
         elem = self._build_default()
-        for tag in ("intProp", "longProp", "stringProp"):
-            assert _find_prop(elem, tag, "ThreadGroup.duration") is None, (
-                f"unexpected {tag} for ThreadGroup.duration"
-            )
+        prop = _find_prop(elem, "longProp", "ThreadGroup.duration")
+        assert prop is not None
+        assert prop.text == "600"
 
     def test_custom_num_threads(self) -> None:
         """``num_threads`` kwarg overrides the default 1."""
@@ -251,11 +250,11 @@ class TestTeardownThreadGroupElement:
         assert tg.attrib["enabled"] == "false"
 
     def test_duration_when_passed_emits_longprop(self) -> None:
-        """``duration`` kwarg 显式传 → 输出 ``<stringProp name="ThreadGroup.duration">``
-        (覆盖默认不输出行为, 给未来场景用).
+        """``duration`` kwarg 显式传 → 输出 ``<longProp name="ThreadGroup.duration">``
+        (覆盖默认值 600, 给未来场景用).
         """
         tg, _ = teardown_thread_group_element("X", duration="300")
-        prop = _find_prop(tg, "stringProp", "ThreadGroup.duration")
+        prop = _find_prop(tg, "longProp", "ThreadGroup.duration")
         assert prop is not None
         assert prop.text == "300"
 

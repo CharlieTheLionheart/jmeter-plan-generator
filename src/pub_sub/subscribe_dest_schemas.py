@@ -158,9 +158,11 @@ def build_create_subscription_sql(
         for k in ("enable", "ignore_history"):
             if k in options:
                 options_parts.append(f"{k} = '{options[k]}'")
-        # retry: 数字字面 (per sub-sql.md line 28: 0-10)
+        # retry: 单引号字符串 (per V3.3.0 实测 2026-10-15: server 拒数字字面
+        # ``retry = 5``, 接受单引号字符串 ``retry = '5'``; sub-sql.md line 28
+        # "0-10" 是取值范围但 SQL 字面必须带单引号)
         if "retry" in options:
-            options_parts.append(f"retry = {options['retry']}")
+            options_parts.append(f"retry = '{options['retry']}'")
     if options_parts:
         parts.append(f"WITH OPTIONS ({', '.join(options_parts)})")
     return " ".join(parts)
