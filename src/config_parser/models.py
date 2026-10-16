@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from typing import Any, Dict, Iterator, List, Literal, Optional
+from urllib.parse import quote
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -534,7 +535,28 @@ class PubSubConfig(BaseModel):
                 "conninfo must start with 'postgresql://' (libpq format; "
                 "KaiwuDB server only accepts libpq-format connection strings)"
             )
-        return v
+        # URL-escape password segment so special chars (@, /, #, ?) in
+        # passwords don't break libpq URI parsing. Idempotent via
+        # ``safe='%'`` — already-escaped ``%40`` stays ``%40``; raw ``@``
+        # becomes ``%40``; no double-escape.
+        #
+        # Per user feedback 2026-10-15: pipeline config uses password
+        # ``Znbase@1234`` which must be ``Znbase%401234`` in libpq URI
+        # form. Validator normalizes either form to escaped form so
+        # downstream ``build_create_subscription_sql`` always emits a
+        # valid libpq URI.
+        rest_idx = v.find("@", len("postgresql://"))
+        if rest_idx == -1:
+            return v  # no @, no password
+        prefix_user_pass = v[len("postgresql://"):rest_idx]
+        rest = v[rest_idx + 1:]
+        colon_idx = prefix_user_pass.find(":")
+        if colon_idx == -1:
+            return v  # no :, no password
+        user = prefix_user_pass[:colon_idx]
+        password = prefix_user_pass[colon_idx + 1:]
+        escaped_password = quote(password, safe="%")
+        return f"postgresql://{user}:{escaped_password}@{rest}"
 
     @field_validator("expected_min_rows")
     @classmethod

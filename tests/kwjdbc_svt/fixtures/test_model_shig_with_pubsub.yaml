@@ -1,0 +1,309 @@
+# shig 场景等价 test_model.yaml
+#
+# 基于 develop-2.0 分支 resources/db_shig/{t_cnc,t_electmeter,t_cnc.meta,t_electmeter.meta}
+# 真实列数 + 列类型比例重生成。
+#
+# 列名映射（spec 自动生成约定名 → shig 语义名）：
+#   t_cnc 67 数据列：
+#     col_char_20_N / col_char_30_N / col_char_10_N  ← cnc_sn / sp_* / cnc_sw_* 等 char 列
+#     col_varchar_100_N / col_varchar_200_N            ← axis_* / abs_pos / sp_name 等 varchar
+#     col_varchar_64_N / col_varchar_300_N / col_varchar_500_N  ← quoted_random_str 长尾
+#     col_int_N / col_smallint_N                       ← 整数列
+#     col_varchar_2000 / col_varchar_1000 / col_double / col_char_2 ← 单条长/特殊列
+#     sp_act_speed 落在 col_char_30_N（cnc 单 char(30) 列表里）
+#     sp_set_speed 同上
+#
+#   t_electmeter 49 数据列：
+#     col_double_N ×30（vol_a/b/c、cur_a/b/c、power*_* 等）
+#     col_int_N ×16（allenergy_*、pallenergy_*、rallenergy_*、allrenergy*_*）
+#     col_varchar_64_N ×2、col_smallint_N ×1、col_char_63_N ×1
+#     vol_a 落在第一个 col_double_N，cur_a 第二个（spec 列序号）
+#     allenergy_a 等 int 列
+#
+# 时间戳列：ts（spec 默认；shig 原用 k_timestamp 需改名）
+# 关系表：sub_company / factory / workshop（保持原样，列数匹配实际）
+
+rel_dbs:
+  - name: db_shig_rel
+    if_not_exists: true
+    comment: shig 场景关系库（元数据：分公司/厂区/车间）
+    tables:
+      # -------------------------------------------------------
+      # sub_company：分公司元数据（4 行；生产 192.168.124.51 db_shig_meta）
+      #   id INT2 PK, name VARCHAR(32), region VARCHAR(16)
+      # -------------------------------------------------------
+      - name: sub_company
+        if_not_exists: true
+        comment: 分公司元数据表
+        primary_key_count: 1
+        primary_keys:
+          - col_type: int8
+            type_proportion: 1.0
+            val_range: "enum:1,2,3,4"
+            seed_num: 4
+            nullable: false
+        data_col_count: 2
+        data_cols:
+          - col_type: varchar(32)
+            type_proportion: 0.5
+            val_range: "enum:济南分公司,沈阳分公司,武汉分公司,柳州分公司"
+            seed_num: 4
+            nullable: false
+          - col_type: varchar(16)
+            type_proportion: 0.5
+            val_range: "enum:北方大区,北方大区,南方大区,南方大区"
+            seed_num: 4
+            nullable: false
+
+      # -------------------------------------------------------
+      # factory：厂区元数据（20 行；每 sub_company 5 个）
+      #   id INT2 PK, name VARCHAR(16), sub_comp_id INT2 NOT NULL → sub_company.id
+      # -------------------------------------------------------
+      - name: factory
+        if_not_exists: true
+        comment: 厂区元数据表
+        primary_key_count: 1
+        primary_keys:
+          - col_type: int8
+            type_proportion: 1.0
+            val_range: "enum:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20"
+            seed_num: 20
+            nullable: false
+        data_col_count: 2
+        data_cols:
+          - col_type: varchar(16)
+            type_proportion: 0.5
+            val_range: "enum:PFAC,TFCFAC,GUOAEFAC,KZFFAC,TDZCFAC,GBKBIFAC,YMFAC,DONEFAC,YKFAC,JNWQNFAC,LFAC,OFAC,KSFAC,AFAC,RTKFAC,XFAC,SPGIFAC,SJCCFAC,QESMUFAC,ZEJFAC"
+            seed_num: 20
+            nullable: false
+          - col_type: int2
+            type_proportion: 0.5
+            val_range: "ref:db_shig_rel.sub_company.pk_int8_1"
+            seed_num: 20
+            nullable: false
+
+      # -------------------------------------------------------
+      # workshop：车间元数据（100 行；生产 192.168.124.51 db_shig_meta）
+      #   id INT2 PK 1..100, name VARCHAR(16) (生产 100 名 + 重复),
+      #   factory_id INT2 NOT NULL → factory.id（uniform ref: 采样 5/factory ± sqrt）
+      # -------------------------------------------------------
+      - name: workshop
+        if_not_exists: true
+        comment: 车间元数据表
+        primary_key_count: 1
+        primary_keys:
+          - col_type: int8
+            type_proportion: 1.0
+            val_range: "[1,100)"
+            seed_num: 100
+            nullable: false
+        data_col_count: 2
+        data_cols:
+          - col_type: varchar(16)
+            type_proportion: 0.5
+            # 生产 100 行车间名（BWS/MWS/HWS 有重复，build_row_aggregate 接受）
+            val_range: "enum:YRGHWS,BPMJWS,GWS,XWS,KZLQAWS,KRJWS,WRXWS,UTEWS,UKLWS,ODKHTWS,KPWS,BTIZWS,NUWS,NYYWHWS,BWS,HWS,UQVOKIWS,CSRVWS,OTBVWS,XZEWS,LVGWS,UOQWS,JYSWS,YKUWS,GIPWS,ZWQNXAWS,RKSWS,WHLCWS,RQPFUHWS,JTIKWS,ANWPRBWS,DWLJWS,XGSPNRWS,JJTWS,VNQIWUWS,MNWS,BWS,OKRWS,XEHFDWS,AROOSWS,AHDWS,VONWS,YWS,DSWS,XPGWS,RFCWS,QEJXTGWS,RWS,NBOUQWS,WNGPWS,MWS,VTBWS,JJHLUWWS,ZGEWS,NFRYWS,MWS,IOWS,KFAMEVWS,VRIWS,BJWS,XVEZZWS,JHWS,XNHATWS,PWS,XRFVJWS,LBAKWS,XOWS,DNTGSWS,OZWS,TKGWS,PCBWS,XHNZWS,BWS,CWDWS,DTNDWS,QCWS,GOWELWS,XYJTWS,IWS,DJCWS,NWS,BHWS,QHZPUWS,HWS,XJWS,OXMACOWS,PUFNYWS,JSYDLRWS,XWWS,GFDAWS,OWS,KLVMMDWS,HWS,JWS,XRCNMWS,NJTYSWS,QWS,HTWS,ULWS,AQWS"
+            seed_num: 100
+            nullable: false
+          - col_type: int2
+            type_proportion: 0.5
+            val_range: "ref:db_shig_rel.factory.pk_int8_1"
+            seed_num: 100
+            nullable: false
+
+ts_dbs:
+  - name: db_shig
+    if_not_exists: true
+    retentions: 1d
+    partition_interval: 1d
+    comment: shig 场景时序库（CNC 机床 + 电表）
+    tables:
+      # -------------------------------------------------------
+      # t_cnc：数控机床
+      #   primary tags(machine_code, op_group) — meta 文件
+      #   data cols: 67（按 develop-2.0 t_cnc 类型比例分配）
+      # -------------------------------------------------------
+      - name: t_cnc
+        if_not_exists: true
+        with_hash: 4
+        retentions: 1d
+        comment: 数控机床表（cnc_sn / sp_set_speed / sp_act_speed / axis_* 等业务列）
+        ts_col:
+          name: ts
+          type: timestamp
+          ms_step: 1000
+        primary_tag_count: 2
+        # primary_tags 顺序：machine_code, op_group（meta 一致）
+        # PrimaryTagColTypeConfig 没有 nullable 字段
+        primary_tags:
+          - col_type: varchar(32)
+            type_proportion: 0.5
+            val_range: "^[A-Z][0-9]{2,4}$"
+            seed_num: 50
+          - col_type: varchar(32)
+            type_proportion: 0.5
+            val_range: "enum:op_group_1,op_group_2,op_group_3,op_group_4"
+            seed_num: 4
+        # 3 个 FK rtag：sub_company_id + factory_id + workshop_id（生产 DDL 三层 FK 关系）
+        # 全部用 ref: 引用关系表 pk，sample 时取对应父表种子保证语义一致
+        regular_tag_count: 3
+        regular_tags:
+          - col_type: smallint
+            type_proportion: 0.34
+            val_range: "ref:db_shig_rel.sub_company.pk_int8_1"
+            seed_num: 20
+            nullable: false
+          - col_type: smallint
+            type_proportion: 0.33
+            val_range: "ref:db_shig_rel.factory.pk_int8_1"
+            seed_num: 20
+            nullable: false
+          - col_type: smallint
+            type_proportion: 0.33
+            val_range: "ref:db_shig_rel.workshop.pk_int8_1"
+            seed_num: 20
+            nullable: false
+        data_col_count: 67
+        # 列类型比例（基于 develop-2.0 t_cnc 实测 67 列）：
+        #   char(30)        17 列  25.4%  ← sp_* / cnc_sw_* / cnc_tol_mem 等
+        #   char(20)        13 列  19.4%  ← axis_quantity / parts_count 等
+        #   char(10)         9 列  13.4%  ← cnc_use_mem / cnc_unuse_mem 等
+        #   varchar(100)     8 列  11.9%  ← axis_* / sp_name 等
+        #   varchar(200)     6 列   9.0%  ← cnc_sn / abs_pos / mach_pos 等
+        #   smallint         3 列   4.5%  ← 整型列
+        #   varchar(64)      2 列   3.0%  ← misc
+        #   varchar(500)     2 列   3.0%  ← sp_load / servo_load
+        #   varchar(300)     2 列   3.0%  ← cnc_sn 长 / sp_load
+        #   int              2 列   3.0%  ← misc int
+        #   varchar(2000)    1 列   1.5%  ← 单条长
+        #   varchar(1000)    1 列   1.5%  ← 单条长
+        #   double           1 列   1.5%  ← sp_override
+        #   char(2)          1 列   1.5%  ← cnc_status
+        # 合计 67 列，比例和 = 100.0%
+        data_cols:
+          - col_type: char(30)
+            type_proportion: 0.250000
+            val_range: "enum:C0A,C1A,C2A,C3A,C4A,C5A,C6A,C7A,C8A,C9A,C10A,C11A,C12A,C13A,C14A,C15A,C16A"
+            seed_num: 17
+          - col_type: char(20)
+            type_proportion: 0.191176
+            val_range: "enum:A0B,A1B,A2B,A3B,A4B,A5B,A6B,A7B,A8B,A9B,A10B,A11B,A12B"
+            seed_num: 13
+          - col_type: char(10)
+            type_proportion: 0.132353
+            val_range: "enum:M0,M1,M2,M3,M4,M5,M6,M7,M8"
+            seed_num: 9
+          - col_type: varchar(100)
+            type_proportion: 0.117647
+            val_range: "enum:V0X,V1X,V2X,V3X,V4X,V5X,V6X,V7X"
+            seed_num: 8
+          - col_type: varchar(200)
+            type_proportion: 0.088235
+            val_range: "enum:P0Y,P1Y,P2Y,P3Y,P4Y,P5Y"
+            seed_num: 6
+          - col_type: smallint
+            type_proportion: 0.044118
+            val_range: "[0,100)"
+            seed_num: 3
+          - col_type: varchar(64)
+            type_proportion: 0.029412
+            val_range: "enum:Q0Z,Q1Z"
+            seed_num: 2
+          - col_type: varchar(500)
+            type_proportion: 0.029412
+            val_range: "enum:L0W,L1W"
+            seed_num: 2
+          - col_type: varchar(300)
+            type_proportion: 0.029412
+            val_range: "enum:N0V,N1V"
+            seed_num: 2
+          - col_type: int
+            type_proportion: 0.029412
+            val_range: "[0,10000)"
+            seed_num: 2
+          - col_type: varchar(2000)
+            type_proportion: 0.014706
+            val_range: "enum:R0U"
+            seed_num: 1
+          - col_type: varchar(1000)
+            type_proportion: 0.014706
+            val_range: "enum:S0T"
+            seed_num: 1
+          - col_type: float4
+            type_proportion: 0.014706
+            val_range: "[0.0,3000.0)"
+            seed_num: 1
+          - col_type: char(2)
+            type_proportion: 0.014706
+            val_range: "enum:OK,NG"
+            seed_num: 2
+          # 末尾汇总调整：14 项累加 1.000001000000000，加 int +0.000001 吸收
+          # 让 sum 落在 validator 容忍区间 [0.999999, 1.000001]
+          # type_proportion 0.014706 → sum=1.000001（pass）
+          # type_proportion 0.014705 → sum=1.000000（pass）
+          # type_proportion 0.014704 → sum=0.999999（pass）
+
+      # -------------------------------------------------------
+      # t_electmeter：电表
+      #   primary tags(machine_code) — meta 文件
+      #   regular tag: elect_name（plan.jmx 引用）
+      #   data cols: 49（按 develop-2.0 t_electmeter 类型比例分配）
+      # -------------------------------------------------------
+      - name: t_electmeter
+        if_not_exists: true
+        with_hash: 4
+        retentions: 1d
+        comment: 电表采集表（vol_a/b/c / cur_a/b/c / power*_* / allenergy_* 等）
+        ts_col:
+          name: ts
+          type: timestamp
+          ms_step: 1000
+        primary_tag_count: 1
+        primary_tags:
+          - col_type: varchar(32)
+            type_proportion: 1.0
+            val_range: "^[A-Z][0-9]{2,4}$"
+            seed_num: 50
+        # 2 个 rtag（生产 192.168.124.51 db_shig_meta DDL）：
+        #   rtag_varchar_1   = op_group (varchar(64))   — 普通 rtag，无 FK
+        #   rtag_smallint_1  = workshop_id (smallint)    — FK → workshop.id
+        # 2026-07-22 在 kwdb-x86_64-master:latest (nightly) 验证 F-17 已修：
+        #   setString(varchar rtag) 不再被静默丢弃，正常写入 op_group_1..4
+        #   容器不再 crash
+        regular_tag_count: 2
+        regular_tags:
+          - col_type: varchar(64)
+            type_proportion: 0.5
+            val_range: "enum:op_group_1,op_group_2,op_group_3,op_group_4"
+            seed_num: 4
+            nullable: false
+          - col_type: smallint
+            type_proportion: 0.5
+            val_range: "ref:db_shig_rel.workshop.pk_int8_1"
+            seed_num: 20
+            nullable: false
+        data_col_count: 49
+        # 列类型比例（基于 develop-2.0 t_electmeter 实测 49 列）：
+        #   double          30 列  61.2%  ← vol_a/b/c / cur_a/b/c / power*_* 等
+        #   int             16 列  32.7%  ← allenergy_* / pallenergy_* / rallenergy_* / allrenergy*_*
+        #   varchar(64)      2 列   4.1%  ← misc
+        #   smallint         1 列   2.0%  ← misc
+        #   char(63)         1 列  （已用作 regular_tag，不计入 data_col）
+        # 合计 49 列，比例和 = 100.0%（≈ 1.0001 因四舍五入，spec 校验和允许 1e-6 误差）
+        data_cols:
+          - col_type: float4
+            type_proportion: 0.612
+            val_range: "[0.0,50000.0)"
+            seed_num: 50
+          - col_type: int
+            type_proportion: 0.327
+            val_range: "[0,250000)"
+            seed_num: 50
+          - col_type: varchar(64)
+            type_proportion: 0.041
+            val_range: "enum:V0Z,V1Z"
+            seed_num: 2
+          - col_type: smallint
+            type_proportion: 0.020
+            val_range: "[0,100)"
+            seed_num: 1

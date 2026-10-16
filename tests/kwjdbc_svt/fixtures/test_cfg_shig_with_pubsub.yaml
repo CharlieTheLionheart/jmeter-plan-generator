@@ -1,0 +1,195 @@
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 50
+  device_start: 1
+  test_duration: 604800
+write_config:
+  - tbl_name: db_shig.t_cnc
+    throughput: 1.0
+    mode: prepare
+    batch_lines: 60
+    device_per_thread: 50
+    num_threads: 20
+  - tbl_name: db_shig.t_electmeter
+    throughput: 1.0
+    mode: prepare
+    batch_lines: 60
+    device_per_thread: 50
+    num_threads: 20
+query_config:
+  - query: >-
+      SELECT ts, col_float4_1
+      FROM db_shig.t_cnc
+      WHERE ptag_varchar_2 = ?
+        AND ptag_varchar_1 = ?
+        AND ts > NOW() - INTERVAL '1 hour'
+      ORDER BY ts DESC
+      LIMIT 100
+    throughput: 4.0
+    num_threads: 1
+  - query: >-
+      SELECT last_row(*)
+      FROM db_shig.t_cnc
+      WHERE ptag_varchar_1 = ?
+    throughput: 2.0
+    num_threads: 1
+  - query: >-
+      SELECT last_row(*)
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = ?
+    throughput: 2.0
+    num_threads: 1
+  - query: >-
+      SELECT ptag_varchar_1,
+             max(col_float4_4) AS max_cur,
+             min(col_float4_4) AS min_cur,
+             avg(col_float4_4) AS avg_cur
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = ?
+        AND rtag_varchar_1 = ?
+      GROUP BY ptag_varchar_1
+      ORDER BY ptag_varchar_1 ASC
+    throughput: 1.0
+    num_threads: 1
+  - query: >-
+      SELECT rtag_varchar_1, count(*) AS cnt
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = ?
+        AND rtag_varchar_1 IN ('op_group_1','op_group_2','op_group_3','op_group_4')
+        AND col_float4_7 > 49.8 AND col_float4_7 < 50.2
+      GROUP BY rtag_varchar_1
+      ORDER BY rtag_varchar_1 ASC
+    throughput: 1.0
+    num_threads: 1
+  - query: >-
+      SELECT ts, ptag_varchar_1,
+             col_float4_4, col_float4_5, col_float4_6
+      FROM db_shig.t_electmeter
+      WHERE 1=1
+        AND ts > NOW() - INTERVAL '1 hour'
+      ORDER BY ts DESC, ptag_varchar_1 ASC
+      LIMIT 100
+      OFFSET 0
+    throughput: 1.0
+    num_threads: 1
+  - query: >-
+      SELECT sum(col_float4_8) AS sumpallpower,
+             count(1) AS countall
+      FROM db_shig.t_electmeter
+      WHERE 1=1
+        AND ts > NOW() - INTERVAL '1 hour'
+    throughput: 1.0
+    num_threads: 1
+  - query: >-
+      SELECT ptag_varchar_1,
+             COUNT(*) AS unbalance_count,
+             MAX(ABS(col_float4_1 - col_float4_2)) AS max_diff_ab,
+             MAX(ABS(col_float4_2 - col_float4_3)) AS max_diff_bc
+      FROM db_shig.t_electmeter
+      WHERE ts > NOW() - INTERVAL '1 hour'
+        AND (ABS(col_float4_1 - col_float4_2) > 1
+             OR ABS(col_float4_2 - col_float4_3) > 1)
+      GROUP BY ptag_varchar_1
+      HAVING COUNT(*) > 5
+      ORDER BY unbalance_count DESC
+      LIMIT 10
+    throughput: 0.016666667
+    num_threads: 1
+  - query: >-
+      SELECT time_bucket(ts, '1m') AS time_bucket,
+             ptag_varchar_1,
+             STDDEV(col_float4_4) AS cur_a_stddev,
+             MAX(col_float4_4) - MIN(col_float4_4) AS cur_a_range
+      FROM db_shig.t_electmeter
+      WHERE ts > NOW() - INTERVAL '6 hours'
+        AND ptag_varchar_1 LIKE '%_%'
+      GROUP BY time_bucket, ptag_varchar_1
+      HAVING STDDEV(col_float4_4) > 0
+      ORDER BY time_bucket DESC, cur_a_stddev DESC
+    throughput: 0.016666667
+    num_threads: 1
+  - query: >-
+      SELECT c.ts         AS cnc_time,
+             e.ts         AS meter_time,
+             c.ptag_varchar_1,
+             c.col_float4_1 AS device_state,
+             e.col_float4_4,
+             e.col_float4_8
+      FROM (
+        SELECT ts, ptag_varchar_1, col_float4_1
+        FROM db_shig.t_cnc
+        WHERE ptag_varchar_1 = ?
+          AND ts > NOW() - INTERVAL '1 hour'
+      ) c
+      INNER JOIN (
+        SELECT ts, ptag_varchar_1, col_float4_4, col_float4_8
+        FROM db_shig.t_electmeter
+        WHERE ptag_varchar_1 = ?
+      ) e
+        ON e.ts BETWEEN c.ts - INTERVAL '500ms' AND c.ts + INTERVAL '500ms'
+      ORDER BY c.ts DESC
+      LIMIT 100
+    throughput: 0.016666667
+    num_threads: 2
+  - query: >-
+      SELECT ptag_varchar_1,
+             time_bucket(ts, '1m') AS time_window,
+             AVG(col_float4_4) FILTER (WHERE col_float4_7 > 49.5 AND col_float4_7 < 50.5) AS norm_avg_cur,
+             AVG(col_float4_4) FILTER (WHERE abs(col_float4_7 - 50) >= 0.5) AS abnorm_avg_cur
+      FROM db_shig.t_electmeter
+      WHERE ts > NOW() - INTERVAL '1 hour'
+        AND ptag_varchar_1 = ?
+      GROUP BY ptag_varchar_1, time_window
+      ORDER BY time_window DESC
+      LIMIT 60
+    throughput: 0.016666667
+    num_threads: 1
+  - query: >-
+      SELECT 'start' AS point_type,
+             ts,
+             ptag_varchar_1,
+             col_float4_4,
+             col_float4_8
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = ?
+        AND ts = (
+          SELECT MIN(ts)
+          FROM db_shig.t_electmeter
+          WHERE ptag_varchar_1 = ?
+            AND ts > NOW() - INTERVAL '1 hour'
+        )
+      UNION ALL
+      SELECT 'end' AS point_type,
+             ts,
+             ptag_varchar_1,
+             col_float4_4,
+             col_float4_8
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = ?
+        AND ts = (
+          SELECT MAX(ts)
+          FROM db_shig.t_electmeter
+          WHERE ptag_varchar_1 = ?
+            AND ts > NOW() - INTERVAL '1 hour'
+        )
+    throughput: 0.016666667
+    num_threads: 1
+# 发布订阅 (per user 2026-10-15 集成到流水线): 表级 + WHERE 过滤 t_cnc
+# 第一个 float4 列 (col_float4_1) > 1000 且 第一个 int 列 (col_int_1) < 100
+# conninfo 密码 Znbase@1234 含 @ → URL-escape 为 Znbase%401234
+# (generator conninfo validator 自动 idempotent escape 防御)
+pub_sub_config:
+  publisher_db: db_shig
+  publication_name: pub_shig
+  subscription_name: sub_shig
+  conninfo: postgresql://root1:Znbase%401234@10.110.10.163:9988/defaultdb
+  tables:
+    - name: t_cnc
+      columns: [ts, ptag_varchar_1, ptag_varchar_2, col_float4_1, col_int_1]
+      where: "col_float4_1 > 1000 AND col_int_1 < 100"
+  options:
+    target: '{"db_shig.public.t_cnc":"db_shig_sub.public.t_cnc"}'
+    enable: "on"
+  expected_min_rows: 0

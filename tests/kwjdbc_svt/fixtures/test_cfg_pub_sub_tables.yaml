@@ -20,7 +20,7 @@ pub_sub_config:
   tables:
     - name: t_cnc
       columns: [ts, ptag_varchar_1, col_float4_1]
-      where: "col_float4_1 > 0"
+      where: "col_float4_1 > 50"
   options:
     target: '{"iot_monitor.public.t_cnc":"iot_monitor_sub.public.t_cnc"}'
     ignore_history: "on"
