@@ -205,6 +205,6 @@ where ts >= '<窗口起>' and ts < '<窗口止>';
 
 ### 9.6 收尾
 
-- [ ] 9.6.1 smoke 全部通过后更新 `todolist.md`(新增 F- 条目:6 条路径全覆盖 + 概率 + 缺整轮 + 空池失败路径)
+- [ ] 9.6.1 smoke 全部通过后更新本 change 的 `handoff.md`(追加 commit hash + 6 条路径全覆盖 / 概率 / 缺整轮 / 空池失败路径的 smoke 证据)
 - [ ] 9.6.2 勾选本文件 §9 全部子 task + §1~§8 全部子 task
 - [ ] 9.6.3 `openspec archive write-missing-data`(spec 增量合并进主 spec)

@@ -84,11 +84,12 @@ source .venv/bin/activate && python -m kwjdbc_svt.main ...
 - **Smoke second**: invoke the **`kwjdbc-jmx-smoke`** skill (don't roll your own command sequence). The skill owns the canonical `kwjdbc_svt.main` + `jmeter -n` end-to-end run against the real KaiwuDB cluster and reports setup / loader / sampler errors.
 - "Tests pass" alone is not enough — smoke is the ground truth for this repo because the generators emit XML that JMeter executes against a running cluster.
 
-7. After every fix: update @todolist.md
-- Delete the solved entry (move to "已删" section if it was a real-but-wrongly-attributed bug).
-- Keep only pending / unfixed issues under "遗留真问题".
-- New commits get a new F-/L-id appended; completed F-ids move to "已完成" with the commit hash.
-- Stale "已完成" entries get compressed to one line per fix (problem + fix + test + smoke) — not full paragraphs.
+7. After every fix: update the active change's handoff(`openspec/changes/<change>/handoff.md`)
+- Tick off completed sub-tasks in that change's `tasks.md`(`- [x]`);leave pending ones unchecked.
+- Append each new commit to `handoff.md`(hash + 验证方式:pytest 结果 / smoke 证据)。
+- Keep `handoff.md` 的「当前进度」「下一步」两节是最新的 —— 下一个会话应当**只读它就能续接**。
+- handoff.md 的写法参考 `session-handoff-prompt` skill 的输出契约(结构稳定 + `[verified]` / `[inferred]` / `[unverified]` 事实标注)。
+- 每个 change 一个 `handoff.md`;change 归档后该文件随 change 留在归档目录里。
 
 ## 语言规则
 

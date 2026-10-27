@@ -295,7 +295,7 @@ A: 自 2026-09-11 cfg-write-throughput-literal 起，写入 timer 的 `timeout` 
 - 修订历史：[`docs/specs/spec_review-2026-06-02.md`](docs/specs/spec_review-2026-06-02.md)
 - 已知 issue：[`docs/issues/F17.md`](docs/issues/F17.md) + [`F17Repro.java`](docs/issues/F17Repro.java)
 - DCR 归档：[`openspec/changes/`](openspec/changes/)（query-naming、throughput-control、main-entry 等）
-- 进度跟踪：[`todolist.md`](todolist.md)（F-9..F-16 + R-1..R-3-续 + F-17 全部完成）
+- 进度跟踪：各 change 的 `openspec/changes/<change>/handoff.md`
 
 ---
 
