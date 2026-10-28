@@ -84,12 +84,17 @@ source .venv/bin/activate && python -m kwjdbc_svt.main ...
 - **Smoke second**: invoke the **`kwjdbc-jmx-smoke`** skill (don't roll your own command sequence). The skill owns the canonical `kwjdbc_svt.main` + `jmeter -n` end-to-end run against the real KaiwuDB cluster and reports setup / loader / sampler errors.
 - "Tests pass" alone is not enough — smoke is the ground truth for this repo because the generators emit XML that JMeter executes against a running cluster.
 
-7. After every fix: update the active change's handoff(`openspec/changes/<change>/handoff.md`)
-- Tick off completed sub-tasks in that change's `tasks.md`(`- [x]`);leave pending ones unchecked.
-- Append each new commit to `handoff.md`(hash + 验证方式:pytest 结果 / smoke 证据)。
-- Keep `handoff.md` 的「当前进度」「下一步」两节是最新的 —— 下一个会话应当**只读它就能续接**。
-- handoff.md 的写法参考 `session-handoff-prompt` skill 的输出契约(结构稳定 + `[verified]` / `[inferred]` / `[unverified]` 事实标注)。
-- 每个 change 一个 `handoff.md`;change 归档后该文件随 change 留在归档目录里。
+## 项目级规则：会话接续与实施档案
+
+本项目的**会话接续**由 `handoff` skill 承担（接续文档写在工程根目录的 `handoff.md`，gitignored），
+**实施决策档案**沉淀在 [`docs/implementation-log.md`](docs/implementation-log.md)（进 git）。所有实施会话必须遵守：
+
+1. **会话开始前先读接续文档**——上一会话结束（或用户要求）时生成的 handoff 接续文档，回答"上次到哪儿了、下一步做什么"。该文档由 `handoff` skill 写在**工程根目录的 `handoff.md`**（已 gitignore；**不用 `/tmp`**——重启会丢）。
+2. **需要历史决策时读实施档案**——[`docs/implementation-log.md`](docs/implementation-log.md) 回答"为什么这么做"：**已落地阶段一览**（做了哪些阶段）+ **§决策汇总**（每阶段做了什么 / 为什么 / 踩了什么坑与修法）+ **待办（跨会话）**。
+3. **每个阶段完成后把决策写进实施档案**——在 `docs/implementation-log.md` 追加该阶段条目（做了什么 / 为什么 / 踩坑与修法 / 遗留），并同步"已落地阶段一览"与"待办（跨会话）"两节。
+4. **代码与档案同 commit**——该阶段的代码改动与 `docs/implementation-log.md` 条目放在**同一个 commit** 里；**不追 commit hash**（填 hash 必须等 commit 产生，会逼出二次 commit）。
+5. 阶段切分粒度遵循 `docs/implementation-log.md` 的"已落地阶段一览"；用户中途调整粒度需先更新该表。
+6. OpenSpec change 的规格与任务清单留在 `openspec/changes/<change>/`（进 git），实施档案**不重复**其内容，只记录决策与教训。
 
 ## 语言规则
 

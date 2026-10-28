@@ -30,3 +30,6 @@ tests/kwjdbc_svt/fixtures/tls/
 # Worktree 隔离工作区
 .worktrees/
 .vscode/settings.json
+
+# 会话接续文档（handoff skill 生成于工程根目录，不入库）
+handoff.md
