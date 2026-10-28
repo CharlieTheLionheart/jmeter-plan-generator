@@ -69,9 +69,32 @@ class TestGenerateGroovyLoaderScript:
         assert "null" in script  # at least mentions null handling
 
     def test_script_has_error_handling(self):
+        """write-missing-data D11: the loader MUST abort loudly.
+
+        The previous contract (``log.error`` + ``props.put(rowsKey, [])``)
+        swallowed the failure: the SetupTG sampler reported success, the
+        write path found an empty pool, and the whole test run finished
+        green **without writing a single row**. The loader now throws so
+        the failure surfaces at the SetupTG.
+        """
         script = generate_groovy_loader_script("tsdb", "t_table", "/path/to/seeds/tsdb/t_table.csv")
-        assert "log.error" in script
-        assert "props.put(rowsKey, [])" in script
+        assert "throw new RuntimeException" in script
+        assert "props.put(rowsKey, [])" not in script
+        assert "props.put(colsKey, [])" not in script
+
+    def test_missing_csv_branch_throws(self):
+        """The ``!file.exists()`` branch MUST throw (not log + empty pool)."""
+        script = generate_groovy_loader_script("tsdb", "t_table", "/path/to/seeds/tsdb/t_table.csv")
+        branch = script.split("if (!file.exists()) {", 1)[1].split("}", 1)[0]
+        assert "throw new RuntimeException" in branch
+        assert "props.put(rowsKey, [])" not in branch
+
+    def test_catch_branch_throws(self):
+        """The ``catch (Throwable t)`` branch MUST re-throw."""
+        script = generate_groovy_loader_script("tsdb", "t_table", "/path/to/seeds/tsdb/t_table.csv")
+        branch = script.split("} catch (Throwable t) {", 1)[1]
+        assert "throw new RuntimeException" in branch
+        assert "props.put(rowsKey, [])" not in branch
 
     def test_special_chars_in_table_name(self):
         # Table names with special characters should be sanitized in the key

@@ -216,9 +216,12 @@ def _build_rest_write_preprocessor_script(
             "def globalProps = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()\n"
             "def bindGroups = globalProps.get(rowsKey) as Map\n"
             "if (bindGroups == null || bindGroups.isEmpty()) {\n"
-            "    log.warn('REST_Write_bind_prep: bind groups empty (rowsKey=' + rowsKey + '), stopping thread')\n"
-            "    vars.put('request_body', '')\n"
-            "    return\n"
+            "    // write-missing-data D11: 空种子池抛业务异常,不静默降级\n"
+            "    // (静默降级会让整轮测试\"全绿但一行没写\")。\n"
+            "    throw new RuntimeException(\n"
+            "        'SharedMemory pool empty for table ' + db + '.' + measurement\n"
+            "            + ' (key ' + rowsKey + '): seed CSV load failed or produced no rows'\n"
+            "    )\n"
             "}\n"
             "\n"
             "// === deviceCode = inline GString (matches SetupTG bind sampler) ===\n"
@@ -233,7 +236,7 @@ def _build_rest_write_preprocessor_script(
             "long msStep = " + str(getattr(ts_table.ts_col, "ms_step", 1000) if ts_table is not None and ts_table.ts_col is not None else 1000) + "L\n"
             "long baseTime = System.currentTimeMillis()\n"
             "int batchLines = " + str(batch_lines) + "\n"
-            "def randomGen = new Random()\n"
+            "def randomGen = java.util.concurrent.ThreadLocalRandom.current()\n"
             "def sb = new StringBuilder()\n"
             "boolean firstLine = true\n"
             "for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {\n"
@@ -291,16 +294,19 @@ def _build_rest_write_preprocessor_script(
         "def globalProps = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()\n"
         "def rows = globalProps.get(rowsKey) as List\n"
         "def columns = globalProps.get(colsKey) as List\n"
-        "if (rows == null || rows.isEmpty() || columns == null) {\n"
-        "    // §6.4.2 B5 fix: stop thread instead of sending empty body.\n"
-        "    // D-12 (2026-08-11): JMeter 5.6.3 has no JMeterContext.stopThread().\n"
-        "    // on Java 21+ — silently exit with empty body so B1 assertion catches it.\n"
-        "    // D-23 (2026-08-14): this safety-net stays even though D-23\n"
-        "    // restores spec §4 cyclic-fill (random start + wrap-around), so\n"
-        "    // rows.isEmpty() should never trigger in normal config.\n"
-        "    log.warn('REST_Write_meters_prep: rows empty (rowsKey=' + rowsKey + '), stopping thread')\n"
-        "    vars.put('request_body', '')\n"
-        "    return\n"
+        "if (rows == null || rows.isEmpty()) {\n"
+        "    // write-missing-data D11: 空种子池抛业务异常,不静默降级\n"
+        "    // (静默降级会让整轮测试\"全绿但一行没写\")。\n"
+        "    throw new RuntimeException(\n"
+        "        'SharedMemory pool empty for table ' + db + '.' + measurement\n"
+        "            + ' (key ' + rowsKey + '): seed CSV load failed or produced no rows'\n"
+        "    )\n"
+        "}\n"
+        "if (columns == null) {\n"
+        "    throw new RuntimeException(\n"
+        "        'SharedMemory column header missing for table ' + db + '.' + measurement\n"
+        "            + ' (key ' + colsKey + '): seed CSV load failed or produced no rows'\n"
+        "    )\n"
         "}\n"
         "// D-23/D-24 (2026-08-14): spec §4 L327 cyclic-fill — row pool is\n"
         "// never popped (only read by index), so batch_lines prep calls\n"
@@ -326,7 +332,7 @@ def _build_rest_write_preprocessor_script(
         "if (threadNum < 0) { threadNum = (vars.get('__threadNum') as Integer) ?: 0 }\n"
         "long msStep = " + str(getattr(ts_table.ts_col, "ms_step", 1000) if ts_table is not None and ts_table.ts_col is not None else 1000) + "L\n"
         "long baseTime = System.currentTimeMillis()\n"
-        "def randomGen = new Random()\n"
+        "def randomGen = java.util.concurrent.ThreadLocalRandom.current()\n"
         "int rowCursor = randomGen.nextInt(rows.size())\n"
         "def sb = new StringBuilder()\n"
         "boolean firstLine = true\n"
@@ -346,7 +352,7 @@ def _build_rest_write_preprocessor_script(
         "                fieldMap[name] = formatFieldValue(value)\n"
         "            }\n"
         "        }\n"
-        f"        def tsValue = (baseTime + (long)(b * msStep))\\n"
+        f"        def tsValue = (baseTime + (long)(b * msStep)) * 1000 * 1000\n"
         "        tagMap.replaceAll { k, v -> v == '\\${device_code}' ? deviceCode : v }\n"
         "        if (!firstLine) { sb.append('\\n') }\n"
         "        sb.append(buildLine(measurement, tagMap, fieldMap))\n"
@@ -445,14 +451,17 @@ def generate_rest_write_thread_group(
 
     # col-tag-bind-write (2026-08-05): index write_configs by ``db.table``
     # for O(1) per-table lookup.
+    # write-missing-data D12(b): 建索引与查询统一用小写 —— JDBC 路径早已
+    # 用 ``.lower()`` 归一,schemaless 缺这一步会让 cfg 写大写表名时匹配
+    # 失败(``missing write_config for ts_table``)。
     write_cfg_by_table: Dict[str, WriteConfig] = {}
     if write_configs:
         for wc in write_configs:
-            write_cfg_by_table[wc.tbl_name] = wc
+            write_cfg_by_table[wc.tbl_name.lower()] = wc
 
     for ts_db in test_model_config.ts_dbs:
         for ts_table in ts_db.tables:
-            fqn = f"{ts_db.name}.{ts_table.name}"
+            fqn = f"{ts_db.name}.{ts_table.name}".lower()
             wc = write_cfg_by_table.get(fqn)
             if wc is None:
                 raise ValueError(

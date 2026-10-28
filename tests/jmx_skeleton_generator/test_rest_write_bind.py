@@ -30,6 +30,7 @@ from config_parser.models import (
 )
 from jmx_skeleton_generator.generators.rest_write_groups import (
     _build_rest_write_preprocessor_script,
+    generate_rest_write_thread_group,
 )
 
 
@@ -142,10 +143,11 @@ def test_default_mode_unchanged() -> None:
     )
 
 
-def test_bind_mode_no_group_returns_safe_default() -> None:
-    """When the bind groups map is empty, the PreProcessor must stop the
-    thread (consistent with the B5 fix for the legacy path) rather than
-    emit a half-populated InfluxDB Line.
+def test_bind_mode_no_group_raises_business_exception() -> None:
+    """When the bind groups map is empty, the PreProcessor MUST throw.
+
+    write-missing-data D11: 旧的"置空 body 静默退出"会让整轮测试
+    "全绿但一行没写"——空种子池必须尽早暴露为 sampler error。
     """
     ts = _ts_table()
     script = _build_rest_write_preprocessor_script(
@@ -157,9 +159,14 @@ def test_bind_mode_no_group_returns_safe_default() -> None:
         num_threads=4,
     )
 
-    assert "vars.put('request_body', '')" in script, (
-        "bind-mode script must guard against empty groups via empty-body sentinel "
-        "(JMeter 5.6.3 has no stopThread API; Thread.stop() throws on Java 21+)"
+    assert "throw new RuntimeException" in script, (
+        "bind-mode script must raise a RuntimeException on an empty pool"
+    )
+    assert "seed CSV load failed" in script, (
+        "bind-mode script must carry the failure hint"
+    )
+    assert "vars.put('request_body', '')" not in script, (
+        "bind-mode script must NOT silently degrade to an empty body"
     )
     assert "ctx.stopThread" not in script, (
         "bind-mode script must NOT use ctx.stopThread() (absent in JMeter 5.6.3 JMeterContext)"
@@ -167,3 +174,73 @@ def test_bind_mode_no_group_returns_safe_default() -> None:
     assert "Thread.currentThread().stop" not in script, (
         "bind-mode script must NOT use Thread.currentThread().stop() (Java 21+ throws)"
     )
+
+
+# ---------------------------------------------------------------------------
+# write-missing-data D12(b): schemaless table lookup is case-insensitive
+# ---------------------------------------------------------------------------
+
+def _single_table_model() -> TestModelConfig:
+    """Model with one lowercase table ``db_iot.meters``."""
+    return TestModelConfig(
+        ts_dbs=[
+            TsDbConfig(
+                name="db_iot",
+                tables=[
+                    TsTableConfig(
+                        name="meters",
+                        data_col_count=1,
+                        data_cols=[
+                            ColTypeConfig(
+                                col_type="float4",
+                                type_proportion=1.0,
+                                val_range="0..100",
+                                seed_num=100,
+                            )
+                        ],
+                        primary_tag_count=1,
+                        primary_tags=[
+                            PrimaryTagColTypeConfig(
+                                col_type="varchar(64)",
+                                type_proportion=1.0,
+                                val_range='"device_{1}"',
+                            )
+                        ],
+                        regular_tag_count=0,
+                        regular_tags=[],
+                    )
+                ],
+            )
+        ],
+    )
+
+
+def _rest_api_config() -> dict:
+    return {
+        "write_url_path": "/restapi/influxdb",
+        "default_db": "db_iot",
+        "https_mode": "tls",
+        "ca_cert_path": "/etc/kaiwudb/certs/ca.crt",
+        "timezone": None,
+    }
+
+
+def test_uppercase_tbl_name_matches_lowercase_model_table() -> None:
+    """cfg's ``tbl_name`` case MUST NOT decide whether the table matches.
+
+    The JDBC path normalises ``tbl_name`` with ``.lower()``; the
+    schemaless path did not, so ``IOT_MONITOR.T_CNC`` in the cfg never
+    matched the model's lowercase table and the generator raised
+    ``missing write_config for ts_table``. Both paths must tolerate the
+    same inputs.
+    """
+    elems = generate_rest_write_thread_group(
+        _single_table_model(),
+        rest_api_config=_rest_api_config(),
+        write_configs=[
+            WriteConfig(tbl_name="DB_IOT.METERS", throughput=60.0, mode="schemaless"),
+        ],
+    )
+
+    assert elems, "uppercase tbl_name must still produce a write ThreadGroup"
+

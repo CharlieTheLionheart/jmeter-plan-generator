@@ -98,10 +98,9 @@ def colsKey = '{cols_key}'
 try {{
     def file = new File(csvPath)
     if (!file.exists()) {{
-        log.error("SharedMemoryLoader: CSV file not found: " + csvPath)
-        props.put(rowsKey, [])
-        props.put(colsKey, [])
-        return
+        // write-missing-data D11: 空种子池一律尽早抛业务异常 ——
+        // 吞掉错误置空数组会让整轮测试"全绿但一行没写"。
+        throw new RuntimeException("SharedMemoryLoader: CSV file not found: " + csvPath)
     }}
 
     def rows = []
@@ -166,9 +165,11 @@ try {{
     log.info("SharedMemoryLoader: loaded " + rows.size() + " rows for " + rowsKey)
 
 }} catch (Throwable t) {{
-    log.error("SharedMemoryLoader: failed to load CSV " + csvPath + ": " + t.getMessage())
-    props.put(rowsKey, [])
-    props.put(colsKey, [])
+    // write-missing-data D11: 加载失败必须中断,不再往 props 放空数组 ——
+    // 消费侧拿到的是 null / 空数组,失败信号不能在这里被抹平。
+    throw new RuntimeException(
+        "SharedMemoryLoader: failed to load CSV " + csvPath + ": " + t.getMessage(), t
+    )
 }}
 """
     return script

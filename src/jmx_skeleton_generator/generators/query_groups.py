@@ -486,7 +486,7 @@ def generate_param_binding_script(
             # statement and SQL became ``WHERE rtag_varchar_1 =
             # "op_group_1"`` (double-quoted identifier, not a string
             # literal). F-14 strips the CSV framing.
-            f"def raw_{param_idx} = lines_{param_idx}.get((int)(Math.random() * lines_{param_idx}.size())).replaceAll('^\"|\"$', '')",
+            f"def raw_{param_idx} = lines_{param_idx}.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(lines_{param_idx}.size())).replaceAll('^\"|\"$', '')",
             f'vars.put("param_{param_idx}", raw_{param_idx})',
             "",
         ])

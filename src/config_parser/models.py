@@ -650,6 +650,32 @@ class TestConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def check_write_config_unique_tables(self) -> "TestConfig":
+        """write-missing-data D12(a): one table ⇒ one ``write_config`` entry.
+
+        The two write paths disagree on what a duplicate entry means:
+        the JDBC path generates a ThreadGroup per entry (two ThreadGroups
+        writing the same table — doubled rows / throughput, two missing
+        policies stacked), while the schemaless path lets the later entry
+        overwrite the earlier one (the earlier entry silently dropped).
+        Neither is the design intent, so the ambiguity is rejected at
+        parse time instead of being papered over at runtime.
+
+        Comparison is case-insensitive (``tbl_name.lower()``) — the rest
+        of the codebase treats the table name case-insensitively too.
+        """
+        seen: set[str] = set()
+        for wc in self.write_config:
+            key = wc.tbl_name.lower()
+            if key in seen:
+                raise ValueError(
+                    f"duplicate write_config entry for tbl_name {wc.tbl_name!r}: "
+                    "each table MUST have exactly one write_config entry"
+                )
+            seen.add(key)
+        return self
+
+    @model_validator(mode="after")
     def check_query_placeholders(self) -> "TestConfig":
         # Every '?' must be bound to a column reference (e.g. "WHERE col = ?").
         # Full semantic binding against generated column names is performed downstream.

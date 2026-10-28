@@ -109,17 +109,24 @@ def test_bind_mode_includes_not_null_data_cols() -> None:
     )
 
 
-def test_bind_mode_no_group_returns_safe_default() -> None:
-    """When the bind groups map is empty, the script must produce a
-    safe SQL (so the JDBC sampler records a clean error rather than a
-    JDBC parse error from a ``-- no bind groups`` comment line).
+def test_bind_mode_no_group_raises_business_exception() -> None:
+    """When the bind groups map is empty, the script MUST throw.
+
+    write-missing-data D11: 静默降级(``SELECT 1`` 兜底)会让整轮测试
+    "全绿但一行没写"——失败必须尽早暴露为 sampler error。
     """
     script = _build_inline_sql_preprocessor_script(
         **_minimal_kwargs(col_tag_bind_mode=True, col_num_per_tag=2, num_threads=4)
     )
 
-    assert 'vars.put("insert_sql", "SELECT 1")' in script, (
-        f"empty-groups guard must emit SELECT 1 fallback; snippet:\n{script[:2000]}"
+    assert "throw new RuntimeException" in script, (
+        f"empty-groups guard must raise a RuntimeException; snippet:\n{script[:2000]}"
+    )
+    assert "seed CSV load failed" in script, (
+        f"empty-groups guard must carry the failure hint; snippet:\n{script[:2000]}"
+    )
+    assert 'vars.put("insert_sql", "SELECT 1")' not in script, (
+        f"empty-groups guard must NOT silently degrade to SELECT 1; snippet:\n{script[:2000]}"
     )
 
 

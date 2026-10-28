@@ -138,9 +138,12 @@ def msStep = {ms_step}
 def bindGroups = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
     .get(rowsKey) as Map
 if (bindGroups == null || bindGroups.isEmpty()) {{
-    log.warn("DirectInsertPrep: empty bind groups for " + rowsKey)
-    vars.put("insert_sql", "SELECT 1")
-    return
+    // write-missing-data D11: 空种子池抛业务异常,不静默降级
+    // (静默降级会让整轮测试"全绿但一行没写")。
+    throw new RuntimeException(
+        "SharedMemory pool empty for table " + db + "." + table
+            + " (key " + rowsKey + "): seed CSV load failed or produced no rows"
+    )
 }}
 
 def threadNum = ctx.getThreadNum()
@@ -183,7 +186,7 @@ for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
     // Inner loop: batch_lines rows per device (整步 ts gap #6 fix).
     def valsRows = []
     for (int r = 0; r < batchLines; r++) {{
-        int rowIdx = new Random().nextInt(rowValues.size())
+        int rowIdx = java.util.concurrent.ThreadLocalRandom.current().nextInt(rowValues.size())
         def cells = rowValues.get(rowIdx) as List
         // write-batch-mode-semantics DCR (2026-08-31) gap #6 fix: ts
         // is `baseTime + r × msStep` (整步语义 — single SQL covers
@@ -225,9 +228,12 @@ def devicePerThread = (vars.get('device_per_thread') as Integer) ?: {device_per_
 def msStep = {ms_step}
 
 if (allRows == null || allRows.isEmpty()) {{
-    log.warn("DirectInsertPrep: shared memory empty for " + rowsKey)
-    vars.put("insert_sql", "-- no rows in shared memory")
-    return
+    // write-missing-data D11: 空种子池抛业务异常,不静默降级
+    // (静默降级会让整轮测试"全绿但一行没写")。
+    throw new RuntimeException(
+        "SharedMemory pool empty for table " + db + "." + table
+            + " (key " + rowsKey + "): seed CSV load failed or produced no rows"
+    )
 }}
 
 def threadNum = ctx.getThreadNum()
@@ -249,7 +255,7 @@ for (int d = localDeviceStart; d < localDeviceStart + devicePerThread; d++) {{
     def deviceCode = threadNum.toString() + "_" + d.toString()
     for (int r = 0; r < batchLines; r++) {{
         // SharedMemory loader 写入的每行是 Object[]（CSV 顺序 cell）
-        def srcRow = allRows.get(new Random().nextInt(total)) as Object[]
+        def srcRow = allRows.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(total)) as Object[]
         // Object[] → List 以便 .get(csvIdx) 索引（ArrayList 无 (Object[]) 构造器）
         def rowCells = srcRow.toList()
         // 整步：每行 ts 间隔一个 msStep，覆盖 batch_lines × msStep 窗口
@@ -621,9 +627,12 @@ def msStep = {ms_step}L
 
 def bindGroups = org.apache.jmeter.util.JMeterUtils.getJMeterProperties().get(rowsKey) as Map
 if (bindGroups == null || bindGroups.isEmpty()) {{
-    log.warn("BatchPreparedBindPrep: bind groups empty for " + rowsKey)
-    vars.putObject("__BATCH_PREPS_${{tableName}}", new ArrayList())
-    return
+    // write-missing-data D11: 空种子池抛业务异常,不静默降级
+    // (静默降级会让整轮测试"全绿但一行没写")。
+    throw new RuntimeException(
+        "SharedMemory pool empty for table " + tableName
+            + " (key " + rowsKey + "): seed CSV load failed or produced no rows"
+    )
 }}
 
 def deviceStart = (vars.get('device_start') != null ? (vars.get('device_start') as Long) : 1L)
@@ -632,7 +641,7 @@ if (threadNum < 0) {{ threadNum = (vars.get('__threadNum') as Integer) ?: 0 }}
 def baseTime = System.currentTimeMillis()
 
 def allPreps = new ArrayList()
-def randomGen = new Random()
+def randomGen = java.util.concurrent.ThreadLocalRandom.current()
 def qualifiedTable = dbName + "." + tableOnly
 for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
     def deviceCode = threadNum.toString() + "_" + d.toString()
@@ -726,8 +735,17 @@ def tableName = {_groovy_str_literal(table_name)}
 // Note: the key has ``_`` (not ``.``) between db and table because
 // JMeter's JMeterProperties splits dotted keys into nested Hashtable
 // paths, making them invisible to subsequent ``get`` calls.
+def rowsKey = "__SHARED_MEM_" + tableName.replace('.', '_')
 def sharedRows = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
-    .get("__SHARED_MEM_" + tableName.replace('.', '_')) as ArrayList
+    .get(rowsKey) as ArrayList
+// write-missing-data D11: 空种子池抛业务异常 —— 现状无任何保护,
+// 空池会在下方 ``% totalRows`` 处抛 ArithmeticException: / by zero。
+if (sharedRows == null || sharedRows.isEmpty()) {{
+    throw new RuntimeException(
+        "SharedMemory pool empty for table " + tableName
+            + " (key " + rowsKey + "): seed CSV load failed or produced no rows"
+    )
+}}
 // Column-name list stored alongside the rows (CSV header order minus
 // the leading ts column). The SQL ``INSERT`` template adds ``ts`` as
 // the first column, so the prepared row must follow:
@@ -741,7 +759,7 @@ def ptagIdx = (columnNames == null) ? -1 : columnNames.indexOf(firstPtag)
 
 def batchLines = {batch_lines}
 def totalRows = sharedRows.size()
-def startIdx = (int)(Math.random() * totalRows)
+def startIdx = java.util.concurrent.ThreadLocalRandom.current().nextInt(totalRows)
 
 def msStep = {ms_step}L
 

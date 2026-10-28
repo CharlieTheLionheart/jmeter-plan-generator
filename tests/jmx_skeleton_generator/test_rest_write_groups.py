@@ -504,12 +504,10 @@ def test_http_samplers_domain_and_port_have_property_defaults():
 
 
 def test_preprocessor_script_handles_rows_empty_gracefully():
-    """JSR223PreProcessor 在 rows 空时必须停线程（不要继续发无效请求）—
-    D-12 (2026-08-11) 修订: 实测 JMeter 5.6.3 ``JMeterContext`` 接口**完全没有**
-    stop 类方法（已在 jmeter.apache.org/api/.../JMeterContext.html 确认 — Method
-    Summary 里没有 stop/setStopThread/stopThread）。唯一稳定停 thread 方式是
-    ``Thread.currentThread().stop()``（Thread.stop() 虽 deprecated 但 5.6.3 仍可用，
-    是 SKILL.md §6.4.5 commit 5 fix-2 错误推断的修正）。
+    """JSR223PreProcessor 在 rows 空时必须抛业务异常（不要继续发无效请求）。
+
+    write-missing-data D11 修订：旧的"置空 body 静默退出"会让整轮测试
+    "全绿但一行没写"——空种子池必须尽早暴露为 sampler error。
 
     反例（禁止）：
       - ``ctx.stopThread()`` / ``ctx.setStopThread(true)``（JMeter 5.6.3 接口无此方法）
@@ -533,10 +531,14 @@ def test_preprocessor_script_handles_rows_empty_gracefully():
         regular_tags=[],
     )
     script = _build_rest_write_preprocessor_script(db="defaultdb", table="meters", ts_table=table)
-    assert "vars.put('request_body', '')" in script, (
-        f"rows-empty 分支必须置空 body 让 B1 assertion 捕获（JMeter 5.6.3 无 stop API 且 "
-        f"Thread.currentThread().stop() 在 Java 21+ 抛 UnsupportedOperationException）, "
-        f"got:\n{script}"
+    assert "throw new RuntimeException" in script, (
+        f"rows-empty 分支必须抛业务异常（不静默降级）, got:\n{script}"
+    )
+    assert "seed CSV load failed" in script, (
+        f"rows-empty 分支必须带失败提示, got:\n{script}"
+    )
+    assert "vars.put('request_body', '')" not in script, (
+        f"rows-empty 分支禁止静默置空 body（会让整轮测试全绿但一行没写）, got:\n{script}"
     )
     assert "ctx.stopThread" not in script, (
         f"rows-empty 分支禁止 ctx.stopThread() 任何参数版（JMeter 5.6.3 接口无此方法）, "
@@ -545,9 +547,6 @@ def test_preprocessor_script_handles_rows_empty_gracefully():
     assert "Thread.currentThread().stop" not in script, (
         f"rows-empty 分支禁止 Thread.currentThread().stop()（Java 21+ 抛 UnsupportedOperationException）, "
         f"got:\n{script}"
-    )
-    assert "log.warn" in script, (
-        f"rows-empty 分支必须有 log.warn 提示, got:\n{script}"
     )
     assert "SampleResult.setIgnore" not in script, (
         f"SampleResult 在 JSR223PreProcessor 未绑定，禁止使用, got:\n{script}"
@@ -711,3 +710,54 @@ def test_rest_write_groups_missing_wc_raises():
             rest_api_config=_default_rest_api(),
             write_configs=[],  # explicit empty list
         )
+
+# ---------------------------------------------------------------------------
+# Groovy 转义回归闸门(2026-09-08 typo 引入,2026-10-28 smoke 才发现)
+# ---------------------------------------------------------------------------
+
+
+def _assert_no_stray_literal_backslash_n(script: str, label: str) -> None:
+    """生成的 Groovy 里不得残留"字面反斜杠 + n"。
+
+    Python 源码里 ``"\\n"``(字面反斜杠 n)与 ``"\\n"``(换行)是两回事:
+    前者会被原样写进 Groovy 脚本,让 Groovy 编译器在那一行报
+    ``Unexpected character: '\\'`` —— 整个 preprocessor 脚本编译失败,
+    表现为 sampler 静默不写数据 / Write 全失败。
+
+    唯一允许的字面 ``\\n`` 是 ``sb.append('\\n')`` —— 那是 Groovy 字符串
+    字面量里刻意要写出的换行字符(InfluxDB Line 行分隔)。
+    """
+    scrubbed = script.replace("sb.append('\\n')", "")
+    assert "\\n" not in scrubbed, (
+        f"{label}: generated Groovy contains a stray literal '\\n' "
+        f"(would break Groovy compilation):\n{script}"
+    )
+
+
+def test_non_bind_script_has_no_stray_literal_backslash_n():
+    """非 bind 分支的 tsValue 行必须是真换行,不是字面 ``\\n``。"""
+    from jmx_skeleton_generator.generators.rest_write_groups import (
+        _build_rest_write_preprocessor_script,
+    )
+
+    script = _build_rest_write_preprocessor_script(
+        db="db_iot", table="meters", ts_table=_single_table_model().ts_dbs[0].tables[0]
+    )
+    _assert_no_stray_literal_backslash_n(script, "schemaless non-bind")
+
+
+def test_bind_script_has_no_stray_literal_backslash_n():
+    """bind 分支同样不得残留字面 ``\\n``。"""
+    from jmx_skeleton_generator.generators.rest_write_groups import (
+        _build_rest_write_preprocessor_script,
+    )
+
+    script = _build_rest_write_preprocessor_script(
+        db="db_iot",
+        table="meters",
+        ts_table=_single_table_model().ts_dbs[0].tables[0],
+        col_tag_bind_mode=True,
+        col_num_per_tag=2,
+        num_threads=2,
+    )
+    _assert_no_stray_literal_backslash_n(script, "schemaless bind")

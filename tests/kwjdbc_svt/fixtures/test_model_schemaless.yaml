@@ -20,6 +20,15 @@ ts_dbs:
       - name: meters
         if_not_exists: true
         retentions: 1d
+        # ts_col.type 必须显式 timestamp(9)（=TIMESTAMP(9) ns 精度），与 InfluxDB
+        # Line 行尾 19 位 ns 时间戳匹配；TIMESTAMP(3) 默认 ms 精度会拒 ns 写入。
+        # ts_col.name 用 k_timestamp —— 服务端把 InfluxDB Line 行尾时间戳映射到
+        # 该列；列名不对则行尾时间戳无处落，NOT NULL 的 ts 列恒为 NULL。
+        # （与 test_model_sparse_100_schemaless.yaml 同款契约。）
+        ts_col:
+          name: k_timestamp
+          type: timestamp(9)
+          ms_step: 1000
         primary_tag_count: 1
         primary_tags:
           - col_type: varchar(64)

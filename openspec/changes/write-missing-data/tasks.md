@@ -51,33 +51,33 @@ python -m pytest tests/                                                  # 全�
 
 ## 1. commit 1 前置:随机源替换(7 处,design D4(b))
 
-- [ ] 1.1 pytest 先写 `tests/jmx_skeleton_generator/test_random_source.py` 含失败断言:覆盖 7 处脚本生成路径,断言产物**不含** `new Random()` / `Math.random()`,**含** `ThreadLocalRandom.current()`:
+- [x] 1.1 pytest 先写 `tests/jmx_skeleton_generator/test_random_source.py` 含失败断言:覆盖 7 处脚本生成路径,断言产物**不含** `new Random()` / `Math.random()`,**含** `ThreadLocalRandom.current()`:
   - `write_groups.py::_build_inline_sql_preprocessor_script` 非 bind 分支(内层循环 `new Random().nextInt(total)`)与 bind 分支(`new Random().nextInt(rowValues.size())`)
   - `write_groups.py::_build_batch_prepared_preprocessor_body` 非 bind 分支(`(int)(Math.random() * totalRows)`)与 `_build_batch_prepared_bind_preprocessor_body`(`def randomGen = new Random()`)
   - `rest_write_groups.py::_build_rest_write_preprocessor_script` 非 bind 与 bind 分支(各 `def randomGen = new Random()`)
   - `query_groups.py` 的 seed 取行脚本(`(int)(Math.random() * lines.size())`)
-- [ ] 1.2 实现 7 处替换:`new Random().nextInt(n)` → `java.util.concurrent.ThreadLocalRandom.current().nextInt(n)`;`def randomGen = new Random()` → `def randomGen = java.util.concurrent.ThreadLocalRandom.current()`(后续 `randomGen.nextInt(...)` 调用点不动);`(int)(Math.random() * n)` → `nextInt(n)`
-- [ ] 1.3 **验收**:跑 `pytest tests/jmx_skeleton_generator/test_random_source.py` 全绿 + 全量 pytest 无 regression
+- [x] 1.2 实现 7 处替换:`new Random().nextInt(n)` → `java.util.concurrent.ThreadLocalRandom.current().nextInt(n)`;`def randomGen = new Random()` → `def randomGen = java.util.concurrent.ThreadLocalRandom.current()`(后续 `randomGen.nextInt(...)` 调用点不动);`(int)(Math.random() * n)` → `nextInt(n)`
+- [x] 1.3 **验收**:跑 `pytest tests/jmx_skeleton_generator/test_random_source.py` 全绿 + 全量 pytest 无 regression
 
 ## 2. commit 1 前置:空种子池失败模式修正(design D11)
 
-- [ ] 2.1 pytest 先写 `tests/shared_memory_initializer/test_shared_memory_initializer.py` 新增用例含失败断言:loader Groovy 脚本在"CSV 文件不存在"分支与 `catch` 分支**均** `throw new RuntimeException`,**不含** `props.put(rowsKey, [])` 兜底
-- [ ] 2.2 pytest 先写 `tests/jmx_skeleton_generator/test_empty_pool_raises.py` 含失败断言:6 个消费点脚本在共享内存池为空时抛 `RuntimeException`,**不含** `log.warn(... empty ...)` + 早退:
+- [x] 2.1 pytest 先写 `tests/shared_memory_initializer/test_shared_memory_initializer.py` 新增用例含失败断言:loader Groovy 脚本在"CSV 文件不存在"分支与 `catch` 分支**均** `throw new RuntimeException`,**不含** `props.put(rowsKey, [])` 兜底
+- [x] 2.2 pytest 先写 `tests/jmx_skeleton_generator/test_empty_pool_raises.py` 含失败断言:6 个消费点脚本在共享内存池为空时抛 `RuntimeException`,**不含** `log.warn(... empty ...)` + 早退:
   - `write_groups.py::_build_inline_sql_preprocessor_script` 非 bind(`allRows` 空)与 bind(`bindGroups` 空)
   - `write_groups.py::_build_batch_prepared_preprocessor_body` 非 bind(**新增**检查,现状无保护)与 `_build_batch_prepared_bind_preprocessor_body`(`bindGroups` 空)
   - `rest_write_groups.py::_build_rest_write_preprocessor_script` 非 bind(`rows` 空)与 bind(`bindGroups` 空)
-- [ ] 2.3 实现 loader 侧抛异常(`shared_memory_initializer.py::generate_groovy_loader_script` 的 2 处:文件不存在分支 + `catch` 分支)
-- [ ] 2.4 实现 6 个消费点抛业务异常,消息带表名 + 共享内存 key + "seed CSV load failed" 提示;判空 MUST 同时覆盖 `null` 与空数组(loader 抛异常后不再 `props.put(rowsKey, [])`,消费侧可能拿到 `null`)
-- [ ] 2.5 **验收**:跑 `pytest tests/shared_memory_initializer/test_shared_memory_initializer.py tests/jmx_skeleton_generator/test_empty_pool_raises.py` 全绿
+- [x] 2.3 实现 loader 侧抛异常(`shared_memory_initializer.py::generate_groovy_loader_script` 的 2 处:文件不存在分支 + `catch` 分支)
+- [x] 2.4 实现 6 个消费点抛业务异常,消息带表名 + 共享内存 key + "seed CSV load failed" 提示;判空 MUST 同时覆盖 `null` 与空数组(loader 抛异常后不再 `props.put(rowsKey, [])`,消费侧可能拿到 `null`)
+- [x] 2.5 **验收**:跑 `pytest tests/shared_memory_initializer/test_shared_memory_initializer.py tests/jmx_skeleton_generator/test_empty_pool_raises.py` 全绿
 
 ## 3. commit 1 前置:配置校验硬化(design D12)
 
-- [ ] 3.1 pytest 先写 `tests/config_parser/test_write_config.py` 新增用例含失败断言:`write_config[]` 内同表两条(大小写不同也算重复,如 `iot_monitor.t_cnc` 与 `IOT_MONITOR.T_CNC`)→ `ValueError`,消息含 `tbl_name`
-- [ ] 3.2 pytest 先写 `tests/jmx_skeleton_generator/test_rest_write_bind.py` 新增用例含失败断言:schemaless 路径在 cfg 用**大写** `tbl_name` 时仍能匹配到 model 的小写表名(现状抛 `missing write_config for ts_table`)
-- [ ] 3.3 实现 `src/config_parser/models.py::TestConfig` 的 `@model_validator(mode="after")`:`write_config` 内 `tbl_name.lower()` 必须唯一
-- [ ] 3.4 实现 `rest_write_groups.py::generate_rest_write_thread_group` 的大小写归一:建索引 `write_cfg_by_table[wc.tbl_name.lower()] = wc`,查询键 `f"{ts_db.name}.{ts_table.name}".lower()`
-- [ ] 3.5 **验收**:跑 `pytest tests/config_parser/test_write_config.py tests/jmx_skeleton_generator/test_rest_write_bind.py` 全绿
-- [ ] 3.6 **commit 1**:§1-§3 全部验收通过 → 停下等 user review → 收到信号后 `git add` + `git commit`(message:`perf(write): 随机源换 ThreadLocalRandom + 空种子池抛业务异常 + write_config 同表唯一校验`)+ `git push origin feat/pub-sub`
+- [x] 3.1 pytest 先写 `tests/config_parser/test_write_config.py` 新增用例含失败断言:`write_config[]` 内同表两条(大小写不同也算重复,如 `iot_monitor.t_cnc` 与 `IOT_MONITOR.T_CNC`)→ `ValueError`,消息含 `tbl_name`
+- [x] 3.2 pytest 先写 `tests/jmx_skeleton_generator/test_rest_write_bind.py` 新增用例含失败断言:schemaless 路径在 cfg 用**大写** `tbl_name` 时仍能匹配到 model 的小写表名(现状抛 `missing write_config for ts_table`)
+- [x] 3.3 实现 `src/config_parser/models.py::TestConfig` 的 `@model_validator(mode="after")`:`write_config` 内 `tbl_name.lower()` 必须唯一
+- [x] 3.4 实现 `rest_write_groups.py::generate_rest_write_thread_group` 的大小写归一:建索引 `write_cfg_by_table[wc.tbl_name.lower()] = wc`,查询键 `f"{ts_db.name}.{ts_table.name}".lower()`
+- [x] 3.5 **验收**:跑 `pytest tests/config_parser/test_write_config.py tests/jmx_skeleton_generator/test_rest_write_bind.py` 全绿
+- [x] 3.6 **commit 1**:§1-§3 全部验收通过 → 停下等 user review → 收到信号后 `git add` + `git commit`(message:`perf(write): 随机源换 ThreadLocalRandom + 空种子池抛业务异常 + write_config 同表唯一校验`)+ `git push origin feat/pub-sub`
 
 ## 4. commit 2:配置模型(`MissingConfig` + `WriteConfig.missing`)
 
