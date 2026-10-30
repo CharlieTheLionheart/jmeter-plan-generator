@@ -474,3 +474,132 @@ class TestPreparedSkip:
         cfg_obj = parse_test_cfg_yaml(cfg_path)
 
         assert _wants_prepared(cfg_obj) is False
+
+
+# ---------------------------------------------------------------------------
+# §7 write-missing-data 集成(Phase A:.jmx 生成层)
+# ---------------------------------------------------------------------------
+
+
+# (cfg fixture, model fixture) —— 覆盖 6 处装配点 + 概率 + 缺整轮。
+_MISSING_FIXTURES = [
+    ("test_cfg_missing_direct.yaml", "test_model.yaml"),
+    ("test_cfg_missing_direct_bind.yaml", "test_model.yaml"),
+    ("test_cfg_missing_prepare.yaml", "test_model.yaml"),
+    ("test_cfg_missing_prepare_bind.yaml", "test_model.yaml"),
+    ("test_cfg_missing_schemaless.yaml", "test_model_schemaless.yaml"),
+    ("test_cfg_missing_schemaless_bind.yaml", "test_model_schemaless.yaml"),
+    ("test_cfg_missing_prob.yaml", "test_model.yaml"),
+    ("test_cfg_missing_full_round.yaml", "test_model.yaml"),
+]
+
+_MISSING_IDS = [f"{cfg}" for cfg, _model in _MISSING_FIXTURES]
+
+# 缺失能力在脚本里留下的标识符(任一出现即说明注入了缺失逻辑)。
+_MISSING_MARKERS = (
+    "missingProbability",
+    "skipMissingRow",
+    "applyMissing",
+)
+
+
+def _jsr223_scripts(jmx_path: Path) -> list:
+    """Collect every ``JSR223*`` script embedded in the JMX.
+
+    The JMX carries a default namespace, so element tags are
+    ``{http://jmeter.apache.org/}JSR223PreProcessor`` —— strip the
+    namespace before matching.
+    """
+    tree = ET.parse(jmx_path)
+    scripts = []
+    for element in tree.iter():
+        if element.tag.rsplit("}", 1)[-1] not in (
+            "JSR223PreProcessor",
+            "JSR223Sampler",
+        ):
+            continue
+        for prop in element.iter():
+            if prop.tag.rsplit("}", 1)[-1] != "stringProp":
+                continue
+            if prop.get("name") == "script":
+                scripts.append(prop.text or "")
+    return scripts
+
+
+class TestMissingDataIntegration:
+    """声明 ``missing`` 段的表,其 Write TG 脚本必须含缺失判定块。"""
+
+    @pytest.mark.parametrize("cfg_name,model_name", _MISSING_FIXTURES, ids=_MISSING_IDS)
+    def test_missing_table_script_contains_missing_block(
+        self, cfg_name: str, model_name: str, tmp_path: Path
+    ):
+        """生成 JMX → ElementTree.parse() 校验 → 缺失块存在。"""
+        out = tmp_path / "out"
+        rc = cli_main(
+            [
+                str(FIXTURE_DIR / model_name),
+                str(FIXTURE_DIR / cfg_name),
+                "-o",
+                str(out),
+            ]
+        )
+        assert rc == EXIT_OK
+
+        jmx = out / "test_plan.jmx"
+        assert jmx.is_file(), "test_plan.jmx should be generated"
+        ET.parse(jmx)  # raises on malformed XML
+
+        scripts = _jsr223_scripts(jmx)
+        assert scripts, "JMX 内应至少有一个 JSR223 脚本"
+        hit = [s for s in scripts if any(m in s for m in _MISSING_MARKERS)]
+        assert hit, (
+            f"{cfg_name}: 声明了 missing 段,但生成的脚本里找不到缺失判定块"
+        )
+
+    def test_table_without_missing_section_has_no_missing_block(self, tmp_path: Path):
+        """未声明 ``missing`` 段的表 → 脚本不含任何缺失标识符(零回归)。"""
+        out = tmp_path / "out"
+        rc = cli_main(
+            [
+                str(FIXTURE_DIR / "test_model.yaml"),
+                str(FIXTURE_DIR / "test_cfg.yaml"),
+                "-o",
+                str(out),
+            ]
+        )
+        assert rc == EXIT_OK
+
+        scripts = _jsr223_scripts(out / "test_plan.jmx")
+        assert scripts
+        for script in scripts:
+            for marker in _MISSING_MARKERS:
+                assert marker not in script, (
+                    f"未声明 missing 段却出现缺失标识符 {marker}"
+                )
+
+    def test_probability_zero_fixture_has_no_missing_block(self, tmp_path: Path):
+        """``probability = 0.0`` → 显式关闭缺失写入,不注入缺失逻辑。
+
+        该 fixture 与"未声明段"的产物逐字节一致 —— 这里只断言"无缺失标识符",
+        逐字节一致性由 ``tests/jmx_skeleton_generator/test_missing_injection.py``
+        的零回归用例覆盖(同一段生成代码,粒度更细)。
+        """
+        import yaml
+
+        cfg = yaml.safe_load(
+            (FIXTURE_DIR / "test_cfg_missing_prob.yaml").read_text(encoding="utf-8")
+        )
+        cfg["write_config"][0]["missing"]["probability"] = 0.0
+        path = _write_yaml(tmp_path, "cfg_zero.yaml", cfg)
+
+        out = tmp_path / "out"
+        rc = cli_main([str(FIXTURE_DIR / "test_model.yaml"), str(path), "-o", str(out)])
+        assert rc == EXIT_OK
+
+        scripts = _jsr223_scripts(out / "test_plan.jmx")
+        assert scripts
+        for script in scripts:
+            for marker in _MISSING_MARKERS:
+                assert marker not in script, (
+                    f"probability=0.0 却出现缺失标识符 {marker}"
+                )

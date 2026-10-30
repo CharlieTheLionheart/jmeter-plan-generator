@@ -150,6 +150,17 @@
   - 时间戳按 `ms_step` 间隔递增生成 `batch_lines` 个（**整步语义** = `+ i × ms_step`，非分摊语义 `+ i × (ms_step / batch_lines)`）
 - `device_per_thread`：每线程负责写入的设备数（**绝对设备号**范围 `[device_start, device_start + device_per_thread - 1]`），与连接池连接数（`conn_pool_size`）无关。每个线程独立负责一批设备，设备号按线程维度划分。**Write TG sampler 内部 `for deviceIndex in device_start..(device_start + device_per_thread - 1)` 遍历当前线程下 dpt 个设备**，每个 device 各写 1 条 INSERT（写 `batch_lines` 行）
 - `num_threads`：写入线程组并发数，也可以设置为 `conn_pool_size`，大于 `conn_pool_size` 时所有写入线程和查询线程共享和复用连接
+- `missing`：**表级缺失数据配置段**（write-missing-data DCR 2026-10-26，可选；只作用于该条目锚定的那一张表，不影响同库其它表）
+  - `probability`：**必填**（段存在时），float ∈ `[0.0, 1.0]`，每写入批次执行一次缺失的概率。`1.0` = 每批次必然缺失，`0.0` = 显式关闭缺失写入（**不注入任何缺失逻辑**，生成结果与未声明该段逐字节一致）
+  - `ts_count`：每轮从**尾部**截断掉的时间戳数，缺省 `0`，`0 ≤ ts_count ≤ batch_lines`
+  - `device_count`：每轮从**尾部**截断掉的设备 ptag 数，缺省 `0`，`0 ≤ device_count ≤ device_per_thread`
+  - **表级隔离**：同一张表的其余写入参数与 `missing` 段同属一个 `write_config[]` 条目；一个条目只作用于它锚定的那一张表；MUST NOT 存在库级或全局层的缺失默认值
+  - **尾部截断 + 交集**：设备维度绑定该表的第一个 primary tag 列，时间戳维度绑定该表的 `ts_col`；两个维度的"尾部"以**本轮网格内的相对下标**定义（设备下标 `0` = 本轮第一个设备，时间戳下标 `0` = 本轮第一个时间戳）。某一维度 `count = 0` = **该维度未配置，不参与判定**；两个维度都配置时取**交集**（命中设备尾部 **且** 命中时间戳尾部的格子才被跳过），本轮丢弃格数恒为 `device_count × ts_count`，写入行数 = `device_per_thread × batch_lines − device_count × ts_count`
+  - **每批次一次判定**：判定发生在写入线程内，各线程**相互独立**（不支持"所有线程在同一批次同时缺失"）；随机源 `ThreadLocalRandom`，每批次至多 1 次概率判定；缺失格子集合由确定性下标比较得出，不依赖随机抽样
+  - **只减行数，不改吞吐**：缺失不影响 `ConstantThroughputTimer` 的调度频率与 sampler 触发次数，缺失后**不做**吞吐补偿
+  - **覆盖全部写入路径**：`direct` / `prepare` / `schemaless` 三种 mode 的 bind 与非 bind 分支共 6 处装配点均生效，语义一致
+  - **缺整轮**：`ts_count == batch_lines`（或 `device_count == device_per_thread`）是合法形态 —— 缺失触发时该批次零行写入，各路径均**不判为写入失败**（`direct` 不产出 `VALUES` 为空的 INSERT；`prepare` 跳过空批次；`schemaless` 不触发失败断言）
+  - 详细规格见 OpenSpec DCR `openspec/changes/write-missing-data/`
 
 > **当前版本多表线程数约束**：当 `write_config` 分条目为不同表指定写入配置时，各表的 `num_threads` 必须保持相同。该限制用于简化每秒写入列数据数的计算与控制，并避免多张表使用不同 `num_threads` 时 JMeter 全局同名变量（如 `${num_threads}`）冲突的问题。后续版本将迭代支持按表独立指定 `num_threads`，届时通过表级独立变量名或线程组内常量值解决变量隔离。
 

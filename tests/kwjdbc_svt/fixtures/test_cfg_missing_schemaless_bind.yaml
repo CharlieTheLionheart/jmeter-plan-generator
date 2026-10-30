@@ -1,0 +1,54 @@
+# write-missing-data schemaless bind fixture
+#
+# OpenSpec change ``write-missing-data`` tasks.md §7.2 —— 6 处装配点覆盖
+# —— schemaless + REST InfluxDB Line + col_tag_bind_mode 分支。
+#
+# model 复用 test_model_schemaless.yaml（表 iot_monitor.meters，
+# data_col_count=20 → col_num_per_tag 取 5）。
+# 缺失配置:probability=1.0（确定性 smoke）、ts_count=1、device_count=1
+#   → 每批次 2×1 网格跳过 1×1=1 格，落库 1 行。
+#
+# schemaless 走 TLS（Login 强制非空密码用户，非空密码用户只能走安全模式）。
+# ca_cert_path 指向仓库内 ca.crt（gitignored，由容器 ``docker cp`` 取出）。
+# 容器重建后必须重新 ``docker cp``，否则 TLS 握手失败。
+
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 4
+  device_start: 1
+  test_duration: 30
+
+rest_api_config:
+  https_mode: tls
+  ca_cert_path: tests/kwjdbc_svt/fixtures/ca.crt
+  http_port: 8081
+  login_user: root
+  login_password: root123
+  login_url_path: /restapi/login
+  ddl_url_path: /restapi/ddl
+  write_url_path: /restapi/influxdb
+  query_url_path: /restapi/query
+  default_db: iot_monitor
+  timezone: null
+  pre_create_tables: true
+
+write_config:
+  - tbl_name: iot_monitor.meters
+    throughput: 6.0
+    mode: schemaless
+    batch_lines: 2
+    device_per_thread: 2
+    num_threads: 1
+    col_tag_bind_mode: true
+    col_num_per_tag: 5
+    missing:
+      probability: 1.0
+      ts_count: 1
+      device_count: 1
+
+query_config:
+  - query: "select count(*) from iot_monitor.meters;"
+    throughput: 1.0
+    num_threads: 1

@@ -1,0 +1,30 @@
+# write-missing-data 概率 fixture
+#
+# OpenSpec change ``write-missing-data`` tasks.md §7.2 + §9.3
+# 用途: 概率触发验证 —— probability=0.5,每批次独立判定一次。
+# 断言口径是**统计区间**(总落库行数落在 [满量×0.5, 满量]),不做精确等值。
+
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 4
+  device_start: 1
+  test_duration: 30
+
+write_config:
+  - tbl_name: iot_monitor.t_cnc
+    throughput: 1.0
+    mode: prepare
+    batch_lines: 5
+    device_per_thread: 2
+    num_threads: 8
+    missing:
+      probability: 0.5
+      ts_count: 2
+      device_count: 1
+
+query_config:
+  - query: "select count(*) from iot_monitor.t_cnc;"
+    throughput: 1.0
+    num_threads: 1

@@ -12,15 +12,17 @@
 |---|---|---|
 | pub-sub-end-to-end | 发布订阅端到端(SetupTG 建发布/订阅 + Verify tearDown TG + `pub_sub_config` 表级配置段) | 设计 + 实现 + smoke 完成,待 `openspec archive` |
 | write-missing-data 阶段 0 | 写入侧按批次随机缺失数据 —— DCR 五件套设计(proposal / design / spec / review / tasks) | 设计完成,编码未开始 |
-| write-missing-data 阶段 1 | commit 1 既有代码修正:7 处随机源换 `ThreadLocalRandom` + 空种子池抛业务异常(loader + 6 消费点)+ `write_config[]` 同表唯一校验 + schemaless 大小写归一 + schemaless 非 bind 路径既有缺陷修正 | 已落地(代码 + UT 全绿 + smoke 全绿,review 通过后 commit) |
+| write-missing-data 阶段 1 | commit 1 既有代码修正:7 处随机源换 `ThreadLocalRandom` + 空种子池抛业务异常(loader + 6 消费点)+ `write_config[]` 同表唯一校验 + schemaless 大小写归一 + schemaless 非 bind 路径既有缺陷修正 | 已落地(`e11f41d`,UT 874 全绿 + smoke 全绿) |
+| write-missing-data 阶段 2 | commit 2 缺失功能:`MissingConfig` 配置模型 + Python/Groovy 同构判定 helper + 6 处 Groovy 注入 + D7 缺整轮兜底 + 9 个 fixture + 主 spec 同步;顺带修掉 direct 路径 3 个从未跑通的既有缺陷 | **已落地**(`86b4b63`,分支 `feat/write-missing-data`;UT 951 全绿 + Phase B smoke 11 个用例全绿;change 已 `openspec archive`) |
 
 ## 待办(跨会话)
 
-- **write-missing-data 编码** —— 按 `openspec/changes/write-missing-data/tasks.md` §1~§9 推进(TDD 节奏:pytest 先行 → 编码 → 模块全绿 → 下一模块;每个 commit 前**停下等 user review**)。
-  - commit 1 = 既有代码修正(与缺失功能零耦合,可独立回滚):7 处随机源换 `ThreadLocalRandom` + 空种子池抛业务异常 + `write_config[]` 同表唯一校验 + schemaless 大小写归一 + schemaless 非 bind 路径修正 —— **§1~§3 已落地,UT 874 全绿 + smoke 全绿,已 commit**
-  - commit 2 = 缺失功能(新增能力):配置模型 → 判定 helper → 6 处 Groovy 注入 → 集成与 fixture —— **下一步从这里开始(tasks.md §4)**
+- **write-missing-data** —— **两个 commit 均已落地,change 已 `openspec archive`**(归档目录 `openspec/changes/archive/2026-10-30-write-missing-data/`,spec 增量合并进 `openspec/specs/write-missing-data/spec.md`)。
+  - commit 1 = 既有代码修正(与缺失功能零耦合,可独立回滚):7 处随机源换 `ThreadLocalRandom` + 空种子池抛业务异常 + `write_config[]` 同表唯一校验 + schemaless 大小写归一 + schemaless 非 bind 路径修正 —— `e11f41d`(分支 `feat/pub-sub`)
+  - commit 2 = 缺失功能(新增能力):配置模型 → 判定 helper → 6 处 Groovy 注入 → 集成与 fixture —— `86b4b63`(分支 `feat/write-missing-data`,从 `feat/pub-sub` 拉出)
 - **pub-sub-end-to-end 归档** —— `openspec archive` 前确认 spec 增量合并进主 spec。
-- **smoke 证据** —— write-missing-data 的 Phase B smoke(6 条路径全覆盖 + 概率 + 缺整轮 + 空种子池失败路径)尚未跑,编码阶段补。
+- **write-missing-data 后续** —— 分支 `feat/write-missing-data` 待提 PR 合入(远端默认分支 `develop-2.0`)。
+- **smoke 证据** —— write-missing-data 的 Phase B smoke(6 条路径 + 概率 + 缺整轮 ×3 路径 + 空种子池)已跑完并全绿,证据见阶段 2 条目。
 
 ## §决策汇总
 
@@ -96,3 +98,76 @@
 
 - `TestConfig.find_write_config()` 仍是**大小写敏感**的精确匹配 —— D12(b) 只覆盖了 schemaless 路径的索引/查询。cfg 写大写表名时,schemaless 路径能命中,但 `main.py` 的 bind 模式校验 / seed CSV 路径排除仍会 `find_write_config` 返回 `None`(两者都是"跳过"语义,不会误写)。若后续要求 cfg 表名大小写全链路等价,需另开一处归一。
 - commit 1 已于 2026-10-28 review 通过后落地(见 git log)。下一阶段从 `tasks.md` §4(commit 2:缺失功能)继续。
+
+### §2026-10-29 write-missing-data 阶段 2:commit 2 缺失功能
+
+**做了什么** —— §4 配置模型(`MissingConfig`)+ §5 判定 helper(Python/Groovy 同构)+ §6 六处 Groovy 注入 + §7 集成与 8 个 fixture,全部落地并通过 §9 的 Phase B smoke。
+
+| 子阶段 | 内容 |
+|---|---|
+| §4 | `config_parser/models.py` 新增 `MissingConfig`(段内字段白名单 `extra="forbid"`、`probability` 必填且 ∈ [0.0,1.0]、两个 count 缺省 0);`WriteConfig.missing: Optional[MissingConfig]` + `@model_validator(mode="after")` 跨字段校验(`ts_count ≤ batch_lines` / `device_count ≤ device_per_thread`,取等合法 = 缺整轮) |
+| §5 | `utils/preprocessor_helpers.py` 新增 `should_skip_row(...)`(纯比较,无随机源)+ `groovy_missing_data_decl(...)` + `groovy_missing_data_block(...)`(未启用时返回空串 → 拼接后脚本逐字节不变)+ `groovy_missing_skip_line(...)` |
+| §6 | 6 处装配点注入:`write_groups.py` 的 direct 非 bind / direct bind / prepare 非 bind / prepare bind,`rest_write_groups.py` 的 schemaless 非 bind / bind。D7 兜底:direct 空行 → 注释串兜底;prepare bind 空 rows 设备不入 preps;schemaless 空 body → `__missing_skipped` 标记,B1 断言据此放行 |
+| §7 | `tests/kwjdbc_svt/test_main.py` 集成用例(8 个 fixture 生成 JMX + `ElementTree.parse()` 校验)+ 8 个新 fixture |
+| §8 | 主 spec `docs/specs/kwdb-svt-test-plan-generator-spec.md` §2.0 补 `missing` 段字段表;本档案同步 |
+
+**关键设计修正(实现阶段发现,已回写 design/spec/tasks)**
+
+| # | 问题 | 处置 |
+|---|---|---|
+| 1 | **design D1 的"count=0 视为全集恒命中"有漏洞**:两个 count 都是 0 时算出 `true && true` → **整轮全丢**,与 spec Scenario「两个 count 均为 0 → 无缺失效果」直接冲突 | 改为"count=0 = **该维度未配置、不参与判定**",生成期只把已配置的维度写进脚本。四种形态(单维 ×2 / 双维交集 / 双零不丢)与 spec 逐条对齐。D7 的运行时漂移(阈值非正 → 设备维退化为全集 → 只按 ts 维截断)**不需要额外分支**,阈值不做 clamp 即自然成立 |
+| 2 | **tasks §9.1 断言 ⑤ 的公式是并集口径** `(dpt−M)×(B−N)`,与 D1 的交集语义冲突 | 改为 `dpt×B − M×N`(交集口径) |
+| 3 | **`missing` 段的注入闸门**(design D6)只判 `probability > 0` | 补:两个 count 都是 0 时段合法但无缺失效果 —— 生成的闭包恒 `return false`,不丢任何格子 |
+
+**顺带修掉的既有缺陷(3 处,全部是 direct 路径从未跑通的原因)**
+
+| # | 缺陷 | 症状 | 修法 |
+|---|---|---|---|
+| 1 | direct 的 Write TG **没有挂 per-ThreadGroup UDV** | preprocessor 读不到 `column_types` → 类型表为空 → 数值列被加引号 → 服务端 `42804 datatype mismatch`,一行都写不进去 | direct 分支补 `_build_write_udv(...)` |
+| 2 | direct 非 bind 的 `typeList.get(c)` —— `String.split()` 返回**数组**,Groovy 数组没有 `.get()` | preprocessor 每 tick 抛 `MissingMethodException` → JSR223 报错但 sampler 仍报成功 → 静默 0 行 | 改 `typeList[c]` |
+| 3 | direct bind 的单元格**原样未加引号**拼进 inline INSERT | 字符串值被当关系名解析 → `42601 unsupported input type relation "m2"` | bind 分支按列类型引号化(数值列不加引号,与非 bind 分支同规则);类型经 `column_types` UDV + model 列序回查 |
+
+> 三处都在 `direct` 路径上,而 `direct` 此前**没有任何一次成功记录**(基线 `e11f41d` + 无 `missing` 段的 direct fixture 实跑:`Err: 4 (50%)`、0 行)—— 是 §9.2.1/§9.2.2 要求的 direct smoke 暴露出来的,不是本 change 引入的。
+
+**踩了什么坑与修法**
+
+| # | 坑 | 修法 |
+|---|---|---|
+| 1 | **pytest 抓不到 Groovy 编译/运行错误** —— 本次 direct 路径的 3 个缺陷全是 JMeter 运行时才暴露(preprocessor 抛异常、sampler 报 42804/42601) | 严格按 `AGENTS.md` §6:UT 全绿后逐路径跑 smoke;并把 JTL 的 `success=false` + `responseCode` 纳入断言 |
+| 2 | **JSR223PreProcessor 抛异常时 sampler 仍报成功** —— direct 缺陷 2 就是这样"静默 0 行 + Err: 0" | smoke 断言不能只看 `Err:` 计数,必须查落库行数与 `jmeter.log` 的 `Problem in JSR223 script` |
+| 3 | **direct 路径的 ts 取毫秒级 wall clock,多线程首批会撞值** —— 4 线程首批 baseTime 落在同一毫秒 → 20 个 ts 值塌成 6 个,per-ts 断言失真 | direct / schemaless 缺失 fixture 改单线程(多线程语义已由 prepare 两条 4 线程路径覆盖);断言按"每设备经历的批次数"归一 |
+| 4 | **smoke 断言口径要按"每设备批次数"归一** —— 同一台表里每设备经历的批次数可能不同(各线程独立 tick) | 归一因子 = `max(每设备 ts 覆盖数) / batch_lines`;行数期望 = `组数 × 批次数 × (D×B − M×N)` |
+| 5 | **`kwbase sql` 输出是 tab 分隔**,按 `|` 切分解析不到分布 | 解析改空白切分 + 跳过表头 |
+| 6 | **JTL 的 `failureMessage` 对 JSR223 报错是空的** —— JMeter 只写 `responseCode=500`,异常文本进 `jmeter.log` | 失败消息的内容断言只能从 `jmeter.log` 取;JTL 只用于"哪些 label 报了 error" |
+| 7 | **JMeter 的 preprocessor 异常不阻断 sampler** —— 消费点抛了业务异常,sampler 仍执行并拿到 null → NPE | 两者都算 error,测试如实报失败;失败消息(业务异常)在 `jmeter.log`,JTL 里看到的是 NPE |
+| 8 | **多线程首批的 baseTime 可能落在同一毫秒** → ts 值相撞,`distinct_ts < 批次数 × batch_lines` | 批次数的判定基准用 JTL 的 `[Write]` sample 数,不用 `distinct_ts ÷ batch_lines`;direct / schemaless 的缺失 fixture 用单线程 |
+
+**smoke 证据**(本次实跑,KaiwuDB TLS 容器 `kaiwudb-smoke`,6 条写入路径 + 3 个专项)
+
+| 用例 | 结果 |
+|---|---|
+| direct 非 bind | `Err: 0`,落库 8 行 = 2 设备 × (5 ts + 3 ts);每设备 ts 覆盖 `{5,3}`、每 ts 设备覆盖 `{2,1}` |
+| direct bind | 同上,`Err: 0`,8 行 |
+| prepare 非 bind | `Err: 0`,落库 32 行 = 4 线程 × 8 行;每设备 ts 覆盖 `{5:4, 3:4}`、每 ts 设备覆盖 `{2:12, 1:8}` |
+| prepare bind | 同上,`Err: 0`,32 行 |
+| schemaless 非 bind(TLS) | `Err: 0`,落库 9 行 = 3 批 × 3 行;每设备 ts 覆盖 `{6,3}`(归一 `{2,1}`)、每 ts 设备覆盖 `{2:3, 1:3}` |
+| schemaless bind(TLS) | 同上,`Err: 0`,9 行 |
+| §9.3 概率(`probability: 0.5`) | `Err: 0`,落库 38/40 行;每设备 ts 覆盖 `{5:7, 3:1}` —— 既非全触发也非全不触发 |
+| §9.4 缺整轮(`ts_count == batch_lines`,prepare) | `Err: 0`,落库 **0 行**;日志见 `WARN No batch rows prepared`(sampler 侧既有 `rowCount==0` 兜底) |
+| §9.4 缺整轮(direct,补 fixture) | `Err: 0`,落库 **0 行**;JMX 含 `if (valuesSql.isEmpty())` + `-- no rows written for ` 兜底 |
+| §9.4 缺整轮(schemaless,补 fixture) | `Err: 0`,落库 **0 行**;JMX 含 `vars.put('__missing_skipped','true')` + 断言 `vars.get('__missing_skipped')=='true'` 放行 |
+| §9.5 空种子池 | 删掉行聚合 CSV → SetupTG `SharedMemoryLoader` 报错(`RuntimeException: SharedMemoryLoader: CSV file not found: ...`)+ Write 消费点二次抛业务异常(`SharedMemory pool empty for table ... (key ...): seed CSV load failed or produced no rows`)+ Write sampler NPE,共 5 条 error、`Err: 5 (62.50%)`、落库 0 行 —— 失败模式如实暴露,不再"全绿但没写数据" |
+
+**零回归核验**(与基线 commit `e11f41d` 逐字节比对,6 处脚本 × `missing=None`)
+
+| 路径 | 结果 |
+|---|---|
+| direct 非 bind / prepare 非 bind / prepare bind / schemaless 非 bind / schemaless bind | **去掉注释后逐字节一致**(差异只有本阶段统一精简的 Groovy 注释) |
+| direct bind | 去掉注释后仅差 1 行 `def batchLines = 5` —— 该分支此前用了 `batchLines` 却从未定义,运行时会 `MissingPropertyException`;§6.3 的 direct bind 注入与 §9.2.2 的 smoke 都要求该路径可用,故补上 |
+
+**遗留**
+
+- `direct` 的 `ms_step` 仍取生成器默认值 `1000`,未按 model 的 `ts_col.ms_step` 解析(既有行为,与本次改动无关;`test_model.yaml` 的 `ms_step` 恰为 1000 故无差异)。
+- `TestConfig.find_write_config()` 仍是大小写敏感的精确匹配(阶段 1 已记,未变)。
+- 阶段 2 的代码与档案待 user review 后落 commit 2(`tasks.md` §7.4)。
+

@@ -196,12 +196,13 @@ test_cfg.yaml
 一格被跳过 MUST 当且仅当两个维度的判定结果**同时为真**(交集):
 
 ```
-device_hit = device_count == 0 || device_idx >= device_per_thread - device_count
-ts_hit     = ts_count == 0 || ts_idx >= batch_lines - ts_count
+# 只对**已配置**的维度取交集(count=0 的维度未配置,不参与判定)
+device_hit = device_idx >= device_per_thread - device_count     # device_count > 0 时
+ts_hit     = ts_idx >= batch_lines - ts_count                     # ts_count > 0 时
 skip(device_idx, ts_idx) = device_hit && ts_hit
 ```
 
-某一维度的 count 为 `0` 时该维度的命中判定恒为真,即该维度不构成约束(等价于全集),交集里这一项不起作用。
+某一维度的 count 为 `0` 时该维度**未配置**,**不参与判定**(既不命中、也不否决另一维)。
 
 #### Scenario: 只配时间戳数 → 尾部时间戳下所有设备都缺
 

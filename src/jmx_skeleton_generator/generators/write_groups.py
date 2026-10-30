@@ -5,13 +5,17 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from config_parser.models import TestModelConfig, WriteConfig
+from config_parser.models import MissingConfig, TestModelConfig, WriteConfig
 from direct_insert_write.preprocessor_generator import (
     _groovy_str_literal,
     _safe_key_token,
 )
 from throughput_control import generate_write_timer
-from utils.preprocessor_helpers import all_groovy_decls
+from utils.preprocessor_helpers import (
+    all_groovy_decls,
+    groovy_missing_data_block,
+    groovy_missing_skip_line,
+)
 from utils.xml_helpers import (
     argument_element,
     collection_prop,
@@ -59,6 +63,9 @@ def _build_inline_sql_preprocessor_script(
     col_num_per_tag: int = 0,
     num_threads: int = 1,
     not_null_data_cols: Optional[List[str]] = None,
+    # write-missing-data DCR: 表级缺失配置。None / probability=0 时
+    # 不注入任何缺失逻辑(生成结果与未声明该段逐字节一致,见 design D6)。
+    missing: Optional[MissingConfig] = None,
 ) -> str:
     """Render a Groovy script that builds a fully-inline INSERT statement
     into ``vars.put("insert_sql", ...)``.
@@ -104,6 +111,9 @@ def _build_inline_sql_preprocessor_script(
     # Java/Groovy single-string 65535 char limit. Prep body reads via
     # ``vars.get('column_types').split(',')``.
     # col-tag-bind-write (2026-08-05): bind-mode Groovy branch.
+    # write-missing-data DCR: 缺失逻辑块 —— 未声明段 / probability=0 时
+    # 为空串,拼接后脚本与改动前逐字节一致(design D6)。
+    missing_block = groovy_missing_data_block(missing)
     if col_tag_bind_mode:
         # Single-ptag alignment (commit 4 fix 2): the first ptag IS the
         # device column; both SetupTG and Write TG compute
@@ -113,6 +123,25 @@ def _build_inline_sql_preprocessor_script(
         bind_rows_key = f"__SHARED_MEM_{db}_{table}_bind"
         safe_bind_db = "'" + db.replace("\\", "\\\\").replace("'", "\\'") + "'"
         safe_bind_table = "'" + table.replace("\\", "\\\\").replace("'", "\\'") + "'"
+        # 内层循环的跳过判定行 —— bind 分支的设备循环起点变量是 deviceStart。
+        # 约定:``skip_line`` 自带结尾换行,模板里把它贴在下一行行首 ——
+        # 未启用缺失时它渲染成空串且不留下空行(逐字节零回归,design D6)。
+        skip_line = ""
+        if missing_block:
+            skip_line = groovy_missing_skip_line(
+                device_start_var="deviceStart", ts_var="r"
+            )
+        # D7 缺整轮兜底:整轮无格子时不得产出 VALUES 为空的非法 INSERT。
+        insert_put = 'vars.put("insert_sql", String.join("; ", allSqls))'
+        if missing_block:
+            insert_put = (
+                "if (allSqls.isEmpty()) {\n"
+                '    vars.put("insert_sql", "-- no rows written for " + qualifiedTable'
+                ' + " (missing data applied)")\n'
+                "} else {\n"
+                '    vars.put("insert_sql", String.join("; ", allSqls))\n'
+                "}"
+            )
         return f"""\
 {all_groovy_decls()}
 
@@ -124,22 +153,15 @@ def colNumPerTag = {col_num_per_tag}
 def numThreads = {num_threads}
 def notNullDataCols = [{not_null_groovy}]
 def devicePerThread = (vars.get('device_per_thread') as Integer) ?: {device_per_thread}
-def msStep = {ms_step}
+def batchLines = {batch_lines}
+def msStep = {ms_step}{missing_block}
 
-// write-batch-mode-semantics DCR (2026-08-31) bind branch — same
-// shape as the main path: outer dpt for-loop iterates
-// `d in [deviceStart, deviceStart + devicePerThread - 1]` so each
-// sampler tick covers all devices assigned to the current thread;
-// inner rbatch-loop iterates `r in [0, batchLines)` to accumulate
-// `batch_lines` rows per device. Total rows per tick =
-// `device_per_thread × batch_lines`. The bind map is looked up by
-// literal deviceCode (no hash — D-21). ts is the per-tick
-// `baseTime + r × msStep` (整步语义 gap #6 fix).
+// write-batch-mode-semantics DCR (2026-08-31) bind branch:每 tick 覆盖
+// device_per_thread × batch_lines 行;ts = baseTime + r × msStep(整步语义)。
 def bindGroups = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
     .get(rowsKey) as Map
 if (bindGroups == null || bindGroups.isEmpty()) {{
     // write-missing-data D11: 空种子池抛业务异常,不静默降级
-    // (静默降级会让整轮测试"全绿但一行没写")。
     throw new RuntimeException(
         "SharedMemory pool empty for table " + db + "." + table
             + " (key " + rowsKey + "): seed CSV load failed or produced no rows"
@@ -152,20 +174,16 @@ if (threadNum < 0) {{
 }}
 def deviceStart = (vars.get('device_start') != null ?
     (vars.get('device_start') as Integer) : 1)
-// write-batch-mode-semantics DCR (2026-08-31): baseTime MUST be
-// re-sampled on every sampler tick — same reasoning as the main path.
+// write-batch-mode-semantics DCR (2026-08-31): baseTime 每 tick 重取
 def baseTime = System.currentTimeMillis()
 
 def tsFmt = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSSSSS")
 def qualifiedTable = db + "." + table
 
-// dpt × batch_lines lines 拼接为 MultiRowInsert 单 SQL（与 main path 一致）。
-// dpt 条 deviceCode 用 inline GString（双花括号转义见 shared_memory_setup.py）。
+// dpt × batch_lines 行拼成单条 MultiRowInsert;deviceCode 用 inline GString。
 def allSqls = []
 for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
-    // Python f-string double-brace escape outputs the literal Groovy
-// GString syntax that the surrounding f-string would otherwise try
-// to resolve as Python identifiers.
+    // inline GString(Python f-string 双花括号转义输出)
     def deviceCode = threadNum.toString() + "_" + d.toString()
     def group = bindGroups.get(deviceCode) as Map
     if (group == null) {{
@@ -183,14 +201,34 @@ for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
     notNullDataCols.each {{ colName -> if (colName) seenLocal.add(colName) }}
     def insertCols = seenLocal.toList()
 
+    // 列类型(来自 UDV,与 model 列序对齐)—— bind group 的列是 model 列的子集,
+    // 按列名回查类型,决定该单元格是否加引号。
+    def colTypeList = (vars.get('column_types') ?: '').split(',')
+    def modelCols = [{cols_list}]
+    def quoteCell = {{ String colName, def raw ->
+        if (raw == null) {{ return "NULL" }}
+        def s = raw.toString()
+        if (s.length() >= 2 && s.startsWith('"') && s.endsWith('"')) {{
+            s = s.substring(1, s.length() - 1)
+        }}
+        if (s.equalsIgnoreCase("null") || s.isEmpty()) {{ return "NULL" }}
+        int ti = modelCols.indexOf(colName)
+        def colType = (ti >= 0 && ti < colTypeList.size()) ? colTypeList[ti] : ""
+        boolean numeric = colType in ["int2", "int4", "int8", "int", "tinyint", "smallint",
+                                      "bigint", "float4", "float8", "double", "real",
+                                      "numeric", "decimal", "bool", "boolean"]
+        return numeric ? s : ("'" + s.replace("'", "''") + "'")
+    }}
+
     // Inner loop: batch_lines rows per device (整步 ts gap #6 fix).
     def valsRows = []
     for (int r = 0; r < batchLines; r++) {{
-        int rowIdx = java.util.concurrent.ThreadLocalRandom.current().nextInt(rowValues.size())
-        def cells = rowValues.get(rowIdx) as List
-        // write-batch-mode-semantics DCR (2026-08-31) gap #6 fix: ts
-        // is `baseTime + r × msStep` (整步语义 — single SQL covers
-        // `batch_lines × msStep` window).
+{skip_line}        int rowIdx = java.util.concurrent.ThreadLocalRandom.current().nextInt(rowValues.size())
+        def srcCells = rowValues.get(rowIdx) as List
+        def cells = srcCells.withIndex().collect {{ val, i ->
+            quoteCell(colNames.get(i), val)
+        }}
+        // write-batch-mode-semantics DCR (2026-08-31) gap #6: ts = baseTime + r × msStep(整步语义)
         long ts = baseTime + r * msStep
         def tsStr = "'" + tsFmt.format(new java.util.Date(ts)) + "'"
         def insertVals = [tsStr] + ["'" + deviceCode + "'"] + cells
@@ -206,8 +244,30 @@ for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
     def valsSql = valsRows.join(", ")
     allSqls.add("INSERT INTO " + qualifiedTable + " (" + colsSql + ") VALUES " + valsSql)
 }}
-vars.put("insert_sql", String.join("; ", allSqls))
+{insert_put}
 """
+
+    # 非 bind 分支:设备循环起点变量是 localDeviceStart(与 bind 分支不同)。
+    skip_line = ""
+    if missing_block:
+        skip_line = groovy_missing_skip_line(
+            device_start_var="localDeviceStart", ts_var="r"
+        )
+    # D7 缺整轮兜底:整轮无格子时不得产出 VALUES 为空的非法 INSERT。
+    insert_put = (
+        'vars.put("insert_sql", "INSERT INTO " + qualifiedTable + " (" + colsSql'
+        ' + ") VALUES " + valuesSql)'
+    )
+    if missing_block:
+        insert_put = (
+            "if (valuesSql.isEmpty()) {\n"
+            '    vars.put("insert_sql", "-- no rows written for " + qualifiedTable'
+            ' + " (missing data applied)")\n'
+            "} else {\n"
+            '    vars.put("insert_sql", "INSERT INTO " + qualifiedTable + " ("'
+            ' + colsSql + ") VALUES " + valuesSql)\n'
+            "}"
+        )
 
     script = f"""\
 {all_groovy_decls()}
@@ -215,8 +275,7 @@ vars.put("insert_sql", String.join("; ", allSqls))
 def db = {safe_db}
 def table = {safe_table}
 def rowsKey = '{rows_key}'
-// SetupThreadGroup per-context props 在线程结束时销毁；SharedMemory loader
-// 通过 JMeterUtils 全局单例写入，读取也必须经它
+// SharedMemory loader 写入 JMeterUtils 全局单例(per-context props 线程结束即销毁)
 def allRows = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
     .get(rowsKey) as ArrayList
 def columns = [{cols_list}]
@@ -225,11 +284,10 @@ def nCols = columns.size()
 def ptagIndex = {ptag_index}
 def batchLines = {batch_lines}
 def devicePerThread = (vars.get('device_per_thread') as Integer) ?: {device_per_thread}
-def msStep = {ms_step}
+def msStep = {ms_step}{missing_block}
 
 if (allRows == null || allRows.isEmpty()) {{
     // write-missing-data D11: 空种子池抛业务异常,不静默降级
-    // (静默降级会让整轮测试"全绿但一行没写")。
     throw new RuntimeException(
         "SharedMemory pool empty for table " + db + "." + table
             + " (key " + rowsKey + "): seed CSV load failed or produced no rows"
@@ -242,19 +300,18 @@ if (threadNum < 0) {{
 }}
 def localDeviceStart = vars.get('device_start') != null ?
     (vars.get('device_start') as Integer) : 0
-// 每个 sampler tick 取一次 baseTime，使本 tick 所有 ts 落在当前 ms 窗口
+// 每 tick 取一次 baseTime,使本 tick 的 ts 落在同一 ms 窗口
 def baseTime = System.currentTimeMillis()
 
 def tsFmt = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSSSSS")
 def total = allRows.size()
 
 def rows = []
-// 外层 device_per_thread for：每 device 拼 batch_lines 行；
-// 总行数 = device_per_thread × batch_lines（单 SQL MultiRowInsert）
+// 外层 device × 内层 batch_lines,总行数 = device_per_thread × batch_lines
 for (int d = localDeviceStart; d < localDeviceStart + devicePerThread; d++) {{
     def deviceCode = threadNum.toString() + "_" + d.toString()
     for (int r = 0; r < batchLines; r++) {{
-        // SharedMemory loader 写入的每行是 Object[]（CSV 顺序 cell）
+{skip_line}        // SharedMemory loader 写入的每行是 Object[]（CSV 顺序 cell）
         def srcRow = allRows.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(total)) as Object[]
         // Object[] → List 以便 .get(csvIdx) 索引（ArrayList 无 (Object[]) 构造器）
         def rowCells = srcRow.toList()
@@ -282,7 +339,7 @@ for (int d = localDeviceStart; d < localDeviceStart + devicePerThread; d++) {{
                         values.add("NULL")
                     }} else {{
                         // 数值 / bool 列不加引号（KaiwuDB 拒绝 '62' 这种 quoted literal）
-                        def colType = (c < typeList.size()) ? typeList.get(c) : ""
+                        def colType = (c < typeList.size()) ? typeList[c] : ""
                         def needsQuoting = !(colType in ["int2", "int4", "int8", "int",
                                                          "tinyint", "smallint", "bigint",
                                                          "float4", "float8", "double", "real",
@@ -304,7 +361,7 @@ for (int d = localDeviceStart; d < localDeviceStart + devicePerThread; d++) {{
 def qualifiedTable = db + "." + table
 def colsSql = String.join(", ", columns)
 def valuesSql = String.join(", ", rows)
-vars.put("insert_sql", "INSERT INTO " + qualifiedTable + " (" + colsSql + ") VALUES " + valuesSql)
+{insert_put}
 """
     return script
 
@@ -566,6 +623,7 @@ def _build_direct_insert_components(
             column_types=column_types,
             batch_lines=wc.batch_lines,
             col_tag_bind_mode=bind_mode,
+            missing=wc.missing,
         )
         preproc, preproc_hash = jsr223_preprocessor_element(
             name=f"DirectInsertPrep-{wc.tbl_name}",
@@ -588,6 +646,7 @@ def _build_batch_prepared_bind_preprocessor_body(
     batch_lines: int,
     ms_step: int,
     device_per_thread: int,
+    missing: Optional[MissingConfig] = None,
 ) -> str:
     """Per-device partial INSERT SQL for batch_prepared + col_tag_bind_mode.
 
@@ -613,6 +672,18 @@ def _build_batch_prepared_bind_preprocessor_body(
         "'{p}': [{inner}]".format(p=prefix, inner=", ".join('"%s"' % b for b in buckets))
         for prefix, buckets in sorted(col_type_buckets.items())
     )
+    # write-missing-data DCR: 缺失逻辑块 —— 未声明段 / probability=0 时
+    # 为空串,拼接后脚本与改动前逐字节一致(design D6)。
+    missing_block = groovy_missing_data_block(missing)
+    # 内层循环的跳过判定行 —— 设备循环起点变量是 deviceStart。
+    skip_line = ""
+    if missing_block:
+        skip_line = groovy_missing_skip_line(device_start_var="deviceStart", ts_var="r")
+    # D7 缺整轮兜底:该设备本轮无格子时,不把它加进 preps 列表 ——
+    # 否则 sampler 会对着空 rows 发起一次空 JDBC 批次。
+    empty_rows_guard = ""
+    if missing_block:
+        empty_rows_guard = "    if (rows.isEmpty()) { continue }\n"
 
     return f"""def tableName = '{safe_table}'
 def dbName = {safe_db}
@@ -622,13 +693,12 @@ def ptagNames = {ptag_names_groovy}
 def ptagColTypes = {ptag_col_types_groovy}
 def colTypeBuckets = [{bucket_items}]
 def devicePerThread = (vars.get('device_per_thread') as Integer) ?: {device_per_thread}
-def batchLines = {batch_lines}
+def batchLines = {batch_lines}{missing_block}
 def msStep = {ms_step}L
 
 def bindGroups = org.apache.jmeter.util.JMeterUtils.getJMeterProperties().get(rowsKey) as Map
 if (bindGroups == null || bindGroups.isEmpty()) {{
     // write-missing-data D11: 空种子池抛业务异常,不静默降级
-    // (静默降级会让整轮测试"全绿但一行没写")。
     throw new RuntimeException(
         "SharedMemory pool empty for table " + tableName
             + " (key " + rowsKey + "): seed CSV load failed or produced no rows"
@@ -672,7 +742,7 @@ for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
     def rows = new ArrayList()
     int rowStartIdx = randomGen.nextInt(rowValues.size())
     for (int r = 0; r < batchLines; r++) {{
-        int idx = (rowStartIdx + r) % rowValues.size()
+{skip_line}        int idx = (rowStartIdx + r) % rowValues.size()
         def cells = rowValues.get(idx) as List
         def ptagRow = ptagValuesByRow.get(r % ptagValuesByRow.size()) as List
         if (ptagRow == null) {{ ptagRow = [deviceCode] }}
@@ -684,7 +754,7 @@ for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
         }}
         rows.add(row)
     }}
-
+{empty_rows_guard}
     allPreps.add([deviceCode: deviceCode, sql: sql, colTypes: insertColTypes, rows: rows])
 }}
 vars.putObject("__BATCH_PREPS_${{tableName}}", allPreps)
@@ -704,6 +774,7 @@ def _build_batch_prepared_preprocessor_body(
     ptag_names: Optional[List[str]] = None,
     ptag_col_types: Optional[List[str]] = None,
     col_type_buckets: Optional[Dict[str, List[str]]] = None,
+    missing: Optional[MissingConfig] = None,
 ) -> str:
     """Compose the Groovy body for the batch_prepared JSR223PreProcessor.
 
@@ -726,32 +797,31 @@ def _build_batch_prepared_preprocessor_body(
             batch_lines=batch_lines,
             ms_step=ms_step,
             device_per_thread=device_per_thread,
+            missing=missing,
         )
+    # write-missing-data DCR: 缺失逻辑块 —— 未声明段 / probability=0 时
+    # 为空串,拼接后脚本与改动前逐字节一致(design D6)。
+    missing_block = groovy_missing_data_block(missing)
+    # 内层循环的跳过判定行 —— 设备循环起点变量是 deviceStart。
+    skip_line = ""
+    if missing_block:
+        skip_line = groovy_missing_skip_line(device_start_var="deviceStart", ts_var="i")
     return f"""// JSR223PreProcessor (groovy): batch_prepared 当前批次数据准备
 def tableName = {_groovy_str_literal(table_name)}
-// Use the global JMeterProperties singleton — JSR223's per-context
-// ``props`` is destroyed when SetupThreadGroup ends, so the SharedMemory
-// loader's per-context writes never reach this thread group.
-// Note: the key has ``_`` (not ``.``) between db and table because
-// JMeter's JMeterProperties splits dotted keys into nested Hashtable
-// paths, making them invisible to subsequent ``get`` calls.
+// 读 JMeterUtils 全局属性(per-context props 在 SetupTG 结束时销毁);
+// key 用 ``_`` 分隔 db/table —— 点号会被 JMeterProperties 拆成嵌套路径而取不到
 def rowsKey = "__SHARED_MEM_" + tableName.replace('.', '_')
 def sharedRows = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
     .get(rowsKey) as ArrayList
-// write-missing-data D11: 空种子池抛业务异常 —— 现状无任何保护,
-// 空池会在下方 ``% totalRows`` 处抛 ArithmeticException: / by zero。
+// write-missing-data D11: 空种子池抛业务异常(否则下方 % totalRows 会除零)
 if (sharedRows == null || sharedRows.isEmpty()) {{
     throw new RuntimeException(
         "SharedMemory pool empty for table " + tableName
             + " (key " + rowsKey + "): seed CSV load failed or produced no rows"
     )
 }}
-// Column-name list stored alongside the rows (CSV header order minus
-// the leading ts column). The SQL ``INSERT`` template adds ``ts`` as
-// the first column, so the prepared row must follow:
-//   [ts, *columns in CSV order].
-// ``firstPtag`` is the column name to overwrite with the device
-// identifier; baked in by the generator (F-3 UDV-pollution fix).
+// 列名清单(CSV header 去掉 ts);prepared row = [ts, *CSV 顺序列],
+// firstPtag 列由设备标识覆盖
 def globalProps = org.apache.jmeter.util.JMeterUtils.getJMeterProperties()
 def columnNames = globalProps.get("__SHARED_MEM_" + tableName.replace('.', '_') + "_columns") as ArrayList
 def firstPtag = {_groovy_str_literal(first_ptag)}
@@ -766,34 +836,24 @@ def msStep = {ms_step}L
 // 设备号计算（本线程负责的设备范围）
 def threadNum = ctx.getThreadNum()
 def deviceStart = Long.parseLong(vars.get("device_start") ?: "1")
-def devicePerThread = Integer.parseInt(vars.get("device_per_thread") ?: "1")
+def devicePerThread = Integer.parseInt(vars.get("device_per_thread") ?: "1"){missing_block}
 def localDeviceStart = calculateLocalDeviceStart(deviceStart, threadNum, devicePerThread)
-// write-batch-mode-semantics DCR (2026-08-31): baseTime MUST be
-// re-sampled on every sampler tick — same reasoning as the main path
-// and bind path. batchSeq counter removed.
+// write-batch-mode-semantics DCR (2026-08-31): baseTime 每 tick 重取
 def baseTime = System.currentTimeMillis()
 
 def batchRows = new ArrayList<Object[]>()
-// write-batch-mode-semantics DCR (2026-08-31) gap #1 + dpt for fix:
-// outer loop iterates `d in [deviceStart, deviceStart + devicePerThread - 1]`
-// and inner loop iterates `i in [0, batchLines)` — same shape as bind
-// path: per device, accumulate `batchLines` rows. Total rows per tick
-// = `device_per_thread × batch_lines`.
+// write-batch-mode-semantics DCR (2026-08-31): 外层 dpt × 内层 batch_lines,
+// 每 tick 总行数 = device_per_thread × batch_lines
 for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {{
-    // inline GString — Python f-string double-brace escape outputs
-    // the literal Groovy GString syntax.
+    // inline GString(Python f-string 双花括号转义输出)
     def deviceCode = threadNum.toString() + "_" + d.toString()
     for (int i = 0; i < batchLines; i++) {{
-        def srcRow = sharedRows.get((startIdx + i) % totalRows)
+{skip_line}        def srcRow = sharedRows.get((startIdx + i) % totalRows)
         def rowCopy = srcRow.clone() as Object[]
         if (ptagIdx >= 0) {{
             rowCopy[ptagIdx] = deviceCode
         }}
-        // write-batch-mode-semantics DCR (2026-08-31) gap #6 fix:
-        // ts is `baseTime + i × msStep` (整步语义 — single SQL
-        // covers `batchLines × msStep` window). Pre-fix used
-        // `batchSeq * msStep + i * msStep / batchLines` which
-        // accumulated per tick AND averaged time across rows.
+        // write-batch-mode-semantics DCR (2026-08-31) gap #6: ts = baseTime + i × msStep(整步语义)
         def ts = new java.sql.Timestamp(baseTime + (long)(i * msStep))
         def outRow = new Object[rowCopy.length + 1]
         outRow[0] = ts
@@ -950,6 +1010,7 @@ def build_batch_prepared_preprocessor_script(
     ptag_names: Optional[List[str]] = None,
     ptag_col_types: Optional[List[str]] = None,
     col_type_buckets: Optional[Dict[str, List[str]]] = None,
+    missing: Optional[MissingConfig] = None,
 ) -> str:
     """Compose the batch_prepared JSR223PreProcessor Groovy body.
 
@@ -965,6 +1026,7 @@ def build_batch_prepared_preprocessor_script(
         ptag_names=ptag_names,
         ptag_col_types=ptag_col_types,
         col_type_buckets=col_type_buckets,
+        missing=missing,
     )
     return f"{all_groovy_decls()}\n{body}"
 
@@ -1039,6 +1101,13 @@ def generate_write_thread_groups(
             sampler, samp_hash, preproc, preproc_hash = _build_direct_insert_components(
                 wc, columns, first_ptag, ts_col_jdbc_type=ts_jdbc, column_types=column_types,
             )
+            # direct 路径同样需要 per-ThreadGroup UDV:preprocessor 从
+            # ``vars.get('column_types')`` 读列类型,决定数值列是否加引号。
+            # 缺 UDV → 类型表为空 → 数值列被加引号 → 服务端 42804
+            # (datatype mismatch),该路径一行都写不进去。
+            udv, udv_hash = _build_write_udv(
+                wc, "", 1000, first_ptag, column_types=column_types,
+            )
             tg, tg_hash = thread_group_element(
                 name=f"Write-{wc.tbl_name}",
                 testname=f"[Write] {wc.tbl_name}",
@@ -1047,7 +1116,12 @@ def generate_write_thread_groups(
                 duration="${test_duration}",
                 loops="-1",
                 scheduler=True,
-                children=[timer, timer_hash, preproc, preproc_hash, sampler, samp_hash],
+                children=[
+                    udv, udv_hash,
+                    timer, timer_hash,
+                    preproc, preproc_hash,
+                    sampler, samp_hash,
+                ],
             )
             results.extend([tg, tg_hash])
             continue
@@ -1156,6 +1230,7 @@ def generate_write_thread_groups(
                     ptag_names=bind_ptag_names,
                     ptag_col_types=bind_ptag_col_types,
                     col_type_buckets=bind_col_type_buckets,
+                    missing=wc.missing,
                 ),
                 script_language=script_language,
                 testname=f"[Write] {wc.tbl_name} - batch_prepared preprocessor",

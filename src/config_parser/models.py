@@ -373,6 +373,30 @@ class RestApiConfig(BaseModel):
         return "" if v is None else v
 
 
+class MissingConfig(BaseModel):
+    """Per-table missing-data configuration (write-missing-data DCR).
+
+    Nested under ``WriteConfig.missing`` — 表级归属,只作用于该条目锚定
+    的那一张表。
+
+    - ``probability`` 是 REQUIRED(段存在时必填):漏配会让缺失永不触发,
+      形成"配了缺失参数却完全不生效"的静默失效,故用 ``...`` 在解析期
+      直接拒绝,而不是靠跨字段校验兜。
+    - ``ts_count`` / ``device_count`` 缺省 ``0``(该维度不构成约束)。
+    - ``extra="forbid"`` 实现段内字段白名单。
+
+    上界(``ts_count <= batch_lines`` / ``device_count <= device_per_thread``)
+    依赖同一条 ``WriteConfig`` 的其它字段,由 ``WriteConfig`` 的
+    ``@model_validator(mode="after")`` 校验 —— 见 design.md D5。
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    probability: float = Field(..., ge=0.0, le=1.0)
+    ts_count: int = Field(default=0, ge=0)
+    device_count: int = Field(default=0, ge=0)
+
+
 class WriteConfig(BaseModel):
     """Write workload configuration."""
 
@@ -390,6 +414,33 @@ class WriteConfig(BaseModel):
     # columns. Orthogonal to ``mode`` (applies to all 5 WriteMode values).
     col_tag_bind_mode: bool = False
     col_num_per_tag: int = 0
+    # write-missing-data DCR (2026-10-26): 表级缺失配置段。None = 该表
+    # 不做缺失(缺省零影响);声明后由生成器在 6 处 Groovy 装配点注入
+    # "尾部截断 + 设备×时间戳取交集"的按批次概率判定。
+    missing: Optional[MissingConfig] = None
+
+    @model_validator(mode="after")
+    def check_missing_counts_within_grid(self) -> "WriteConfig":
+        """write-missing-data D5:两个 count 的上界取自**本条目**的网格规模。
+
+        取等(``ts_count == batch_lines`` / ``device_count == device_per_thread``)
+        是合法的"缺整轮"形态 —— 缺失触发时该批次零行写入,不判为失败。
+        超过总数则语义无定义,在解析期拒绝。
+        """
+        m = self.missing
+        if m is None:
+            return self
+        if m.ts_count > self.batch_lines:
+            raise ValueError(
+                f"missing.ts_count ({m.ts_count}) must be <= batch_lines "
+                f"({self.batch_lines})"
+            )
+        if m.device_count > self.device_per_thread:
+            raise ValueError(
+                f"missing.device_count ({m.device_count}) must be <= "
+                f"device_per_thread ({self.device_per_thread})"
+            )
+        return self
 
     @model_validator(mode="after")
     def check_col_tag_bind_mode_positive(self) -> "WriteConfig":

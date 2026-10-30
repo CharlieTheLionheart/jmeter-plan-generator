@@ -190,3 +190,25 @@ def test_bind_mode_base_time_per_tick() -> None:
     assert "batchSeq" not in script, (
         f"batchSeq counter must not appear; got snippet:\n{script[:2000]}"
     )
+
+
+def test_bind_mode_defines_batch_lines() -> None:
+    """bind 分支 MUST 定义 ``batchLines`` —— 内层循环用它做上界。
+
+    既有缺陷(2026-10-28 修复):bind 分支的 ``for (int r = 0; r < batchLines; r++)``
+    引用了一个**从未定义**的 ``batchLines``。Groovy 里未定义的标识符是属性
+    访问,运行时抛 ``MissingPropertyException: No such property: batchLines``
+    —— 整条 direct+bind 写入路径从未跑通过。
+
+    write-missing-data 的 §6.3(direct bind 注入)与 §9.2.2(direct+bind
+    smoke)都要求该路径可用,故在此补齐定义。
+    """
+    script = _build_inline_sql_preprocessor_script(
+        **_minimal_kwargs(
+            col_tag_bind_mode=True, col_num_per_tag=2, num_threads=2, batch_lines=5,
+        )
+    )
+    assert "def batchLines = 5" in script, (
+        f"batchLines must be defined in the bind branch; got snippet:\n{script[:2000]}"
+    )
+

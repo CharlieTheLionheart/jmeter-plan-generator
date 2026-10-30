@@ -1,0 +1,35 @@
+# write-missing-data direct bind fixture
+#
+# OpenSpec change ``write-missing-data`` tasks.md §7.2 —— 6 处装配点覆盖 —— direct + inline SQL INSERT + col_tag_bind_mode 分支。
+#
+# model 复用 test_model.yaml（表 iot_monitor.t_cnc，data_col_count=2 /
+# primary_tag_count=1）。
+# 缺失配置:probability=1.0（确定性 smoke —— 尾部截断位置固定）、
+# ts_count=2、device_count=1 → 每批次 2×5 网格跳过 1×2=2 格，落库 8 行。
+
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 4
+  device_start: 1
+  test_duration: 30
+
+write_config:
+  - tbl_name: iot_monitor.t_cnc
+    throughput: 1.0
+    mode: direct
+    batch_lines: 5
+    device_per_thread: 2
+    num_threads: 1
+    col_tag_bind_mode: true
+    col_num_per_tag: 2
+    missing:
+      probability: 1.0
+      ts_count: 2
+      device_count: 1
+
+query_config:
+  - query: "select count(*) from iot_monitor.t_cnc;"
+    throughput: 1.0
+    num_threads: 1

@@ -84,6 +84,39 @@ source .venv/bin/activate && python -m kwjdbc_svt.main ...
 - **Smoke second**: invoke the **`kwjdbc-jmx-smoke`** skill (don't roll your own command sequence). The skill owns the canonical `kwjdbc_svt.main` + `jmeter -n` end-to-end run against the real KaiwuDB cluster and reports setup / loader / sampler errors.
 - "Tests pass" alone is not enough — smoke is the ground truth for this repo because the generators emit XML that JMeter executes against a running cluster.
 
+## Smoke 调试规约：先讲计划与断言标准 → 逐例展示 → 逐例确认
+
+> **2026-10-29 user 反馈**：调试全程埋头改、不展示效果 → 用户无法核对"我对调试结果的理解有没有偏差"，
+> 也无法为调试结果负责 → 于是不敢让 agent commit + push。
+> **宁可停下来问，也不能闷头改完再报一句"通过了"。**
+
+**1. 调试前：先向用户解释调试计划与断言标准（跑第一条命令之前）**
+
+必须先用文字讲清四件事，再动手：
+
+| 项 | 要讲清什么 |
+|---|---|
+| 目标 | 这一轮验哪条路径 / 哪个场景（如"direct 非 bind 的缺失形态"） |
+| 断言标准 | 判 pass 的**具体条件**（期望的落库形态、期望的错误数、期望为 0 的行数……），以及判 fail 的边界 |
+| 数据来源 | 观测值从哪取（哪条 SQL、JTL 的哪个字段、`jmeter.log` 的哪一段） |
+| 失败定位 | 失败时按什么顺序查（sampler error → preprocessor 异常 → 落库数据） |
+
+**2. 调试中：向用户明确展示调试结果与分析过程**
+
+- **原始输出**：JTL 关键行（`label` / `success` / `responseCode` / `failureMessage`）、
+  `jmeter.log` 的 `Problem in JSR223 script` 段、数据库查询的完整结果表 —— **贴原文，不转述**；
+- **期望 vs 实测的逐项对照**（两者并排，标出哪些不符）；
+- **分析过程**：现象 → 假设 → 验证方式 → 结论 → 下一步打算做什么。
+
+只说"通过 / 不通过"等于没跑 —— 用户要的是能自己复核的证据。
+
+**3. 逐例推进：每个用例调试展示完成后，等用户验证确认再执行下一个用例**
+
+- **一个用例一个用例来**，不批量跑完全部再汇总汇报；
+- 每个用例的流程：讲计划与断言标准 → 执行 → 展示结果与分析 → **停下等用户验证确认**；
+- 用户确认"可以继续"之后，才进入下一个用例；
+- 用户未确认前：不要跑下一个用例、不要顺手改代码、不要自行推进。
+
 ## 项目级规则：会话接续与实施档案
 
 本项目的**会话接续**由 `handoff` skill 承担（接续文档写在工程根目录的 `handoff.md`，gitignored），

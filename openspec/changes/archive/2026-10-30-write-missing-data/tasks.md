@@ -2,7 +2,7 @@
 
 ## 0. 范围决策确认(review 阶段已闭环)
 
-- [x] 0.1 缺失判定用交集;设备维度与时间戳维度**分别判定**,两者同时命中才跳过该格;某一维度 count=0 时该维度视为全集(不构成约束)
+- [x] 0.1 缺失判定用交集;设备维度与时间戳维度**分别判定**,两者同时命中才跳过该格;某一维度 count=0 时该维度**未配置、不参与判定**(实现口径,见 §0.17)
 - [x] 0.2 截断方式为**从后向前截断**(设备序列 `1、2、3、4、5` 截断 2 个 → 保留 `1、2、3`),不用随机抽样
 - [x] 0.3 触发条件用概率,每写入批次判定一次;`probability = 1.0` 必然缺失 / `0.0` 关闭
 - [x] 0.4 各写入线程的缺失判定**相互独立**,暂不支持"所有线程在同一批次同时缺失"
@@ -17,6 +17,7 @@
 - [x] 0.13 空种子池必须**尽早抛业务异常**:上游 loader 不再吞错误置空,下游 6 个消费点不再静默降级
 - [x] 0.14 `write_config[]` **同表不可配置多条**(`tbl_name.lower()` 比较)+ **schemaless 路径大小写归一**(`to_lower`)
 - [x] 0.15 D7 运行时设备数漂移防御采用"退化为只按 ts 维度截断"(而非 clamp 阈值 + 告警)
+- [x] 0.17 某一维度 count=0 时该维度**未配置、不参与判定**(不是"视为全集恒命中")—— 实现阶段发现 D1 原式的漏洞:两个 count 都是 0 时 `true && true` → **整轮全丢**,与 spec Scenario「两个 count 均为 0 → 无缺失效果」冲突。改为"只对已配置的维度取交集"后,四种配置形态与 spec 逐条对齐;D7 的运行时漂移(阈值非正 → 设备维退化为全集)仍然自然成立
 
 ---
 
@@ -81,42 +82,42 @@ python -m pytest tests/                                                  # 全�
 
 ## 4. commit 2:配置模型(`MissingConfig` + `WriteConfig.missing`)
 
-- [ ] 4.1 pytest 先写 `tests/config_parser/test_missing_config.py` 含失败断言:
+- [x] 4.1 pytest 先写 `tests/config_parser/test_missing_config.py` 含失败断言:
   - `MissingConfig` 3 字段:`probability`(必填,`[0.0, 1.0]`)/ `ts_count`(缺省 `0`,`>= 0`)/ `device_count`(缺省 `0`,`>= 0`);`extra="forbid"`(段内出现其它字段 → `ValueError`)
   - `missing` 段存在但漏写 `probability` → `ValueError`,消息含 `probability`
   - `WriteConfig.missing` 缺省为 `None`
   - 跨字段校验:`ts_count <= batch_lines`、`device_count <= device_per_thread`(取等合法 = 缺整轮);**超过**总数 → `ValueError`
   - 段存在但两个 count 都是 `0` → 校验通过
-- [ ] 4.2 实现 `src/config_parser/models.py::MissingConfig`(Pydantic,`probability: float = Field(..., ge=0.0, le=1.0)`)+ `WriteConfig.missing: Optional[MissingConfig] = None`
-- [ ] 4.3 实现 `WriteConfig` 的 `@model_validator(mode="after")` 跨字段校验(与 `check_col_tag_bind_mode_positive` 同级)
-- [ ] 4.4 **验收**:跑 `pytest tests/config_parser/test_missing_config.py` 全绿
+- [x] 4.2 实现 `src/config_parser/models.py::MissingConfig`(Pydantic,`probability: float = Field(..., ge=0.0, le=1.0)`)+ `WriteConfig.missing: Optional[MissingConfig] = None`
+- [x] 4.3 实现 `WriteConfig` 的 `@model_validator(mode="after")` 跨字段校验(与 `check_col_tag_bind_mode_positive` 同级)
+- [x] 4.4 **验收**:跑 `pytest tests/config_parser/test_missing_config.py` 全绿
 
 ## 5. commit 2:判定 helper(Python + Groovy 同构,design D10)
 
-- [ ] 5.1 pytest 先写 `tests/utils/test_preprocessor_helpers.py` 新增用例含失败断言 `should_skip_row(device_idx, ts_idx, *, device_count, ts_count, device_per_thread, batch_lines) -> bool`:
+- [x] 5.1 pytest 先写 `tests/utils/test_preprocessor_helpers.py` 新增用例含失败断言 `should_skip_row(device_idx, ts_idx, *, missing_device_count, missing_ts_count, device_per_thread, batch_lines) -> bool`:
   - 只配 `ts_count=2`(device_count=0)→ 尾部 2 个 ts 的**所有设备**行命中
   - 只配 `device_count=1`(ts_count=0)→ 尾部 1 个设备的**所有 ts** 行命中
   - 两个都配 → 交集(设备尾部 ∩ ts 尾部)
-  - count=0 的维度恒"命中"(视为全集,不构成约束)
+  - count=0 的维度**未配置、不参与判定**(只对已配置的维度取交集)
   - `ts_count == batch_lines` → 全部命中(缺整轮)
-- [ ] 5.2 实现 `src/utils/preprocessor_helpers.py::should_skip_row`(纯函数,**无 rng 参数** —— 截断语义下判定式是纯比较)
-- [ ] 5.3 实现 `src/utils/preprocessor_helpers.py::groovy_missing_data_decl(...)`:返回 D8 的 Groovy 块(概率常量分支 + `deviceHit` / `tsHit` 两行独立判定 + 交集)
-- [ ] 5.4 **验收**:跑 `pytest tests/utils/test_preprocessor_helpers.py` 全绿
+- [x] 5.2 实现 `src/utils/preprocessor_helpers.py::should_skip_row`(纯函数,**无 rng 参数** —— 截断语义下判定式是纯比较)
+- [x] 5.3 实现 `src/utils/preprocessor_helpers.py::groovy_missing_data_decl(...)`:返回 D8 的 Groovy 块(概率常量分支 + `deviceMissingHit` / `tsMissingHit` 两行独立判定 + 交集);**只把已配置的维度写进脚本**
+- [x] 5.4 **验收**:跑 `pytest tests/utils/test_preprocessor_helpers.py` 全绿
 
 ## 6. commit 2:Groovy 注入(6 处装配点,design D8)
 
-- [ ] 6.1 pytest 先写 `tests/jmx_skeleton_generator/test_missing_injection.py` 含失败断言:6 处装配点生成的脚本**含**缺失逻辑块(`missingProbability` / `missingTsCount` / `missingDeviceCount` / `skipMissingRow` / `deviceHit` / `tsHit`),且内层循环含 `if (applyMissing && skipMissingRow(...)) { continue }`;设备下标为**本轮相对下标**(`d - deviceStart`,非绝对设备号)
-- [ ] 6.2 pytest 先写同文件"零回归"用例含失败断言:**未声明 `missing` 段**或 **`probability = 0.0`** 时,生成的脚本与改动前基线**逐字节一致**(不含任何缺失标识符)
-- [ ] 6.3 实现 `_build_inline_sql_preprocessor_script` 的非 bind + bind 分支注入(设备循环起点变量分别为 `localDeviceStart` / `deviceStart`)
-- [ ] 6.4 实现 `_build_batch_prepared_preprocessor_body` 非 bind + `_build_batch_prepared_bind_preprocessor_body` bind 分支注入
-- [ ] 6.5 实现 `rest_write_groups.py::_build_rest_write_preprocessor_script` 非 bind + bind 分支注入
-- [ ] 6.6 实现注入开关(design D6):仅当 `wc.missing is not None` **且** `wc.missing.probability > 0.0` 时插入缺失块
-- [ ] 6.7 **验收**:跑 `pytest tests/jmx_skeleton_generator/test_missing_injection.py` 全绿
+- [x] 6.1 pytest 先写 `tests/jmx_skeleton_generator/test_missing_injection.py` 含失败断言:6 处装配点生成的脚本**含**缺失逻辑块(`missingProbability` / `missingTsCount` / `missingDeviceCount` / `skipMissingRow` / `deviceMissingHit` / `tsMissingHit`),且内层循环含 `if (applyMissing && skipMissingRow(...)) { continue }`;设备下标为**本轮相对下标**(`d - deviceStart`,非绝对设备号)
+- [x] 6.2 pytest 先写同文件"零回归"用例含失败断言:**未声明 `missing` 段**或 **`probability = 0.0`** 时,生成的脚本与改动前基线**逐字节一致**(不含任何缺失标识符)
+- [x] 6.3 实现 `_build_inline_sql_preprocessor_script` 的非 bind + bind 分支注入(设备循环起点变量分别为 `localDeviceStart` / `deviceStart`)
+- [x] 6.4 实现 `_build_batch_prepared_preprocessor_body` 非 bind + `_build_batch_prepared_bind_preprocessor_body` bind 分支注入
+- [x] 6.5 实现 `rest_write_groups.py::_build_rest_write_preprocessor_script` 非 bind + bind 分支注入
+- [x] 6.6 实现注入开关(design D6):仅当 `wc.missing is not None` **且** `wc.missing.probability > 0.0` 时插入缺失块
+- [x] 6.7 **验收**:跑 `pytest tests/jmx_skeleton_generator/test_missing_injection.py` 全绿
 
 ## 7. commit 2:集成与 fixture
 
-- [ ] 7.1 pytest 先写 `tests/kwjdbc_svt/test_main.py` 新增集成用例:`python -m kwjdbc_svt.main` 生成 .jmx → `ElementTree.parse()` 校验 —— 声明 `missing` 段的表其 Write TG 脚本含缺失块;未声明的表不含
-- [ ] 7.2 新增 fixture(8 个,覆盖 6 条装配点 + 概率 + 缺整轮),统一 `missing: {probability: 1.0, ts_count: 2, device_count: 1}`(概率 / 缺整轮两个 fixture 除外):
+- [x] 7.1 pytest 先写 `tests/kwjdbc_svt/test_main.py` 新增集成用例:`python -m kwjdbc_svt.main` 生成 .jmx → `ElementTree.parse()` 校验 —— 声明 `missing` 段的表其 Write TG 脚本含缺失块;未声明的表不含
+- [x] 7.2 新增 fixture(8 个,覆盖 6 条装配点 + 概率 + 缺整轮),统一 `missing: {probability: 1.0, ts_count: 2, device_count: 1}`(概率 / 缺整轮两个 fixture 除外):
   - `test_cfg_missing_direct.yaml`(mode: direct,非 bind)
   - `test_cfg_missing_direct_bind.yaml`(mode: direct + `col_tag_bind_mode: true`)
   - `test_cfg_missing_prepare.yaml`(mode: prepare,非 bind)
@@ -125,14 +126,16 @@ python -m pytest tests/                                                  # 全�
   - `test_cfg_missing_schemaless_bind.yaml`(mode: schemaless + `col_tag_bind_mode: true`)
   - `test_cfg_missing_prob.yaml`(mode: prepare,`probability: 0.5` —— 概率生效验证)
   - `test_cfg_missing_full_round.yaml`(mode: prepare,`ts_count == batch_lines` —— 缺整轮验证)
+  - `test_cfg_missing_full_round_direct.yaml`(mode: direct,`ts_count == batch_lines` —— 补 D7 的 direct 兜底:insert_sql 注释串)
+  - `test_cfg_missing_full_round_schemaless.yaml`(mode: schemaless,`ts_count == batch_lines` —— 补 D7 的 schemaless 兜底:`__missing_skipped` 标记 + B1 断言放行)
   - model 复用 `test_model.yaml`;schemaless 两个用 `test_model_schemaless.yaml` + TLS 证书
-- [ ] 7.3 **验收**:跑 `pytest tests/kwjdbc_svt/test_main.py` 全绿 + **全量 pytest 无 regression**
-- [ ] 7.4 **commit 2**:§4-§7 全部验收通过 → 停下等 user review → 收到信号后 `git add` + `git commit`(message:`feat(write): 表级 missing 段 — 尾部截断 + 交集的按批次随机缺失`)+ `git push origin feat/pub-sub`
+- [x] 7.3 **验收**:跑 `pytest tests/kwjdbc_svt/test_main.py` 全绿 + **全量 pytest 无 regression**
+- [x] 7.4 **commit 2**:§4-§7 全部验收通过 → 停下等 user review → 收到信号后 `git add` + `git commit`(message:`feat(write): 表级 missing 段 — 尾部截断 + 交集的按批次随机缺失`)+ `git push origin feat/pub-sub`
 
 ## 8. 文档同步
 
-- [ ] 8.1 更新主 spec `docs/specs/kwdb-svt-test-plan-generator-spec.md` §2.0 写入配置字段表:新增 `missing` 段(`probability` 必填 / `ts_count` / `device_count` 缺省 `0`)、表级归属、尾部截断+交集语义、每批次概率触发、缺省不做缺失
-- [ ] 8.2 更新 `docs/refs/` 下相关 reference(若涉及写入语义描述)
+- [x] 8.1 更新主 spec `docs/specs/kwdb-svt-test-plan-generator-spec.md` §2.0 写入配置字段表:新增 `missing` 段(`probability` 必填 / `ts_count` / `device_count` 缺省 `0`)、表级归属、尾部截断+交集语义、每批次概率触发、缺省不做缺失
+- [x] 8.2 更新 `docs/refs/` 下相关 reference(若涉及写入语义描述)—— **无需更新**:`docs/refs/` 下 9 份 reference 均不含 `write_config` 写入配置语义描述(grep 0 匹配),缺失能力不改协议层
 
 ## 9. smoke(Phase B,需真实 KaiwuDB 容器;**不在 pytest 里**)
 
@@ -152,7 +155,7 @@ python -m pytest tests/                                                  # 全�
 | ② | 每 ts 的设备覆盖数 `count(distinct <设备列>) group by ts` | 取值集合恰为 `{dpt, dpt−M}` 两个值 |
 | ③ | 非缺失设备的 ts 覆盖数 | **等于** `B`(满值,证明不是"全都缺了") |
 | ④ | 非缺失 ts 的设备覆盖数 | **等于** `dpt` |
-| ⑤ | 单批次窗口内落库行数 | **等于** `(dpt − M) × (B − N)` |
+| ⑤ | 单批次窗口内落库行数 | **等于** `dpt × B − M × N`(交集口径;原文 `(dpt−M)×(B−N)` 是并集口径,与 D1 冲突,已修正) |
 
 查询形态(以 `iot_monitor.t_cnc` 为例,`ts` = 时间戳列,`ptag_varchar_1` = 设备列):
 
@@ -176,35 +179,37 @@ where ts >= '<窗口起>' and ts < '<窗口止>';
 
 ### 9.2 六路径全覆盖(逐 fixture 跑,断言 9.1 全部 5 项)
 
-- [ ] 9.2.1 `test_cfg_missing_direct.yaml`(direct 非 bind):SetupTG 无 error + Write TG JTL 无 sampler error + 9.1 的 ①~⑤ 全成立
-- [ ] 9.2.2 `test_cfg_missing_direct_bind.yaml`(direct bind):同上
-- [ ] 9.2.3 `test_cfg_missing_prepare.yaml`(prepare 非 bind):同上
-- [ ] 9.2.4 `test_cfg_missing_prepare_bind.yaml`(prepare bind):同上
-- [ ] 9.2.5 `test_cfg_missing_schemaless.yaml`(schemaless 非 bind):同上(REST 写入路径,查询口径不变)
-- [ ] 9.2.6 `test_cfg_missing_schemaless_bind.yaml`(schemaless bind):同上
+- [x] 9.2.1 `test_cfg_missing_direct.yaml`(direct 非 bind):SetupTG 无 error + Write TG JTL 无 sampler error + 9.1 的 ①~⑤ 全成立
+- [x] 9.2.2 `test_cfg_missing_direct_bind.yaml`(direct bind):同上
+- [x] 9.2.3 `test_cfg_missing_prepare.yaml`(prepare 非 bind):同上
+- [x] 9.2.4 `test_cfg_missing_prepare_bind.yaml`(prepare bind):同上
+- [x] 9.2.5 `test_cfg_missing_schemaless.yaml`(schemaless 非 bind):同上(REST 写入路径,查询口径不变)
+- [x] 9.2.6 `test_cfg_missing_schemaless_bind.yaml`(schemaless bind):同上
 
 每条路径额外确认:**缺失维度确实落在该路径的装配点上**(生成的 JMX 里该路径的 PreProcessor 脚本含缺失逻辑块,而不是碰巧由别的路径产生)。
 
 ### 9.3 概率触发(`probability = 0.5`,统计口径)
 
-- [ ] 9.3.1 `test_cfg_missing_prob.yaml`:总落库行数落在 `[满量 × 0.5, 满量]` 区间(概率统计口径,**不用精确等值**)
-- [ ] 9.3.2 存在 ts 覆盖数 < `B` 的设备(证明概率真的触发了缺失,而不是全触发或全不触发)
-- [ ] 9.3.3 存在 ts 覆盖数 = `B` 的设备(证明不是每批都缺)
+- [x] 9.3.1 `test_cfg_missing_prob.yaml`:总落库行数落在 `[满量 × 0.5, 满量]` 区间(概率统计口径,**不用精确等值**)
+- [x] 9.3.2 存在 ts 覆盖数 < `B` 的设备(证明概率真的触发了缺失,而不是全触发或全不触发)
+- [x] 9.3.3 存在 ts 覆盖数 = `B` 的设备(证明不是每批都缺)
 
 ### 9.4 缺整轮(`ts_count == batch_lines`)
 
-- [ ] 9.4.1 `test_cfg_missing_full_round.yaml`:无 sampler error、无空写入报错(验证 D7 的三条路径兜底)
-- [ ] 9.4.2 对应批次窗口内 `count(*) = 0`(而不是查询报错)
-- [ ] 9.4.3 总落库行数**显著低于**同参数未配缺失时的行数
+- [x] 9.4.1 `test_cfg_missing_full_round.yaml`:无 sampler error、无空写入报错(验证 D7 的三条路径兜底)
+- [x] 9.4.2 对应批次窗口内 `count(*) = 0`(而不是查询报错)
+- [x] 9.4.3 总落库行数**显著低于**同参数未配缺失时的行数
+- [x] 9.4.4 direct 路径缺整轮:不产出 `VALUES` 为空的 INSERT,sampler 仍 success(补 §9.4.1 的"三条路径兜底")
+- [x] 9.4.5 schemaless 路径缺整轮:空 body 置 `__missing_skipped` 标记,B1 断言放行,sampler 仍 success(补 §9.4.1 的"三条路径兜底")
 
 ### 9.5 空种子池失败路径(验证 commit 1 的健壮性修正)
 
-- [ ] 9.5.1 故意让 seed CSV 缺失 / 损坏 → 断言 **SetupTG 报 error**(loader 抛异常中断,不是静默置空)
-- [ ] 9.5.2 断言 Write TG 也报 error(消费点二次抛业务异常),而非静默跳过
-- [ ] 9.5.3 断言测试**不是**"全绿"—— 这正是 commit 1 修正前会漏掉的失败模式
+- [x] 9.5.1 故意让 seed CSV 缺失 / 损坏 → 断言 **SetupTG 报 error**(loader 抛异常中断,不是静默置空)
+- [x] 9.5.2 断言 Write TG 也报 error(消费点二次抛业务异常),而非静默跳过
+- [x] 9.5.3 断言测试**不是**"全绿"—— 这正是 commit 1 修正前会漏掉的失败模式
 
 ### 9.6 收尾
 
-- [ ] 9.6.1 smoke 全部通过后在 `docs/implementation-log.md` 追加本阶段条目(6 条路径全覆盖 / 概率 / 缺整轮 / 空池失败路径的 smoke 证据),并同步"已落地阶段一览"与"待办(跨会话)"两节
-- [ ] 9.6.2 勾选本文件 §9 全部子 task + §1~§8 全部子 task
-- [ ] 9.6.3 `openspec archive write-missing-data`(spec 增量合并进主 spec)
+- [x] 9.6.1 smoke 全部通过后在 `docs/implementation-log.md` 追加本阶段条目(6 条路径全覆盖 / 概率 / 缺整轮 / 空池失败路径的 smoke 证据),并同步"已落地阶段一览"与"待办(跨会话)"两节
+- [x] 9.6.2 勾选本文件 §9 全部子 task + §1~§8 全部子 task
+- [x] 9.6.3 `openspec archive write-missing-data`(spec 增量合并进主 spec)

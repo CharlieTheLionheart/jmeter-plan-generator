@@ -90,18 +90,20 @@ kwjdbc-svt 的 3 种写入 mode(`write_config[].mode`)最终都落到同一个�
 判定由两个维度**分别进行**,各自产出一个布尔结果;一格被跳过 ⟺ 两个结果**同时为真**(交集):
 
 ```
-device_hit = device_count == 0 || device_idx >= device_per_thread - device_count
-ts_hit     = ts_count == 0 || ts_idx >= batch_lines - ts_count
+# 只对**已配置**的维度取交集(count=0 的维度未配置,不参与判定)
+device_hit = device_idx >= device_per_thread - device_count     # device_count > 0 时
+ts_hit     = ts_idx >= batch_lines - ts_count                     # ts_count > 0 时
 skip(device_idx, ts_idx) = device_hit && ts_hit
 ```
 
-某一维度的 count 为 `0` 时该维度的命中判定恒为真(不构成约束,视为全集),因此三种配置形态统一到同一套判定:
+某一维度的 count 为 `0` 时该维度**未配置**,**不参与判定**(既不命中、也不否决另一维)—— 生成期就只把已配置的维度写进脚本。因此四种配置形态统一到同一套判定:
 
 | 配置 | 缺失形态 | 丢弃格数 |
 |---|---|---|
 | 只配 `ts_count=2` | 尾部 2 个 ts 下**所有设备**的行 | `2 × device_per_thread` |
 | 只配 `device_count=1` | 尾部 1 个设备在**所有 ts** 上的行 | `1 × batch_lines` |
 | 两个都配 | 两者的**交集**(右下角 `M × N` 块) | `M × N` |
+| 两个都是 0 | 无维度参与 → 一格都不丢(段合法但无缺失效果) | `0` |
 
 **备选方案**:
 
@@ -109,6 +111,8 @@ skip(device_idx, ts_idx) = device_hit && ts_hit
 - **备选 B**:两维度取**并集**(任一命中就丢)。✗ 与 user 明确要求的"取交集"相反。
 
 **推论**:计数允许等于总数(`device_count <= device_per_thread`、`ts_count <= batch_lines`),因此**缺整轮**(该批次一行不写)是取值的自然结果,不需要独立开关。两维计数都取全量时,交集覆盖整个网格 → 该批次零行写入。缺整轮是合法配置,各路径的兜底见 D7。
+
+> **实现阶段修正(2026-10-29)**:原式把 count=0 的维度写成"命中判定恒为真(视为全集)",在**两个 count 都是 0** 时算出 `true && true` → 整轮全丢,与 spec Scenario「两个 count 均为 0 → 无缺失效果」冲突。改为"count=0 = 未配置、不参与判定"后,四种形态与 spec 逐条对齐(单维 2 种 / 双维交集 / 双零不丢)。
 
 ### D2:概率触发 —— 每批次一次、per-thread
 
@@ -251,7 +255,7 @@ def check_missing_counts_within_grid(self) -> "WriteConfig":
 - `prepare` 两条路径:sampler body 已有 `if (rowCount == 0) { log.warn(...); return }` 保护,跳过 JDBC 批次执行,不判为失败。
 - `schemaless` 两条路径:body 为空会被既有 B1 断言捕获 —— 该断言原本用于捕获"种子数据为空"这类异常写入。需要区分两种空 body:preprocessor 在**因缺失导致**为空时置一个标记(如 `vars.put('__missing_skipped', 'true')`),B1 断言在该标记存在时放行;种子数据为空导致的空 body 不置标记,仍被捕获。这是本 change 对 schemaless 路径的唯一新增逻辑。
 
-另有一条**运行时漂移**的边界:`device_per_thread` 是 UDV(`vars.get('device_per_thread')`),理论上可被外部改小于配置的 `missing.device_count`,此时阈值 `devicePerThread - missingDeviceCount` 可能 `<= 0` → 全部设备被丢。防御:当运行时设备数 `<= missing.device_count` 时,退化为"只按 ts 维度截断",保证至少留下时间戳维度未被丢弃的行(而不是直接 clamp 阈值 —— clamp 会静默改变缺失语义)。
+另有一条**运行时漂移**的边界:`device_per_thread` 是 UDV(`vars.get('device_per_thread')`),理论上可被外部改小于配置的 `missing.device_count`,此时阈值 `devicePerThread - missingDeviceCount` 可能 `<= 0` → 全部设备命中设备维。防御:**阈值不做 clamp** —— 阈值非正时设备维自动退化为"全集"(不约束),交集只剩 ts 维决定,即"只按 ts 维度截断",保证至少留下时间戳维度未被丢弃的行。(clamp 阈值反而会静默改变缺失语义。)
 
 注意这条防御与"缺整轮"是两回事:缺整轮是**配置显式取全量**(用户要的就是这一批没数据),而运行时漂移是**配置本意不是全量但运行时环境变了**,后者退化为部分截断以保住数据。
 

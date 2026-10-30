@@ -1,0 +1,49 @@
+# write-missing-data 缺整轮 fixture(schemaless 非 bind)
+#
+# OpenSpec change ``write-missing-data`` tasks.md §9.4 + design D7
+# 用途: ts_count == batch_lines → 缺失触发时该批次零行写入,且**不判为失败**。
+# 覆盖 schemaless 路径的 D7 兜底:body 为空 → 置 ``__missing_skipped`` 标记,
+# B1 断言据此放行(而"种子数据为空"导致的空 body 不置标记,仍被断言捕获)。
+#
+# model 复用 test_model_schemaless.yaml(表 iot_monitor.meters,
+# ts_col.name=k_timestamp / type=timestamp(9) —— InfluxDB Line 行尾是 ns)。
+# schemaless 走 TLS(Login 强制非空密码用户,非空密码用户只能走安全模式)。
+
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 4
+  device_start: 1
+  test_duration: 30
+
+rest_api_config:
+  https_mode: tls
+  ca_cert_path: tests/kwjdbc_svt/fixtures/ca.crt
+  http_port: 8081
+  login_user: root
+  login_password: root123
+  login_url_path: /restapi/login
+  ddl_url_path: /restapi/ddl
+  write_url_path: /restapi/influxdb
+  query_url_path: /restapi/query
+  default_db: iot_monitor
+  timezone: null
+  pre_create_tables: true
+
+write_config:
+  - tbl_name: iot_monitor.meters
+    throughput: 6.0
+    mode: schemaless
+    batch_lines: 2
+    device_per_thread: 2
+    num_threads: 1
+    missing:
+      probability: 1.0
+      ts_count: 2
+      device_count: 0
+
+query_config:
+  - query: "select count(*) from iot_monitor.meters;"
+    throughput: 1.0
+    num_threads: 1

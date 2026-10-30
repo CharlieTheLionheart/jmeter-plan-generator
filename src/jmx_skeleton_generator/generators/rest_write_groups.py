@@ -29,10 +29,13 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from config_parser.models import TestModelConfig, WriteConfig
+from config_parser.models import MissingConfig, TestModelConfig, WriteConfig
 from seed_data_generator.reference import iter_table_columns
 from throughput_control import generate_write_timer
-from utils.preprocessor_helpers import all_groovy_decls
+from utils.preprocessor_helpers import (
+    all_groovy_decls,
+    groovy_missing_data_block,
+)
 from utils.xml_helpers import (
     http_request_sampler_element,
     jsr223_preprocessor_element,
@@ -98,10 +101,7 @@ _GROOVY_HELPERS = (
     "    if (s ==~ /^-?\\d+$/) { return s }\n"
     "    if (s ==~ /^-?\\d+\\.\\d+([eE][-+]?\\d+)?$/) { return s }\n"
     "    if (s ==~ /^-?\\d+[eE][-+]?\\d+$/) { return s }\n"
-    "    // D-22 (2026-08-14): use String.replace (literal) instead of replaceAll\n"
-    "    // (regex). The previous chain '\\\\\\\\'→'\\\\\\\\\\\\\\\\' produced\n"
-    "    // PatternSyntaxException: Unescaped trailing backslash in JMeter\n"
-    "    // 5.6.3 Groovy once the numThreads=2 fix (D-21) exposed this path.\n"
+    "    // D-22 (2026-08-14): 用 String.replace(字面量)而非 replaceAll(正则)\n"
     "    def bs = ((char) 92).toString()\n"
     "    return '\"' + s.replace(bs, bs + bs).replace('\"', bs + '\"') + '\"'\n"
     "}\n"
@@ -148,6 +148,9 @@ def _build_rest_write_preprocessor_script(
     # bakes ``device_per_thread`` into its own Groovy template at
     # generation time); defaults to 1 to align with WriteConfig.
     device_per_thread: int = 1,
+    # write-missing-data DCR: 表级缺失配置。None / probability=0 时
+    # 不注入任何缺失逻辑(生成结果与未声明该段逐字节一致,见 design D6)。
+    missing: Optional[MissingConfig] = None,
 ) -> str:
     """Compose the Groovy script for one measurement's PreProcessor.
 
@@ -194,6 +197,26 @@ def _build_rest_write_preprocessor_script(
         else "ts"
     )
 
+    # write-missing-data DCR: 缺失逻辑块 —— 未声明段 / probability=0 时
+    # 为空串,拼接后脚本与改动前逐字节一致(design D6)。
+    missing_block = groovy_missing_data_block(missing)
+    # 内层循环的跳过判定行 —— 设备循环起点变量是 deviceStart。
+    skip_line = ""
+    marker_setup = ""
+    marker_guard = ""
+    if missing_block:
+        # schemaless 需要区分"因缺失而空"与"其它原因而空"(D7):前者放行
+        # B1 断言,后者仍被捕获 —— 故统计被跳过的格子数。
+        skip_line = (
+            "        if (applyMissing && skipMissingRow((int)(d - deviceStart), b)) "
+            "{ missingSkipped++; continue }\n"
+        )
+        marker_setup = "int missingSkipped = 0\nvars.remove('__missing_skipped')\n"
+        marker_guard = (
+            "if (missingSkipped > 0 && sb.length() == 0) "
+            "{ vars.put('__missing_skipped', 'true') }\n"
+        )
+
     # col-tag-bind-write (2026-08-05): bind-mode early return.
     # Replaces steps 1-5 with: read ``__SHARED_MEM_*_bind``, look up
     # group_id → {col_names, row_values, ptag_values, ptag_names},
@@ -217,7 +240,6 @@ def _build_rest_write_preprocessor_script(
             "def bindGroups = globalProps.get(rowsKey) as Map\n"
             "if (bindGroups == null || bindGroups.isEmpty()) {\n"
             "    // write-missing-data D11: 空种子池抛业务异常,不静默降级\n"
-            "    // (静默降级会让整轮测试\"全绿但一行没写\")。\n"
             "    throw new RuntimeException(\n"
             "        'SharedMemory pool empty for table ' + db + '.' + measurement\n"
             "            + ' (key ' + rowsKey + '): seed CSV load failed or produced no rows'\n"
@@ -225,18 +247,16 @@ def _build_rest_write_preprocessor_script(
             "}\n"
             "\n"
             "// === deviceCode = inline GString (matches SetupTG bind sampler) ===\n"
-            "// write-batch-mode-semantics DCR (2026-08-31) gap #1 + dpt for\n"
-            "// fix: outer loop iterates `d in [deviceStart, deviceStart +\n"
-            "// devicePerThread - 1]` so each sampler tick covers all\n"
-            "// devices assigned to the current thread. Total lines per\n"
-            "// HTTP body = `device_per_thread × batch_lines`.\n"
+            "// 每 body 共 device_per_thread × batch_lines 行\n"
             "def deviceStart = (globalProps.get('device_start') ?: '1') as int\n"
             "def threadNum = ctx.getThreadNum()\n"
             "if (threadNum < 0) { threadNum = (vars.get('__threadNum') as Integer) ?: 0 }\n"
             "long msStep = " + str(getattr(ts_table.ts_col, "ms_step", 1000) if ts_table is not None and ts_table.ts_col is not None else 1000) + "L\n"
             "long baseTime = System.currentTimeMillis()\n"
             "int batchLines = " + str(batch_lines) + "\n"
-            "def randomGen = java.util.concurrent.ThreadLocalRandom.current()\n"
+            + missing_block
+            + marker_setup
+            + "def randomGen = java.util.concurrent.ThreadLocalRandom.current()\n"
             "def sb = new StringBuilder()\n"
             "boolean firstLine = true\n"
             "for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {\n"
@@ -255,15 +275,15 @@ def _build_rest_write_preprocessor_script(
             "    }\n"
             "    int rowStartIdx = randomGen.nextInt(rowValues.size())\n"
             "    for (int b = 0; b < batchLines; b++) {\n"
-            "        int idx = (rowStartIdx + b) % rowValues.size()\n"
+            + skip_line
+            + "        int idx = (rowStartIdx + b) % rowValues.size()\n"
             "        def cells = rowValues.get(idx) as List\n"
             "        def ptagCells = ptagValuesByRow.get(idx % ptagValuesByRow.size()) as List\n"
             "        def tagMap = [:]\n"
             "        for (int p = 0; p < ptagNamesOrdered.size(); p++) {\n"
             "            tagMap[ptagNamesOrdered[p]] = escapeTagValue(ptagCells[p].toString())\n"
             "        }\n"
-            "        // write-batch-mode-semantics DCR (2026-08-31) gap #2\n"
-            "        // fix: regular_tag (rtag) columns also go to tag_set.\n"
+        "        // write-batch-mode-semantics DCR (2026-08-31) gap #2: rtag 列也进 tag_set\n"
             "        for (String tname : tagNames) {\n"
             "            if (!tagMap.containsKey(tname)) { tagMap[tname] = '' }\n"
             "        }\n"
@@ -278,7 +298,8 @@ def _build_rest_write_preprocessor_script(
             "        firstLine = false\n"
             "    }\n"
             "}\n"
-            "vars.put('request_body', sb.toString())\n"
+            + marker_guard
+            + "vars.put('request_body', sb.toString())\n"
         )
 
     return (
@@ -296,7 +317,6 @@ def _build_rest_write_preprocessor_script(
         "def columns = globalProps.get(colsKey) as List\n"
         "if (rows == null || rows.isEmpty()) {\n"
         "    // write-missing-data D11: 空种子池抛业务异常,不静默降级\n"
-        "    // (静默降级会让整轮测试\"全绿但一行没写\")。\n"
         "    throw new RuntimeException(\n"
         "        'SharedMemory pool empty for table ' + db + '.' + measurement\n"
         "            + ' (key ' + rowsKey + '): seed CSV load failed or produced no rows'\n"
@@ -308,27 +328,21 @@ def _build_rest_write_preprocessor_script(
         "            + ' (key ' + colsKey + '): seed CSV load failed or produced no rows'\n"
         "    )\n"
         "}\n"
-        "// D-23/D-24 (2026-08-14): spec §4 L327 cyclic-fill — row pool is\n"
-        "// never popped (only read by index), so batch_lines prep calls\n"
-        "// all succeed even after the seed pool is exhausted. The batch\n"
-        "// body is constructed inside the loop below.\n"
+        "// D-23/D-24 (2026-08-14): 行池只按下标读不弹出,种子耗尽后仍能凑满 batch_lines 行\n"
         "\n"
         "// === column group classification (baked by generator) ===\n"
         f"def ptagNames = [{ptag_names_groovy}] as Set\n"
         f"def tagNames = [{tag_names_groovy}] as Set\n"
         f"def fieldNames = [{field_names_groovy}] as Set\n"
         "\n"
-        "// === assemble dpt × batch_lines InfluxDB Line bodies per spec §4 L327 ===\n"
-        "// D-24 (2026-08-14): build ``batch_lines`` lines per prep call.\n"
-        "// write-batch-mode-semantics DCR (2026-08-31) gap #1 + dpt for fix:\n"
-        "// outer loop iterates `d in [deviceStart, deviceStart + devicePerThread - 1]`\n"
-        "// and inner loop iterates `b in [0, batchLines)`. Total lines per\n"
-        "// HTTP body = `device_per_thread × batch_lines`. Device code is\n"
-        "// the inline GString `${threadNum}_${d}` (matches SetupTG bind).\n"
+        "// === assemble dpt × batch_lines InfluxDB Line bodies ===\n"
+        "// 每 body 共 device_per_thread × batch_lines 行;deviceCode 用 inline GString\n"
         "int batchLines = " + str(batch_lines) + "\n"
         "def deviceStart = (globalProps.get('device_start') ?: '1') as int\n"
         "def devicePerThread = (globalProps.get('device_per_thread') ?: '2') as int\n"
-        "int threadNum = ctx.getThreadNum()\n"
+        + missing_block
+        + marker_setup
+        + "int threadNum = ctx.getThreadNum()\n"
         "if (threadNum < 0) { threadNum = (vars.get('__threadNum') as Integer) ?: 0 }\n"
         "long msStep = " + str(getattr(ts_table.ts_col, "ms_step", 1000) if ts_table is not None and ts_table.ts_col is not None else 1000) + "L\n"
         "long baseTime = System.currentTimeMillis()\n"
@@ -339,7 +353,8 @@ def _build_rest_write_preprocessor_script(
         "for (int d = deviceStart; d < deviceStart + devicePerThread; d++) {\n"
         "    def deviceCode = threadNum.toString() + \"_\" + d.toString()\n"
         "    for (int b = 0; b < batchLines; b++) {\n"
-        "        int rowIdx = (rowCursor + b) % rows.size()\n"
+        + skip_line
+        + "        int rowIdx = (rowCursor + b) % rows.size()\n"
         "        def row = rows.get(rowIdx)\n"
         "        def tagMap = [:]\n"
         "        def fieldMap = [:]\n"
@@ -360,7 +375,8 @@ def _build_rest_write_preprocessor_script(
         "        firstLine = false\n"
         "    }\n"
         "}\n"
-        "vars.put('request_body', sb.toString())\n"
+        + marker_guard
+        + "vars.put('request_body', sb.toString())\n"
     )
 
 
@@ -481,6 +497,7 @@ def generate_rest_write_thread_group(
                 num_threads=num_threads,
                 device_per_thread=device_per_thread,
                 batch_lines=int(wc.batch_lines) if wc else 1,
+                missing=(wc.missing if wc else None),
             )
 
             timer, timer_hash = generate_write_timer(throughput=wc.throughput)
@@ -521,6 +538,14 @@ def generate_rest_write_thread_group(
                 "if (prev.getResponseDataAsString().contains('\"code\":0')) return;\n"
                 "else throw new RuntimeException(\"Write failed: \" + prev.getResponseDataAsString())"
             )
+            if wc.missing is not None and wc.missing.probability > 0.0:
+                # D7 缺整轮:preprocessor 因缺失跳过全部格子时 body 为空,
+                # 放行该批次(不判为写入失败);种子数据为空导致的空 body
+                # 不置标记,仍被下面的断言捕获。
+                assert_script = (
+                    "if (vars.get('__missing_skipped') == 'true') return;\n"
+                    + assert_script
+                )
             assert_elem = _build_write_jsr223_assertion(
                 name=f"{sampler_name}_assert",
                 testname=f"{sampler_name}_assert",

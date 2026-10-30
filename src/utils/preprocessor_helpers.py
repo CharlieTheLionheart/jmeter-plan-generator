@@ -228,3 +228,147 @@ def all_groovy_decls() -> str:
             groovy_calculate_local_device_start_decl(),
         ]
     )
+
+
+# ---------------------------------------------------------------------------
+# write-missing-data D10: 缺失判定 helper(Python / Groovy 同构)
+# ---------------------------------------------------------------------------
+
+
+def should_skip_row(
+    device_idx: int,
+    ts_idx: int,
+    *,
+    missing_device_count: int,
+    missing_ts_count: int,
+    device_per_thread: int,
+    batch_lines: int,
+) -> bool:
+    """Whether one grid cell is skipped by the missing-data rule.
+
+    Tail truncation per dimension, combined by intersection (design.md D1)::
+
+        device_missing_hit = device_idx >= device_per_thread - missing_device_count
+        ts_missing_hit     = ts_idx >= batch_lines - missing_ts_count
+        skip = device_missing_hit && ts_missing_hit
+
+    A dimension whose count is ``0`` is not configured and does not take
+    part in the decision; both ``0`` → nothing is dropped.
+
+    Indices are **round-relative** (``device_idx`` = position inside this
+    round's grid), never absolute device numbers.
+    """
+    missing_device_and_ts = missing_device_count > 0 and missing_ts_count > 0
+    missing_device_only = missing_device_count > 0 and missing_ts_count == 0
+    missing_ts_only = missing_ts_count > 0 and missing_device_count == 0
+    if missing_device_and_ts:
+        return (
+            device_idx >= device_per_thread - missing_device_count
+            and ts_idx >= batch_lines - missing_ts_count
+        )
+    if missing_device_only:
+        return device_idx >= device_per_thread - missing_device_count
+    if missing_ts_only:
+        return ts_idx >= batch_lines - missing_ts_count
+    return False
+
+
+def groovy_missing_data_decl(
+    *,
+    probability: float,
+    missing_ts_count: int,
+    missing_device_count: int,
+) -> str:
+    """Groovy source for the missing-data block injected at the 6 write sites.
+
+    Declares ``missingProbability`` / ``missingTsCount`` /
+    ``missingDeviceCount`` (the baked-in config), ``applyMissing`` (the
+    per-batch Bernoulli draw, D2) and the ``skipMissingRow`` closure
+    implementing the same intersection rule as :func:`should_skip_row`.
+
+    Only the **configured** dimensions appear in the closure (a count of
+    ``0`` means "not configured"); the closure reads the script-local
+    ``devicePerThread`` / ``batchLines``, so a device count shrunk at
+    runtime yields a non-positive threshold — every device then hits and
+    the timestamp dimension alone decides (D7).
+    """
+    missing_device_and_ts = missing_device_count > 0 and missing_ts_count > 0
+    missing_device_only = missing_device_count > 0 and missing_ts_count == 0
+    missing_ts_only = missing_ts_count > 0 and missing_device_count == 0
+    parts = [
+        "// write-missing-data: 尾部截断(设备 × 时间戳,取交集)",
+        f"def missingProbability = {probability!r}d",
+        f"def missingTsCount = {int(missing_ts_count)}",
+        f"def missingDeviceCount = {int(missing_device_count)}",
+        "def applyMissing = false",
+        "if (missingProbability == 1.0d) {",
+        "    applyMissing = true",
+        "} else {",
+        "    applyMissing = java.util.concurrent.ThreadLocalRandom.current()"
+        ".nextDouble() < missingProbability",
+        "}",
+        "def skipMissingRow = { int devIdx, int tsIdx ->",
+    ]
+    if missing_device_and_ts or missing_device_only:
+        parts.append(
+            "    boolean deviceMissingHit = devIdx >= devicePerThread - missingDeviceCount"
+        )
+    if missing_device_and_ts or missing_ts_only:
+        parts.append("    boolean tsMissingHit = tsIdx >= batchLines - missingTsCount")
+    if missing_device_and_ts:
+        parts.append("    return deviceMissingHit && tsMissingHit")
+    elif missing_device_only:
+        parts.append("    return deviceMissingHit")
+    elif missing_ts_only:
+        parts.append("    return tsMissingHit")
+    else:
+        parts.append("    return false")
+    parts.append("}")
+    return "\n".join(parts)
+
+
+def groovy_missing_data_block(missing: Any) -> str:
+    """Missing-data block for embedding — empty string when disabled.
+
+    Design D6: the block is injected **only** when the table declares a
+    ``missing`` section whose ``probability`` is greater than ``0.0``.
+    An absent section and ``probability: 0.0`` both yield ``""``, which
+    the generators splice at the end of a line so the surrounding script
+    stays byte-identical to the not-declared variant.
+
+    The returned text starts **and** ends with a newline, so it can be
+    appended directly to a template line::
+
+        def batchLines = 5{missing_block}def msStep = 1000
+
+    ``missing`` is a :class:`config_parser.models.MissingConfig` (or
+    ``None``). It is read duck-typed on purpose — importing the config
+    models here would invert the ``utils → config_parser`` layering.
+    """
+    if missing is None or missing.probability <= 0.0:
+        return ""
+    return "\n" + groovy_missing_data_decl(
+        probability=missing.probability,
+        missing_ts_count=missing.ts_count,
+        missing_device_count=missing.device_count,
+    ) + "\n"
+
+
+def groovy_missing_skip_line(*, device_start_var: str, ts_var: str) -> str:
+    """The per-cell skip line placed at the top of the inner (ts) loop.
+
+    The device index is **round-relative** (``d - <device loop start>``):
+    the missing set must be defined on "the devices of *this* round",
+    and the absolute device number ``d`` shifts with ``device_start``
+    / multi-end coordination, which would make the tail semantics drift.
+
+    ``&&`` short-circuits, so a batch that did not trigger the rule pays
+    nothing beyond the boolean check.
+    """
+    return (
+        f"        if (applyMissing && skipMissingRow((int)(d - {device_start_var}), "
+        f"{ts_var})) {{ continue }}\n"
+    )
+
+
+
