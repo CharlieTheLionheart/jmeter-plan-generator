@@ -10,10 +10,10 @@
 
 | 阶段 | 内容 | 状态 |
 |---|---|---|
-| pub-sub-end-to-end | 发布订阅端到端(SetupTG 建发布/订阅 + Verify tearDown TG + `pub_sub_config` 表级配置段) | 设计 + 实现 + smoke 完成,待 `openspec archive` |
+| pub-sub-end-to-end | 发布订阅端到端(SetupTG 建发布/订阅 + Verify tearDown TG + `pub_sub_config` 表级配置段) | 设计 + 实现 + smoke 完成,**已 `openspec archive`**(2026-11-02,spec 增量 +12 条合并进 `openspec/specs/pub-sub-end-to-end/spec.md`) |
 | write-missing-data 阶段 0 | 写入侧按批次随机缺失数据 —— DCR 五件套设计(proposal / design / spec / review / tasks) | 设计完成,编码未开始 |
 | write-missing-data 阶段 1 | commit 1 既有代码修正:7 处随机源换 `ThreadLocalRandom` + 空种子池抛业务异常(loader + 6 消费点)+ `write_config[]` 同表唯一校验 + schemaless 大小写归一 + schemaless 非 bind 路径既有缺陷修正 | 已落地(`e11f41d`,UT 874 全绿 + smoke 全绿) |
-| write-missing-data 阶段 2 | commit 2 缺失功能:`MissingConfig` 配置模型 + Python/Groovy 同构判定 helper + 6 处 Groovy 注入 + D7 缺整轮兜底 + 9 个 fixture + 主 spec 同步;顺带修掉 direct 路径 3 个从未跑通的既有缺陷 | **已落地**(`86b4b63`,分支 `feat/write-missing-data`;UT 951 全绿 + Phase B smoke 11 个用例全绿;change 已 `openspec archive`) |
+| write-missing-data 阶段 2 | commit 2 缺失功能:`MissingConfig` 配置模型 + Python/Groovy 同构判定 helper + 6 处 Groovy 注入 + D7 缺整轮兜底 + 9 个 fixture + 主 spec 同步;顺带修掉 direct 路径 3 个从未跑通的既有缺陷 | **已落地**(`de19e36`,分支 `feat/write-missing-data`;UT 951 全绿 + Phase B smoke 11 个用例全绿;change 已 `openspec archive`)。**smoke 断言已落成正式 pytest**(`tests/kwjdbc_svt/test_missing_smoke.py`,opt-in:`KWJDB_SVT_SMOKE=1`) |
 
 ## 待办(跨会话)
 
@@ -21,7 +21,7 @@
   - commit 1 = 既有代码修正(与缺失功能零耦合,可独立回滚):7 处随机源换 `ThreadLocalRandom` + 空种子池抛业务异常 + `write_config[]` 同表唯一校验 + schemaless 大小写归一 + schemaless 非 bind 路径修正 —— `e11f41d`(分支 `feat/pub-sub`)
   - commit 2 = 缺失功能(新增能力):配置模型 → 判定 helper → 6 处 Groovy 注入 → 集成与 fixture —— `86b4b63`(分支 `feat/write-missing-data`,从 `feat/pub-sub` 拉出)
 - **pub-sub-end-to-end 归档** —— `openspec archive` 前确认 spec 增量合并进主 spec。
-- **write-missing-data 后续** —— 分支 `feat/write-missing-data` 待提 PR 合入(远端默认分支 `develop-2.0`)。
+- **write-missing-data 后续** —— 分支 `feat/write-missing-data` 待提 PR 合入(远端默认分支 `develop-2.0`)。smoke 断言已落成 `tests/kwjdbc_svt/test_missing_smoke.py`(opt-in:`KWJDB_SVT_SMOKE=1`)。
 - **smoke 证据** —— write-missing-data 的 Phase B smoke(6 条路径 + 概率 + 缺整轮 ×3 路径 + 空种子池)已跑完并全绿,证据见阶段 2 条目。
 
 ## §决策汇总
@@ -157,6 +157,15 @@
 | §9.4 缺整轮(direct,补 fixture) | `Err: 0`,落库 **0 行**;JMX 含 `if (valuesSql.isEmpty())` + `-- no rows written for ` 兜底 |
 | §9.4 缺整轮(schemaless,补 fixture) | `Err: 0`,落库 **0 行**;JMX 含 `vars.put('__missing_skipped','true')` + 断言 `vars.get('__missing_skipped')=='true'` 放行 |
 | §9.5 空种子池 | 删掉行聚合 CSV → SetupTG `SharedMemoryLoader` 报错(`RuntimeException: SharedMemoryLoader: CSV file not found: ...`)+ Write 消费点二次抛业务异常(`SharedMemory pool empty for table ... (key ...): seed CSV load failed or produced no rows`)+ Write sampler NPE,共 5 条 error、`Err: 5 (62.50%)`、落库 0 行 —— 失败模式如实暴露,不再"全绿但没写数据" |
+
+**smoke 断言已落成正式 pytest 用例**(2026-11-02):`tests/kwjdbc_svt/test_missing_smoke.py`,
+11 个用例(6 条写入路径 + 概率 + 缺整轮 ×3 路径 + 空种子池),断言口径与上表逐条对应。
+默认**跳过**(不需容器),opt-in 跑法::
+
+    KWJDB_SVT_SMOKE=1 python -m pytest tests/kwjdbc_svt/test_missing_smoke.py -v
+
+落成 pytest 的原因:断言口径原先只存在于临时驱动脚本里,重启即丢;落成用例后口径变更会随代码一起被 review。
+两处**有意不做的断言**:①「每个 ts 的设备数」—— 多线程首批 baseTime 可能落在同一毫秒 → 两批次 ts 值相撞 → 该 ts 设备数翻倍,断言会随机翻车(等价事实已由"每设备 ts 覆盖数"覆盖);② JTL 的 `failureMessage` 内容 —— JMeter 对 JSR223 报错只写 `responseCode=500`,异常文本在 `jmeter.log`(空池用例的消息断言因此走 label 判定 + 落库行数)。
 
 **零回归核验**(与基线 commit `e11f41d` 逐字节比对,6 处脚本 × `missing=None`)
 
