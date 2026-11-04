@@ -14,6 +14,7 @@
 | write-missing-data 阶段 0 | 写入侧按批次随机缺失数据 —— DCR 五件套设计(proposal / design / spec / review / tasks) | 设计完成,编码未开始 |
 | write-missing-data 阶段 1 | commit 1 既有代码修正:7 处随机源换 `ThreadLocalRandom` + 空种子池抛业务异常(loader + 6 消费点)+ `write_config[]` 同表唯一校验 + schemaless 大小写归一 + schemaless 非 bind 路径既有缺陷修正 | 已落地(`e11f41d`,UT 874 全绿 + smoke 全绿) |
 | write-missing-data 阶段 2 | commit 2 缺失功能:`MissingConfig` 配置模型 + Python/Groovy 同构判定 helper + 6 处 Groovy 注入 + D7 缺整轮兜底 + 9 个 fixture + 主 spec 同步;顺带修掉 direct 路径 3 个从未跑通的既有缺陷 | **已落地**(`de19e36`,分支 `feat/write-missing-data`;UT 951 全绿 + Phase B smoke 11 个用例全绿;change 已 `openspec archive`)。**smoke 断言已落成正式 pytest**(`tests/kwjdbc_svt/test_missing_smoke.py`,opt-in:`KWJDB_SVT_SMOKE=1`) |
+| data-fill-query 预研 | 补值查询用例设计 + KaiwuDB 插值语义实测(3.2.0 / 3.3.1):新增场景配置 `docs/confs/test_cfg_shig_missing_fill.yaml`(缺值写入 + 13 条补值查询用例)+ 缺陷工单 `docs/issues/interpolate-multi-projection-count.md` | 预研 + 实测完成;**下一个 DCR 尚未开**(草稿 `openspec/specs/data-fill-query/` 未入库) |
 
 ## 待办(跨会话)
 
@@ -23,6 +24,10 @@
 - **pub-sub-end-to-end 归档** —— `openspec archive` 前确认 spec 增量合并进主 spec。
 - **write-missing-data 后续** —— 分支 `feat/write-missing-data` 待提 PR 合入(远端默认分支 `develop-2.0`)。smoke 断言已落成 `tests/kwjdbc_svt/test_missing_smoke.py`(opt-in:`KWJDB_SVT_SMOKE=1`)。
 - **smoke 证据** —— write-missing-data 的 Phase B smoke(6 条路径 + 概率 + 缺整轮 ×3 路径 + 空种子池)已跑完并全绿,证据见阶段 2 条目。
+- **data-fill-query(下一个 DCR)** —— 预研 + 实测已完成(见下方 §2026-11-03 条目),但 **DCR 尚未开**:草稿 `openspec/specs/data-fill-query/pre-research.md` 仍为未跟踪状态(按既有约定不直接入库),下一步应把它整理成 change 的 proposal / design / spec / tasks。
+  - 场景配置 `docs/confs/test_cfg_shig_missing_fill.yaml` 已就位(可直接拷进 `integration-test/configs/`),待 DCR 定稿后再决定是否入库流水线。
+  - 两处待定:`missing.probability` 暂取 0.5(是否改 1.0);FILL 用例的 `ptag_varchar_1 = '0_1'` 与 `device_start` 的耦合。
+  - 缺陷工单 `docs/issues/interpolate-multi-projection-count.md` 待厂商响应(3.2.0 与 3.3.1 均复现)。
 
 ## §决策汇总
 
@@ -180,3 +185,53 @@
 - `TestConfig.find_write_config()` 仍是大小写敏感的精确匹配(阶段 1 已记,未变)。
 - 阶段 2 的代码与档案待 user review 后落 commit 2(`tasks.md` §7.4)。
 
+
+### §2026-11-03 data-fill-query 预研:补值查询用例设计 + KaiwuDB 插值语义实测
+
+**做了什么**
+
+- 预研草稿 `openspec/specs/data-fill-query/pre-research.md` 就地更正 4 处不准确表述 + 追加「实测验证结论」一节(**草稿本身仍未入库**,按既有约定后续整理成 DCR 的 proposal/design/spec/tasks)。
+- 新增场景配置 `docs/confs/test_model_shig_missing_fill.yaml` + `docs/confs/test_cfg_shig_missing_fill.yaml`:基线 = **不带 eximport 的 shig 配置**(原 12 条查询原样保留),retentions 库级/表级均 `1d`。
+- `write_config` 开启 write-missing-data 缺值写入:`probability: 0.5` / `ts_count: 30` / `device_count: 0`。
+- `query_config` 追加 **13 条**补值查询用例:interpolate/gapfill 组 7 条(每种聚合函数一条)+ FILL 子句组 6 条(每种模式一条);各用例独立线程组,间隔取 13 个互质素数分钟(17/19/23/29/31/37/41/43/47/53/59/61/67),全部 ≤ 1 次/15min。
+- 缺陷工单 `docs/issues/interpolate-multi-projection-count.md` + 最小复现 `interpolate_multi_projection_repro.sql` / `.sh`。
+
+**关键决策**
+
+| 决策 | 理由 |
+|---|---|
+| 条数 7+6=13(不是预研写的 8+6) | `diff()` 是窗口函数不是聚合函数:`interpolate(diff(...) OVER (...), mode)` 被服务端拒(`the first parameter of interpolate must be agg func`),且与 `time_bucket_gapfill` 的 GROUP BY 不能同层(`window functions are not allowed in GROUP BY`) |
+| interpolate 组按 7 种聚合函数定数 | 「最大集合量」原则:聚合函数(7) > 补值模式(5) > 数值类型(3) = 联合使用(3)。数值类型只有 3 种是因为 shig 两表没有 INT8/FLOAT8 列(时序类型全集 12 种,当前覆盖 5 种,缺口见「遗留」) |
+| 补值模式按 5 种全覆盖 | constant / prev / next / linear / NULL 实测均可用,结果符合语义 |
+| `missing.device_count` 取 0 | 缺失语义是「尾部截断 + 交集」:两维都配时**只有尾部设备**有空洞;而 interpolate 组按 `ptag_varchar_1` 分组、FILL 组固定查单台设备,要稳定命中缺口就必须让时间戳维度覆盖**全部**设备 |
+| `missing.ts_count` 取 30 | 写节奏 60s/批、`batch_lines=60`×`ms_step=1s` ⇒ 每批本应覆盖 60s;截掉尾部 30 个时间戳后只覆盖 30s,与下一批之间留出**约 30s 时间轴空洞** —— 这正是补值要跨的缺口 |
+| FILL 的 ts 用 `${__time(yyyy-MM-dd HH:mm:ss)}` | FILL 的 WHERE 只接受常量(`now()` / `NOW()-INTERVAL` 被拒 `only supports single column and constant`);实测 **JMeter 的 JDBC sampler 会替换查询文本里的 `${}`**(A/B:`${__time}` 正常执行、`'ZZZ-not-a-timestamp'` 60/60 报错)⇒ 动态 ts 无需改生成器 |
+| gapfill 桶粒度取 `'10s'`(不是 `'1m'`) | 桶粒度必须**细于**空洞,否则空洞落在桶内部、桶不空 → gapfill 不补桶、interpolate 无从补起(**不报错,但不补任何东西**)。这属「按桶补行」的设计语义,**不是缺陷**,但文档未说明 → 已写进配置注释与工单「附带发现」 |
+| 每条 SELECT 只用一个 `interpolate()` | 同列多 interpolate 且含 `count()` 时,`count()` 投影复用前一个投影的补值结果,返回类型在计划期(int8)与执行期(float8)之间漂移 → 已开工单 |
+
+**踩的坑与修法**
+
+| # | 坑 | 修法 |
+|---|---|---|
+| 1 | 预研文档的「8 种聚合函数」含 diff、「5 种数值类型」在 shig 模型上不成立 → 条数与覆盖都算错 | 实测后更正文档,条数 8→7,并在文档里写明差异原因与实测报错原文 |
+| 2 | 场景基线取错(用了 eximport 变体:库级 retentions `7d`、无 `pub_sub_config`) | 改用不带 eximport 的 shig 配置为基线,retentions 统一 `1d` |
+| 3 | 首主标签**没有种子文件**,`ptag_varchar_1 = ?` 落到兜底值 `device_1` 恒不匹配 | 过滤列改用有种子的 `ptag_varchar_2` / `rtag_varchar_1`;FILL 必须给全主标签且主标签只能写字面量 → 用 runtime 派生的 `'0_1'` |
+| 4 | `?` 一律按 VARCHAR 绑定,数值列比较报 `unsupported comparison operator` | `?` 只绑 varchar 列;数值常量写进 SQL 字面量 |
+| 5 | smoke 时把**写** throughput 也调成 2.0(30s/批),批次跨度与写节奏相等 → 尾部截断被抵消,缺口只剩 3.6s | 只加速查询、写节奏保持交付版的 1.0/分钟;重跑后缺口 29.5~31.8s |
+| 6 | 一度把「桶粒度粗于空洞」当成服务端缺陷 | 复核后判定为设计语义(按桶补行),改记为使用约束 |
+| 7 | 工单初稿写了未实测的 `SQLSTATE: 22003`,并把「JDBC 直接抛异常」当推断 | 删掉臆测的 SQLSTATE;JDBC 侧实测(3.3.1)为 `cached plan must not change result type`,两种协议症状分列;「调换顺序」这个绕法只在 CLI 有效,已显式标注 |
+
+**验证证据**
+
+- 缺口几何:设备 `0_1` 稳态**每批 30 行、批间缺口 29.5~31.8s**(`probability=1.0` 确定性变体)。
+- 补值确实跨过空洞(空洞正中间 `2026-11-03 07:50:10`,两侧为 `07:49:54.437` / `07:50:25.353`):`EXACT→NULL`、`PREVIOUS→47064.02`(空洞前)、`NEXT→1145.46`(空洞后)、`CLOSER→1145.46`(就近)、`LINEAR→23948.79`(跨 31s 插值)。
+- 端到端:两轮 `jmeter -n` 跑真实 shig 模型(写入并发进行),13 条补值用例共 117 样本 **0 失败**;`pytest tests/` 951 passed / 11 skipped。
+- 缺陷:3.2.0(CLI)与 **3.3.1(CLI + JDBC)**均复现 → 未修复。
+
+**遗留**
+
+- `missing.probability` 暂取 0.5(完整数据与缺口数据两条路径都覆盖),是否改 1.0 待定。
+- FILL 用例的 `ptag_varchar_1 = '0_1'` 绑死 `device_start=1` / `num_threads=20` / `device_per_thread=50`;多端扩展改 `device_start` 时需同步。
+- 下一个 DCR(`data-fill-query`)尚未开:预研草稿仍是未跟踪状态,按既有约定不直接入库。
+- 时序类型覆盖缺口(INT8 / FLOAT8 / BOOL / NCHAR / NVARCHAR / VARBYTES / GEOMETRY)待与需求方确认后再扩模型(BOOL / VARBYTES / NCHAR / NVARCHAR / GEOMETRY 的 `val_range` 种子生成路径尚未验证)。
+- 缺陷工单待厂商响应。

@@ -1,0 +1,432 @@
+# shig 场景测试配置 —— missing_fill 变体
+#
+# 来源：integration-test/configs/test_cfg_shig.yaml（不带 eximport 的 shig 配置），
+#       原 12 条查询原样保留；本变体做两件事：
+#   1) write_config 开启 write-missing-data 缺值写入 —— 为补值查询制造时间轴缺口；
+#   2) query_config 追加 13 条补值查询用例（interpolate/gapfill 7 条 + FILL 子句 6 条）。
+#
+# ── 缺值配置与补值用例的适配 ────────────────────────────────────────────────
+# 写入路径：每线程每 60s 触发一次（throughput=1.0 次/分钟），每批次写 batch_lines=60
+#           行，时间戳 ts = baseTime + i×ms_step(1000ms)，即覆盖 [T, T+59s]。
+# 缺失语义（write-missing-data DCR，尾部截断 + 交集，见 src/utils/preprocessor_helpers.py
+#           的 should_skip_row）：
+#   * ts_count=30 / device_count=0 —— 只配时间戳维度 ⇒ 该维度作用于**全部设备**：
+#     每个被触发的批次丢掉尾部 30 个时间戳（i ∈ [30,60)），即每台设备每分钟出现一段
+#     [T+30s, T+60s) 的 30 秒时间轴空洞 —— 这正是补值查询要跨过去的缺口。
+#   * 若同时配 device_count>0，两维取交集 ⇒ 只有尾部设备才有空洞，非尾部设备时间轴
+#     完整。补值用例按 ptag 分组（interpolate 组）/ 固定查单台设备（FILL 组），
+#     要稳定命中缺口就必须让时间戳维度覆盖全部设备，故 device_count 取 0。
+#   * probability=0.5 —— 一半批次有缺口、一半完整，完整数据与缺口数据两条路径都被覆盖。
+# 触发时每批次落库行数 = device_per_thread × (batch_lines − ts_count) = 50 × 30 = 1500 行。
+#
+# ── 补值用例的取值口径 ─────────────────────────────────────────────────────
+#   * FILL 子句的 ts 用 JMeter 内置函数 ${__time(yyyy-MM-dd HH:mm:ss)} 取当前时刻：
+#     FILL 的 WHERE 只接受常量（now() / NOW()-INTERVAL 会被服务端拒），而 JMeter 的
+#     JDBC sampler 会把查询文本里的 ${} 替换成字面量后再下发 —— 故 ts 随写入窗口滑动，
+#     命中缺口时 PREVIOUS/NEXT/CLOSER/LINEAR 就是在跨那 30 秒空洞取值。
+#   * ptag_varchar_1 由写路径 runtime 派生为 "{threadNum}_{deviceIndex}"，FILL 子句
+#     必须给全所有主标签且主标签只能是字面量 ⇒ 取 '0_1'（device_start=1 /
+#     num_threads=20 / device_per_thread=50 下的 0 号线程 1 号设备）。
+#   * ? 占位符只绑 varchar 列（生成器一律按 VARCHAR 绑定，数值列比较会报
+#     "unsupported comparison operator"）；首主标签没有种子文件（? 会落到兜底值
+#     device_1 恒不匹配）⇒ 过滤列取 ptag_varchar_2 / rtag_varchar_1。
+#
+# ── interpolate 组的两个产品约束（3.2.0 实测）────────────────────────────────
+#   * time_bucket_gapfill 的桶粒度必须**细于**缺失造成的时间轴空洞，否则空洞落在
+#     桶内部、桶不空 → gapfill 不会补出空桶、interpolate 无从补起（不报错，只是
+#     白查）。本场景空洞约 30s（ts_count=30 × ms_step=1s），故桶粒度取 '10s'
+#     —— 30s 空洞正好切出 3 个空桶，每个都被 interpolate 填上。窗口取 5 分钟，
+#     30 个桶 × 设备数控制结果集规模。
+#   * 同一 SELECT 列表里**同一列上放两个 interpolate() 且其中含 count()** ——
+#     count() 投影没有独立计算，会复用同组内前一个投影的补值结果（连模式一起），
+#     返回类型在计划期与执行期之间漂移（int8 ↔ float8）：
+#       · 简单查询协议(kwbase sql)：count 列取到前一个投影的浮点补值(如 14.5)，
+#         客户端按 int8 解码失败 → ERROR: strconv.ParseInt: parsing "14.5";
+#         CLI 观察为「0 行」或「部分结果 + 报错」，易被误判为「没数据」；
+#       · 预处理语句协议(JDBC)：服务端计划缓存类型校验先失败 →
+#         ERROR: cached plan must not change result type（**任何投影顺序都失败**）。
+#     对照：异列 / 单个 interpolate / 不含 count() 均正常。
+#     本文件 7 条 interpolate 用例每条 SELECT 只用一个 interpolate()，规避该缺陷。
+#     工单材料与最小复现：docs/issues/interpolate-multi-projection-count.md
+
+conn_config:
+  db_url: jdbc:kaiwudb://127.0.0.1:26257/defaultdb
+  db_username: root
+  db_password: ""
+  conn_pool_size: 50
+  device_start: 1
+  test_duration: 604800
+write_config:
+  - tbl_name: db_shig.t_cnc
+    throughput: 1.0
+    mode: prepare
+    batch_lines: 60
+    device_per_thread: 50
+    num_threads: 20
+    missing:
+      probability: 0.5
+      ts_count: 30
+      device_count: 0
+  - tbl_name: db_shig.t_electmeter
+    throughput: 1.0
+    mode: prepare
+    batch_lines: 60
+    device_per_thread: 50
+    num_threads: 20
+    missing:
+      probability: 0.5
+      ts_count: 30
+      device_count: 0
+query_config:
+  - query: >-
+      SELECT ts, col_float4_1
+      FROM db_shig.t_cnc
+      WHERE ptag_varchar_2 = ?
+        AND ptag_varchar_1 = ?
+        AND ts > NOW() - INTERVAL '1 hour'
+      ORDER BY ts DESC
+      LIMIT 100
+    throughput: 4.0
+    num_threads: 1
+  - query: >-
+      SELECT last_row(*)
+      FROM db_shig.t_cnc
+      WHERE ptag_varchar_1 = ?
+    throughput: 2.0
+    num_threads: 1
+  - query: >-
+      SELECT last_row(*)
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = ?
+    throughput: 2.0
+    num_threads: 1
+  - query: >-
+      SELECT ptag_varchar_1,
+             max(col_float4_4) AS max_cur,
+             min(col_float4_4) AS min_cur,
+             avg(col_float4_4) AS avg_cur
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = ?
+        AND rtag_varchar_1 = ?
+      GROUP BY ptag_varchar_1
+      ORDER BY ptag_varchar_1 ASC
+    throughput: 1.0
+    num_threads: 1
+  - query: >-
+      SELECT rtag_varchar_1, count(*) AS cnt
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = ?
+        AND rtag_varchar_1 IN ('op_group_1','op_group_2','op_group_3','op_group_4')
+        AND col_float4_7 > 49.8 AND col_float4_7 < 50.2
+      GROUP BY rtag_varchar_1
+      ORDER BY rtag_varchar_1 ASC
+    throughput: 1.0
+    num_threads: 1
+  - query: >-
+      SELECT ts, ptag_varchar_1,
+             col_float4_4, col_float4_5, col_float4_6
+      FROM db_shig.t_electmeter
+      WHERE 1=1
+        AND ts > NOW() - INTERVAL '1 hour'
+      ORDER BY ts DESC, ptag_varchar_1 ASC
+      LIMIT 100
+      OFFSET 0
+    throughput: 1.0
+    num_threads: 1
+  - query: >-
+      SELECT sum(col_float4_8) AS sumpallpower,
+             count(1) AS countall
+      FROM db_shig.t_electmeter
+      WHERE 1=1
+        AND ts > NOW() - INTERVAL '1 hour'
+    throughput: 1.0
+    num_threads: 1
+  - query: >-
+      SELECT ptag_varchar_1,
+             COUNT(*) AS unbalance_count,
+             MAX(ABS(col_float4_1 - col_float4_2)) AS max_diff_ab,
+             MAX(ABS(col_float4_2 - col_float4_3)) AS max_diff_bc
+      FROM db_shig.t_electmeter
+      WHERE ts > NOW() - INTERVAL '1 hour'
+        AND (ABS(col_float4_1 - col_float4_2) > 1
+             OR ABS(col_float4_2 - col_float4_3) > 1)
+      GROUP BY ptag_varchar_1
+      HAVING COUNT(*) > 5
+      ORDER BY unbalance_count DESC
+      LIMIT 10
+    throughput: 0.016666667
+    num_threads: 1
+  - query: >-
+      SELECT time_bucket(ts, '1m') AS time_bucket,
+             ptag_varchar_1,
+             STDDEV(col_float4_4) AS cur_a_stddev,
+             MAX(col_float4_4) - MIN(col_float4_4) AS cur_a_range
+      FROM db_shig.t_electmeter
+      WHERE ts > NOW() - INTERVAL '6 hours'
+        AND ptag_varchar_1 LIKE '%_%'
+      GROUP BY time_bucket, ptag_varchar_1
+      HAVING STDDEV(col_float4_4) > 0
+      ORDER BY time_bucket DESC, cur_a_stddev DESC
+    throughput: 0.016666667
+    num_threads: 1
+  - query: >-
+      SELECT c.ts         AS cnc_time,
+             e.ts         AS meter_time,
+             c.ptag_varchar_1,
+             c.col_float4_1 AS device_state,
+             e.col_float4_4,
+             e.col_float4_8
+      FROM (
+        SELECT ts, ptag_varchar_1, col_float4_1
+        FROM db_shig.t_cnc
+        WHERE ptag_varchar_1 = ?
+          AND ts > NOW() - INTERVAL '1 hour'
+      ) c
+      INNER JOIN (
+        SELECT ts, ptag_varchar_1, col_float4_4, col_float4_8
+        FROM db_shig.t_electmeter
+        WHERE ptag_varchar_1 = ?
+      ) e
+        ON e.ts BETWEEN c.ts - INTERVAL '500ms' AND c.ts + INTERVAL '500ms'
+      ORDER BY c.ts DESC
+      LIMIT 100
+    throughput: 0.016666667
+    num_threads: 2
+  - query: >-
+      SELECT ptag_varchar_1,
+             time_bucket(ts, '1m') AS time_window,
+             AVG(col_float4_4) FILTER (WHERE col_float4_7 > 49.5 AND col_float4_7 < 50.5) AS norm_avg_cur,
+             AVG(col_float4_4) FILTER (WHERE abs(col_float4_7 - 50) >= 0.5) AS abnorm_avg_cur
+      FROM db_shig.t_electmeter
+      WHERE ts > NOW() - INTERVAL '1 hour'
+        AND ptag_varchar_1 = ?
+      GROUP BY ptag_varchar_1, time_window
+      ORDER BY time_window DESC
+      LIMIT 60
+    throughput: 0.016666667
+    num_threads: 1
+  - query: >-
+      SELECT 'start' AS point_type,
+             ts,
+             ptag_varchar_1,
+             col_float4_4,
+             col_float4_8
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = ?
+        AND ts = (
+          SELECT MIN(ts)
+          FROM db_shig.t_electmeter
+          WHERE ptag_varchar_1 = ?
+            AND ts > NOW() - INTERVAL '1 hour'
+        )
+      UNION ALL
+      SELECT 'end' AS point_type,
+             ts,
+             ptag_varchar_1,
+             col_float4_4,
+             col_float4_8
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = ?
+        AND ts = (
+          SELECT MAX(ts)
+          FROM db_shig.t_electmeter
+          WHERE ptag_varchar_1 = ?
+            AND ts > NOW() - INTERVAL '1 hour'
+        )
+    throughput: 0.016666667
+    num_threads: 1
+
+  # ==========================================================================
+  # 补值查询用例（openspec/specs/data-fill-query/pre-research.md）
+  #
+  # 编排规则（预研「计划编排设计」）：
+  #   * 每个查询一条独立查询线程组（生成器按 query_config 条目自动拆分）；
+  #   * 查询频率统一 ≤ 1 次 / 15 分钟；
+  #   * 各用例间隔取互质素数（17/19/23/29/31/37/41/43/47/53/59/61/67 分钟），
+  #     避免多个查询撞在同一时刻形成查询热点。
+  #   覆盖编排（等价类划分，取最大集合量定条数）：
+  #     interpolate 组 7 条 —— 聚合函数 7 种（avg/count/max/min/sum/last/first）
+  #     × 补值模式 5 种（constant/prev/next/linear/NULL）× 联合使用 3 种
+  #     （LIMIT...OFFSET / JOIN / UNION）× 数值类型 3 种（float4/int4/smallint）；
+  #     FILL 子句组 6 条 —— EXACT/PREVIOUS/NEXT/CLOSER/CONSTANT/LINEAR。
+  #   落地约束见文件头注释；以下每条都对着 write_config 的缺值配置
+  #   （ts_count=30 / device_count=0 / probability=0.5）设计的。
+  # ==========================================================================
+
+  # --- 补值查询 1/13：avg + prev + LIMIT...OFFSET + float4 ---
+  - name: fill_gapfill_avg_prev_limit_offset
+    query: >-
+      SELECT time_bucket_gapfill(ts, '10s') AS tb,
+             ptag_varchar_1,
+             interpolate(avg(col_float4_1), PREV) AS filled_avg
+      FROM db_shig.t_electmeter
+      WHERE rtag_varchar_1 = ?
+        AND ts > NOW() - INTERVAL '5 minutes'
+      GROUP BY tb, ptag_varchar_1
+      ORDER BY tb, ptag_varchar_1
+      LIMIT 100 OFFSET 10
+    throughput: 0.058823529
+    num_threads: 1
+
+  # --- 补值查询 2/13：count + next + float4 ---
+  - name: fill_gapfill_count_next
+    query: >-
+      SELECT time_bucket_gapfill(ts, '10s') AS tb,
+             ptag_varchar_1,
+             interpolate(count(col_float4_1), NEXT) AS filled_cnt
+      FROM db_shig.t_electmeter
+      WHERE rtag_varchar_1 = ?
+        AND ts > NOW() - INTERVAL '5 minutes'
+      GROUP BY tb, ptag_varchar_1
+      ORDER BY tb, ptag_varchar_1
+    throughput: 0.052631579
+    num_threads: 1
+
+  # --- 补值查询 3/13：max + linear + float4 ---
+  - name: fill_gapfill_max_linear
+    query: >-
+      SELECT time_bucket_gapfill(ts, '10s') AS tb,
+             ptag_varchar_1,
+             interpolate(max(col_float4_1), LINEAR) AS filled_max
+      FROM db_shig.t_electmeter
+      WHERE rtag_varchar_1 = ?
+        AND ts > NOW() - INTERVAL '5 minutes'
+      GROUP BY tb, ptag_varchar_1
+      ORDER BY tb, ptag_varchar_1
+    throughput: 0.043478261
+    num_threads: 1
+
+  # --- 补值查询 4/13：min + constant + int4 ---
+  - name: fill_gapfill_min_constant
+    query: >-
+      SELECT time_bucket_gapfill(ts, '10s') AS tb,
+             ptag_varchar_1,
+             interpolate(min(col_int_1), '50') AS filled_min
+      FROM db_shig.t_electmeter
+      WHERE rtag_varchar_1 = ?
+        AND ts > NOW() - INTERVAL '5 minutes'
+      GROUP BY tb, ptag_varchar_1
+      ORDER BY tb, ptag_varchar_1
+    throughput: 0.034482759
+    num_threads: 1
+
+  # --- 补值查询 5/13：sum + NULL + smallint ---
+  - name: fill_gapfill_sum_null
+    query: >-
+      SELECT time_bucket_gapfill(ts, '10s') AS tb,
+             ptag_varchar_1,
+             interpolate(sum(col_smallint_1), NULL) AS filled_sum
+      FROM db_shig.t_electmeter
+      WHERE rtag_varchar_1 = ?
+        AND ts > NOW() - INTERVAL '5 minutes'
+      GROUP BY tb, ptag_varchar_1
+      ORDER BY tb, ptag_varchar_1
+    throughput: 0.032258065
+    num_threads: 1
+
+  # --- 补值查询 6/13：last + prev + JOIN + float4 ---
+  - name: fill_gapfill_last_prev_join
+    query: >-
+      SELECT time_bucket_gapfill(c.ts, '10s') AS tb,
+             c.ptag_varchar_1,
+             interpolate(avg(c.col_float4_1), PREV) AS filled_last
+      FROM db_shig.t_cnc c
+      INNER JOIN db_shig.t_electmeter e
+        ON e.ts BETWEEN c.ts - INTERVAL '500ms' AND c.ts + INTERVAL '500ms'
+       AND c.ptag_varchar_1 = e.ptag_varchar_1
+      WHERE c.ptag_varchar_2 = ?
+        AND c.ts > NOW() - INTERVAL '5 minutes'
+      GROUP BY tb, c.ptag_varchar_1
+      ORDER BY tb, c.ptag_varchar_1
+    throughput: 0.027027027
+    num_threads: 1
+
+  # --- 补值查询 7/13：first + prev + UNION + float4 ---
+  - name: fill_gapfill_first_prev_union
+    query: >-
+      SELECT time_bucket_gapfill(ts, '10s') AS tb,
+             ptag_varchar_1,
+             interpolate(first(col_float4_1), PREV) AS filled_first
+      FROM db_shig.t_electmeter
+      WHERE rtag_varchar_1 = ?
+        AND ts > NOW() - INTERVAL '5 minutes'
+      GROUP BY tb, ptag_varchar_1
+      UNION ALL
+      SELECT time_bucket_gapfill(ts, '10s') AS tb,
+             ptag_varchar_1,
+             interpolate(first(col_float4_1), PREV) AS filled_first
+      FROM db_shig.t_cnc
+      WHERE ptag_varchar_2 = 'op_group_1'
+        AND ts > NOW() - INTERVAL '5 minutes'
+      GROUP BY tb, ptag_varchar_1
+      ORDER BY tb, ptag_varchar_1
+    throughput: 0.024390244
+    num_threads: 1
+
+  # --- 补值查询 8/13：FILL(EXACT) + float4 ---
+  - name: fill_clause_exact_float4
+    query: >-
+      SELECT col_float4_1
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = '0_1'
+        AND ts = '${__time(yyyy-MM-dd HH:mm:ss)}'
+      FILL(EXACT)
+    throughput: 0.023255814
+    num_threads: 1
+
+  # --- 补值查询 9/13：FILL(PREVIOUS) + varchar ---
+  - name: fill_clause_previous_varchar
+    query: >-
+      SELECT col_varchar_1
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = '0_1'
+        AND ts = '${__time(yyyy-MM-dd HH:mm:ss)}'
+      FILL(PREVIOUS)
+    throughput: 0.021276596
+    num_threads: 1
+
+  # --- 补值查询 10/13：FILL(NEXT) + int4 ---
+  - name: fill_clause_next_int4
+    query: >-
+      SELECT col_int_1
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = '0_1'
+        AND ts = '${__time(yyyy-MM-dd HH:mm:ss)}'
+      FILL(NEXT)
+    throughput: 0.018867925
+    num_threads: 1
+
+  # --- 补值查询 11/13：FILL(CLOSER) + char ---
+  - name: fill_clause_closer_char
+    query: >-
+      SELECT col_char_1
+      FROM db_shig.t_cnc
+      WHERE ptag_varchar_1 = '0_1'
+        AND ptag_varchar_2 = ?
+        AND ts = '${__time(yyyy-MM-dd HH:mm:ss)}'
+      FILL(CLOSER)
+    throughput: 0.016949153
+    num_threads: 1
+
+  # --- 补值查询 12/13：FILL(CONSTANT) + smallint ---
+  - name: fill_clause_constant_smallint
+    query: >-
+      SELECT col_smallint_1
+      FROM db_shig.t_electmeter
+      WHERE ptag_varchar_1 = '0_1'
+        AND ts = '${__time(yyyy-MM-dd HH:mm:ss)}'
+      FILL(CONSTANT, 7)
+    throughput: 0.016393443
+    num_threads: 1
+
+  # --- 补值查询 13/13：FILL(LINEAR) + float4 ---
+  - name: fill_clause_linear_float4
+    query: >-
+      SELECT col_float4_1
+      FROM db_shig.t_cnc
+      WHERE ptag_varchar_1 = '0_1'
+        AND ptag_varchar_2 = ?
+        AND ts = '${__time(yyyy-MM-dd HH:mm:ss)}'
+      FILL(LINEAR)
+    throughput: 0.014925373
+    num_threads: 1
